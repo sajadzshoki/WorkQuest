@@ -58,7 +58,9 @@
     "main": "منوی اصلی",
     "account": "حساب کاربری",
     "collapse": "بستن منو",
-    "expand": "باز کردن منو"
+    "expand": "باز کردن منو",
+    "members": "کارکنان",
+    "invitations": "دعوت‌نامه‌ها"
   },
   "auth": {
     "loginTitle": "ورود به ورک‌کوئست",
@@ -199,6 +201,18 @@
       "REJECTED": "رد شده",
       "FULFILLED": "تحویل شده",
       "CANCELLED": "لغو شده"
+    },
+    "user": {
+      "ACTIVE": "فعال",
+      "SUSPENDED": "معلق",
+      "DEACTIVATED": "غیرفعال",
+      "INVITED": "دعوت‌شده"
+    },
+    "invitation": {
+      "PENDING": "در انتظار",
+      "ACCEPTED": "پذیرفته‌شده",
+      "REVOKED": "لغو شده",
+      "EXPIRED": "منقضی شده"
     }
   },
   "priority": {
@@ -232,7 +246,39 @@
     "lead": "سرپرست تیم",
     "manager": "مدیر مستقیم",
     "noTeams": "شما عضو هیچ تیمی نیستید",
-    "noMembers": "عضوی ثبت نشده است"
+    "noMembers": "عضوی ثبت نشده است",
+    "create": "تیم جدید",
+    "createTitle": "ساخت تیم",
+    "createSubtitle": "پس از ساخت، می‌توانید سرپرست و اعضا را تعیین کنید.",
+    "createSuccess": "تیم ساخته شد",
+    "nameLabel": "نام تیم",
+    "namePlaceholder": "مثلاً تیم محصول",
+    "descriptionLabel": "توضیحات",
+    "descriptionPlaceholder": "این تیم چه کاری انجام می‌دهد؟",
+    "openTeam": "جزئیات تیم",
+    "notFound": "این تیم پیدا نشد یا دسترسی مشاهده آن را ندارید",
+    "aboutTitle": "درباره تیم",
+    "noLead": "سرپرست تعیین نشده",
+    "noManager": "بدون مدیر مستقیم",
+    "createdAt": "تاریخ ساخت",
+    "delete": "حذف تیم",
+    "deleteConfirm": "تیم «{name}» حذف شود؟ اعضا در شرکت می‌مانند ولی عضویت تیمی آن‌ها حذف می‌شود.",
+    "deleteSuccess": "تیم حذف شد",
+    "editTitle": "ویرایش تیم",
+    "editSuccess": "تغییرات تیم ذخیره شد",
+    "addMember": "افزودن عضو",
+    "addMemberTitle": "افزودن عضو به تیم",
+    "addMemberSubtitle": "فقط کسانی که هنوز عضو تیمی نیستند در این فهرست هستند.",
+    "addSuccess": "عضو به تیم اضافه شد",
+    "removeMember": "حذف",
+    "removeMemberConfirm": "«{name}» از این تیم حذف شود؟",
+    "candidateLabel": "عضو",
+    "noCandidates": "کسی برای افزودن نیست",
+    "noCandidatesHint": "همه اعضای شرکت در تیم دیگری عضو هستند.",
+    "errors": {
+      "generic": "انجام این کار ناموفق بود"
+    },
+    "leadNeedsManager": "ابتدا نقش او را به «مدیر تیم» ارتقا دهید"
   },
   "leaderboard": {
     "title": "جدول امتیازها",
@@ -352,5 +398,105 @@
       }
     },
     "footer": "ساخته‌شده برای تیم‌های ایرانی"
+  },
+  "members": {
+    "title": "کارکنان",
+    "subtitle": "افزودن، ویرایش و مدیریت اعضای شرکت",
+    "searchPlaceholder": "جست‌وجو بر اساس نام، عنوان شغلی یا شماره موبایل",
+    "total": "{count} نفر",
+    "you": "شما",
+    "noJobTitle": "بدون عنوان شغلی",
+    "noTeam": "بدون تیم",
+    "memberCount": "{count} عضو",
+    "backToList": "بازگشت به فهرست کارکنان",
+    "notFound": "این کاربر پیدا نشد یا دسترسی مشاهده آن را ندارید",
+    "removeConfirm": "«{name}» از شرکت حذف شود؟ دسترسی او بلافاصله قطع می‌شود.",
+    "empty": {
+      "title": "هنوز عضوی ثبت نشده است",
+      "description": "اولین همکار خود را با شماره موبایل دعوت کنید.",
+      "descriptionReadOnly": "شما هنوز عضو هیچ تیمی نیستید."
+    },
+    "filters": {
+      "team": "همه تیم‌ها",
+      "role": "همه نقش‌ها"
+    },
+    "actions": {
+      "view": "مشاهده پروفایل",
+      "remove": "حذف از شرکت"
+    },
+    "invite": {
+      "cta": "دعوت همکار",
+      "title": "دعوت همکار جدید",
+      "subtitle": "همکار شما با کد ورود پیامکی به شرکت می‌پیوندد؛ نیازی به رمز عبور نیست.",
+      "phoneLabel": "شماره موبایل",
+      "phoneHint": "مثال: ۰۹۱۲۱۲۳۴۵۶۷",
+      "nameLabel": "نام و نام خانوادگی",
+      "namePlaceholder": "مثلاً سارا محمدی",
+      "jobTitleLabel": "عنوان شغلی",
+      "jobTitlePlaceholder": "مثلاً توسعه‌دهنده ارشد",
+      "teamLabel": "تیم",
+      "roleLabel": "نقش",
+      "expiryLabel": "اعتبار دعوت‌نامه",
+      "expiryOption": "{count} روز",
+      "noTeam": "بدون تیم",
+      "noticeTitle": "همکار شما چه می‌بیند؟",
+      "noticeDetail": "پس از ورود با کد پیامکی، این دعوت‌نامه را می‌بیند و با یک کلیک می‌پذیرد.",
+      "submit": "ارسال دعوت‌نامه",
+      "sending": "در حال ارسال…",
+      "successTitle": "دعوت‌نامه ارسال شد",
+      "successDetail": "{name} می‌تواند با شماره موبایل خود وارد شود.",
+      "errors": {
+        "generic": "ارسال دعوت‌نامه ناموفق بود"
+      }
+    },
+    "detail": {
+      "profile": "شناسنامه",
+      "role": "نقش سازمانی",
+      "status": "وضعیت",
+      "team": "تیم",
+      "lastLogin": "آخرین ورود",
+      "neverLoggedIn": "هنوز وارد نشده است",
+      "subordinates": "زیردستان",
+      "gamification": "امتیازها و عملکرد",
+      "performance": "خلاصه عملکرد",
+      "overdue": "عقب‌افتاده",
+      "achievements": "دستاوردها",
+      "noAchievements": "هنوز دستاوردی کسب نکرده است"
+    },
+    "edit": {
+      "title": "ویرایش عضو",
+      "success": "تغییرات ذخیره شد",
+      "managerNotice": "به‌عنوان مدیر تیم می‌توانید عنوان شغلی و تیم را تغییر دهید؛ تغییر نقش در اختیار مدیران شرکت است.",
+      "errors": {
+        "generic": "ذخیره تغییرات ناموفق بود"
+      }
+    }
+  },
+  "invitations": {
+    "title": "دعوت‌نامه‌ها",
+    "subtitle": "دعوت‌نامه‌های ارسال‌شده و وضعیت پذیرش آن‌ها",
+    "empty": "دعوت‌نامه‌ای در این وضعیت نیست",
+    "emptyHint": "با دکمه «دعوت همکار» اولین دعوت‌نامه را بسازید.",
+    "expires": "اعتبار",
+    "daysLeft": "{count} روز باقی‌مانده",
+    "revoke": "لغو",
+    "revokeConfirm": "دعوت‌نامه «{name}» لغو شود؟",
+    "revoked": "دعوت‌نامه لغو شد",
+    "noJobTitle": "بدون عنوان شغلی",
+    "teamLabel": "تیم",
+    "errors": {
+      "generic": "انجام این کار ناموفق بود"
+    },
+    "verifySuccess": "کد تأیید شد",
+    "verifySuccessDetail": "یک دعوت‌نامه در انتظار شماست.",
+    "joinTitle": "دعوت‌نامه شما",
+    "joinSubtitle": "شرکت زیر شما را دعوت کرده است. با پذیرش، حساب شما در همان شرکت ساخته می‌شود.",
+    "nonePending": "دعوت‌نامه معتبری برای این شماره وجود ندارد",
+    "acceptButton": "پذیرش دعوت‌نامه و ورود",
+    "acceptNotice": "نقش و تیم شما را مدیر شرکت تعیین کرده است و پس از ورود قابل مشاهده است.",
+    "joinAs": "پیوستن به‌عنوان {name}",
+    "joinAsDetail": "نقش شما در این شرکت: {role}",
+    "joinedTitle": "خوش آمدید",
+    "joinedDetail": "به «{company}» پیوستید."
   }
 }

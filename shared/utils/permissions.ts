@@ -23,9 +23,12 @@ export const PERMISSIONS = [
   'company:update',
   'member:read',
   'member:manage',
+  'member:invite',
   // teams
   'team:read',
   'team:manage',
+  /** Edit the teams a MANAGER leads and move members in/out of them. */
+  'team:manage:assigned',
   // tasks
   'task:read:own',
   'task:read:team',
@@ -50,6 +53,15 @@ export type Permission = (typeof PERMISSIONS)[number]
 /**
  * Permission matrix. `'*'` means "everything".
  * Deliberately coarse — a per-resource ACL is not a Phase 1 goal.
+ *
+ * Two permissions are role gates only and still need a *scope* check in the
+ * handler, because the matrix cannot express "which rows":
+ *
+ *  - `member:read` / `member:invite` — a MANAGER only reaches their own team and
+ *    their subordinates (`getManagedUserIds`).
+ *  - `team:manage:assigned` — a MANAGER only reaches teams they lead.
+ *
+ * OWNER and ADMIN hold `'*'` and are company-wide.
  */
 const MATRIX: Record<Role, readonly Permission[] | '*'> = {
   OWNER: '*',
@@ -57,7 +69,9 @@ const MATRIX: Record<Role, readonly Permission[] | '*'> = {
   MANAGER: [
     'company:read',
     'member:read',
+    'member:invite',
     'team:read',
+    'team:manage:assigned',
     'task:read:own',
     'task:read:team',
     'task:assign',
@@ -70,6 +84,8 @@ const MATRIX: Record<Role, readonly Permission[] | '*'> = {
   ],
   EMPLOYEE: [
     'company:read',
+    // Scoped by the handler to the teams the employee actually belongs to.
+    'team:read',
     'task:read:own',
     'achievement:read',
     'reward:read',

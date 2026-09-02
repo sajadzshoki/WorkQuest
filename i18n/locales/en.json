@@ -58,7 +58,9 @@
     "main": "Main navigation",
     "account": "Account",
     "collapse": "Collapse menu",
-    "expand": "Expand menu"
+    "expand": "Expand menu",
+    "members": "Employees",
+    "invitations": "Invitations"
   },
   "auth": {
     "loginTitle": "Sign in to WorkQuest",
@@ -199,6 +201,18 @@
       "REJECTED": "Rejected",
       "FULFILLED": "Fulfilled",
       "CANCELLED": "Cancelled"
+    },
+    "user": {
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "DEACTIVATED": "Deactivated",
+      "INVITED": "Invited"
+    },
+    "invitation": {
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REVOKED": "Revoked",
+      "EXPIRED": "Expired"
     }
   },
   "priority": {
@@ -232,7 +246,39 @@
     "lead": "Team lead",
     "manager": "Direct manager",
     "noTeams": "You are not in a team yet",
-    "noMembers": "No members yet"
+    "noMembers": "No members yet",
+    "create": "New team",
+    "createTitle": "Create a team",
+    "createSubtitle": "You can set the lead and members right after creating it.",
+    "createSuccess": "Team created",
+    "nameLabel": "Team name",
+    "namePlaceholder": "e.g. Product team",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What does this team do?",
+    "openTeam": "Team details",
+    "notFound": "This team was not found, or you may not view it",
+    "aboutTitle": "About this team",
+    "noLead": "No lead assigned",
+    "noManager": "No direct manager",
+    "createdAt": "Created",
+    "delete": "Delete team",
+    "deleteConfirm": "Delete the team “{name}”? Members stay in the company but lose this membership.",
+    "deleteSuccess": "Team deleted",
+    "editTitle": "Edit team",
+    "editSuccess": "Team updated",
+    "addMember": "Add member",
+    "addMemberTitle": "Add a member to the team",
+    "addMemberSubtitle": "Only people who are not in a team yet appear here.",
+    "addSuccess": "Member added to the team",
+    "removeMember": "Remove",
+    "removeMemberConfirm": "Remove “{name}” from this team?",
+    "candidateLabel": "Member",
+    "noCandidates": "Nobody left to add",
+    "noCandidatesHint": "Everyone in the company already belongs to a team.",
+    "errors": {
+      "generic": "That did not work"
+    },
+    "leadNeedsManager": "promote them to Team manager first"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -352,5 +398,105 @@
       }
     },
     "footer": "Built for Iranian teams"
+  },
+  "members": {
+    "title": "Employees",
+    "subtitle": "Add, edit and manage the people in your company",
+    "searchPlaceholder": "Search by name, job title or phone number",
+    "total": "{count} people",
+    "you": "You",
+    "noJobTitle": "No job title",
+    "noTeam": "No team",
+    "memberCount": "{count} members",
+    "backToList": "Back to employees",
+    "notFound": "This person was not found, or you may not view their profile",
+    "removeConfirm": "Remove “{name}” from the company? Their access is revoked immediately.",
+    "empty": {
+      "title": "No employees yet",
+      "description": "Invite your first colleague with their phone number.",
+      "descriptionReadOnly": "You are not a member of any team yet."
+    },
+    "filters": {
+      "team": "All teams",
+      "role": "All roles"
+    },
+    "actions": {
+      "view": "View profile",
+      "remove": "Remove from company"
+    },
+    "invite": {
+      "cta": "Invite colleague",
+      "title": "Invite a colleague",
+      "subtitle": "They join with an SMS code — there are no passwords in WorkQuest.",
+      "phoneLabel": "Phone number",
+      "phoneHint": "e.g. +989121234567",
+      "nameLabel": "Full name",
+      "namePlaceholder": "e.g. Sara Mohammadi",
+      "jobTitleLabel": "Job title",
+      "jobTitlePlaceholder": "e.g. Senior developer",
+      "teamLabel": "Team",
+      "roleLabel": "Role",
+      "expiryLabel": "Invitation validity",
+      "expiryOption": "{count} days",
+      "noTeam": "No team",
+      "noticeTitle": "What will they see?",
+      "noticeDetail": "After signing in with their SMS code they see this invitation and accept it in one tap.",
+      "submit": "Send invitation",
+      "sending": "Sending…",
+      "successTitle": "Invitation sent",
+      "successDetail": "{name} can now sign in with their phone number.",
+      "errors": {
+        "generic": "Could not send the invitation"
+      }
+    },
+    "detail": {
+      "profile": "Profile",
+      "role": "Company role",
+      "status": "Status",
+      "team": "Team",
+      "lastLogin": "Last sign-in",
+      "neverLoggedIn": "Has not signed in yet",
+      "subordinates": "Direct reports",
+      "gamification": "Points and performance",
+      "performance": "Performance summary",
+      "overdue": "Overdue",
+      "achievements": "Achievements",
+      "noAchievements": "No achievements unlocked yet"
+    },
+    "edit": {
+      "title": "Edit member",
+      "success": "Changes saved",
+      "managerNotice": "As a team manager you can change the job title and team; role changes belong to company admins.",
+      "errors": {
+        "generic": "Could not save the changes"
+      }
+    }
+  },
+  "invitations": {
+    "title": "Invitations",
+    "subtitle": "Invitations you sent and whether they were accepted",
+    "empty": "No invitations in this state",
+    "emptyHint": "Use “Invite colleague” to send the first one.",
+    "expires": "Validity",
+    "daysLeft": "{count} days left",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke the invitation for “{name}”?",
+    "revoked": "Invitation revoked",
+    "noJobTitle": "No job title",
+    "teamLabel": "Team",
+    "errors": {
+      "generic": "That did not work"
+    },
+    "verifySuccess": "Code verified",
+    "verifySuccessDetail": "You have an invitation waiting.",
+    "joinTitle": "Your invitation",
+    "joinSubtitle": "The company below invited you. Accepting creates your account inside it.",
+    "nonePending": "There is no valid invitation for this number",
+    "acceptButton": "Accept and sign in",
+    "acceptNotice": "Your role and team were set by the company and are visible once you sign in.",
+    "joinAs": "Join as {name}",
+    "joinAsDetail": "Your role in this company: {role}",
+    "joinedTitle": "Welcome",
+    "joinedDetail": "You joined “{company}”."
   }
 }

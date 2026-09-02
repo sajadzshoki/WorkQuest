@@ -13,7 +13,8 @@ import { usePrisma } from './db'
  * Rules:
  *  - models listed in TENANT_MODELS always carry `companyId`;
  *  - `Company`, `OtpCode`, `Session` and `OnboardingTicket` are deliberately
- *    excluded (pre-auth or tenant root);
+ *    excluded (pre-auth or tenant root). `Invitation` **is** scoped — the
+ *    pre-auth lookup goes through `usePrisma()` directly, never this client;
  *  - an explicit `companyId` that disagrees with the session is a hard error,
  *    never a silent override.
  */
@@ -21,6 +22,7 @@ export const TENANT_MODELS = [
   'User',
   'Team',
   'TeamMember',
+  'Invitation',
   'Level',
   'UserProgress',
   'XpTransaction',

@@ -7,15 +7,22 @@ import { issueSession, startSession, toCompanySummary, toUserSummary } from '../
 import { usePrisma } from '../../../utils/db'
 import { errors, readValidated } from '../../../utils/http'
 import { verifyOtpCode } from '../../../utils/crypto'
+import { issueInvitationTicket, listPendingInvitationsForPhone } from '../../../utils/invitation'
 import { issueOnboardingTicket } from '../../../utils/onboarding'
 
 /**
  * Step 2 of authentication: verify the code.
  *
- * Two outcomes:
- *  - the phone belongs to an active account → open a session;
- *  - it does not → issue a single-use onboarding ticket so the founder can
- *    create a company (see `server/utils/onboarding.ts`).
+ * Three outcomes, checked in this order:
+ *  1. the phone belongs to an active account → open a session;
+ *  2. a company has invited this phone → issue an **invitation** ticket, so
+ *     the invitee accepts an existing invitation (see
+ *     `server/utils/invitation.ts`) instead of founding their own company;
+ *  3. neither → issue an **onboarding** ticket so they can register a company
+ *     (see `server/utils/onboarding.ts`).
+ *
+ * The order is a security property, not a convenience: an invited phone must
+ * not be able to sidestep the invitation and self-register as an OWNER.
  *
  * The code itself is checked as a scrypt digest, expires after
  * `otpTtlSeconds`, and is burned after `otpMaxAttempts` wrong guesses.
@@ -77,6 +84,19 @@ export default defineEventHandler(async (event): Promise<VerifyOtpResponse> => {
   }
 
   if (!user) {
+    // Invited? Joining beats self-registration — the invitation carries the
+    // role the company decided on, so it must not be bypassable.
+    const invitations = await listPendingInvitationsForPhone(normalized)
+    if (invitations.length > 0) {
+      const ticket = await issueInvitationTicket(event, normalized)
+      return {
+        status: 'invitation_pending',
+        phone: normalized,
+        expiresAt: ticket.expiresAt.toISOString(),
+        invitationCount: invitations.length,
+      }
+    }
+
     const ticket = await issueOnboardingTicket(event, normalized)
     return {
       status: 'onboarding_required',

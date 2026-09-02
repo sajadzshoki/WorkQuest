@@ -150,3 +150,58 @@ export function freshPhone(): string {
 export function assertHarnessReady(): void {
   requiredEnv('WORKQUEST_TEST_URL')
 }
+
+// ---------------------------------------------------------------------------
+// Signing in
+// ---------------------------------------------------------------------------
+
+/**
+ * Request a code and return it, as the OTP provider delivered it.
+ *
+ * Retries through the resend cooldown: that is real server behaviour with its
+ * own test in the auth suite, but it keeps tripping up any test that reuses a
+ * phone, so the helper absorbs it.
+ */
+export async function requestCode(
+  client: ApiClient,
+  phone: string,
+  purpose: 'LOGIN' | 'REGISTER' = 'LOGIN',
+): Promise<string> {
+  forgetCode()
+
+  let result = await client.request('/api/auth/otp/request', {
+    method: 'POST',
+    body: { phone, purpose },
+  })
+
+  for (let attempt = 0; attempt < 8 && result.status === 429; attempt += 1) {
+    await sleep(1500)
+    forgetCode()
+    result = await client.request('/api/auth/otp/request', {
+      method: 'POST',
+      body: { phone, purpose },
+    })
+  }
+
+  if (result.status !== 200) {
+    throw new Error(`OTP request for ${phone} failed: ${result.status} ${JSON.stringify(result.body)}`)
+  }
+
+  return latestCode(phone)
+}
+
+/** Sign a phone in and hand back the client holding its session cookie. */
+export async function signIn(phone: string): Promise<ApiClient> {
+  const client = new ApiClient()
+  const code = await requestCode(client, phone)
+  const result = await client.request('/api/auth/otp/verify', {
+    method: 'POST',
+    body: { phone, code },
+  })
+
+  if (result.status !== 200) {
+    throw new Error(`Sign-in for ${phone} failed: ${result.status} ${JSON.stringify(result.body)}`)
+  }
+
+  return client
+}

@@ -2,11 +2,18 @@
 
 Persian-first, multi-tenant employee performance management SaaS with a gamification layer.
 
-This repository is the **foundation phase (phase 0)**: architecture, design system, RTL/i18n
-plumbing, database layer, server API conventions and the authentication/authorization skeleton.
+Implemented so far:
+
+- **Phase 0 — foundation.** Architecture, design system, RTL/i18n plumbing, database layer,
+  server API conventions, and the authentication/authorization skeleton.
+- **Phase 1 — authentication.** Phone-OTP sign-in with a pluggable delivery transport, revocable
+  JWT sessions, and self-service company registration for founders.
+- **Phase 2 — people and teams.** Employee invitation by phone, acceptance through OTP, role and
+  scope management, and team CRUD with a one-primary-team rule.
+
 Product features (task assignment, review workflows, reward redemption, challenge engine) are
 modelled in the database and stubbed as read-only endpoints, but are **not** implemented yet —
-see [Remaining work](#remaining-work-for-phase-1).
+see [Remaining work](#11-remaining-work).
 
 ---
 
@@ -91,22 +98,27 @@ app/                          # everything rendered in the browser (Nuxt 4 srcDi
     layout/                   # shell: sidebar, topbar, mobile tab bar, switchers
     common/                   # PageHeader, SectionCard, EmptyState
     gamification/             # XpProgress, StatTile, StreakPill, status/priority badges
+    members/                  # RoleBadge, StatusBadge, InviteModal
     auth/                     # OtpCodeInput, OnboardingStepper
-  composables/                # useSession, useOnboarding, useCan, useLocaleFormat, useNavItems…
+  composables/                # useSession, useOnboarding, useInvitation, useCan,
+                              # useLocaleFormat, useNavItems…
   layouts/                    # default (app shell), auth, landing
-  middleware/                 # auth.ts, guest.ts, onboarding.ts (route guards)
-  pages/                      # index, login, onboarding, dashboard, tasks, team, …
+  middleware/                 # auth.ts, guest.ts, onboarding.ts, invitation.ts (route guards)
+  pages/                      # index, login, onboarding, dashboard, tasks, team, team/[id],
+                              # members, members/[id], invitations, invitations/join, …
 i18n/locales/                 # fa.json (source of truth), en.json
 server/
   middleware/1.auth-context.ts# resolves the session cookie → event.context.auth
-  utils/                      # db, tenant, auth, session, onboarding, http, otp, crypto,
-                              # error-handler
+  utils/                      # db, tenant, auth, session, onboarding, invitation, members,
+                              # http, otp, crypto, error-handler
   api/                        # one file per endpoint (Nitro file routing)
+                              #   auth/, members/, invitations/, teams/, tasks/, …
 shared/                       # code shared by client and server
   constants.ts                # default level ladder, supported timezones/locales
   schemas/                    # zod request/query schemas
-  types/                      # API contracts (AuthContext, MeResponse, onboarding payloads)
-  utils/                      # permissions matrix, XP maths, locale formatting, slugify
+  types/                      # API contracts (AuthContext, MeResponse, member/team payloads)
+  utils/                      # permissions matrix, member-scope rules, XP maths,
+                              # locale formatting, slugify
 prisma/
   schema.prisma               # domain model
   migrations/                 # SQL migrations
@@ -141,7 +153,9 @@ const tasks = await db.task.findMany({ where: { status: 'ASSIGNED' } })
 2. stamps `companyId` on every `create` / `createMany` / `upsert`;
 3. **throws** if a handler passes a `companyId` that disagrees with the session.
 
-`Company`, `OtpCode` and `Session` are intentionally outside that list (tenant root / pre-auth).
+`Company`, `OtpCode`, `Session` and `OnboardingTicket` are intentionally outside that list
+(tenant root / pre-auth). `Invitation` **is** scoped — the pre-auth lookup that an invitee's
+ticket performs goes through `usePrisma()` directly, never through this client.
 
 Layers, in order:
 
@@ -149,12 +163,27 @@ Layers, in order:
 | --- | --- | --- |
 | Session | `server/middleware/1.auth-context.ts` | verify JWT, load user + session row, attach `event.context.auth` |
 | RBAC | `shared/utils/permissions.ts` + `server/utils/auth.ts` | `can(role, permission)`, `requirePermission(event, …)` |
-| Scope | `resolveVisibleUserIds(auth, scope)` | managers only see their (transitive) reports |
+| Scope | `shared/utils/member-scope.ts` | *which rows* a role may reach |
 | Tenant | `server/utils/tenant.ts` | hard `companyId` filter on every query |
 
 Roles are deliberately flat — `OWNER`, `ADMIN`, `MANAGER`, `EMPLOYEE` — with higher roles
 inheriting everything below. Manager authority comes from the `TeamMember.managerId` graph, not
 from a second permission system.
+
+The matrix answers "may this role act at all"; `shared/utils/member-scope.ts` answers "on which
+rows". Keeping those helpers **pure** (subject in, boolean out) is what makes the whole model
+unit-testable without a database:
+
+| Rule | OWNER / ADMIN | MANAGER | EMPLOYEE |
+| --- | --- | --- | --- |
+| `visibleMemberScope` | whole company (`null`) | self + transitive reports | self only |
+| `memberPermissions.canEdit` | anyone but self | own reports | nobody, incl. self |
+| `memberPermissions.canChangeRole` | anyone but self, never an OWNER | never | never |
+| `canEditTeam` | any team | teams they lead | none |
+| `maxAssignableRole` | `ADMIN` | `EMPLOYEE` | — |
+
+Two invariants follow from those rules and are enforced server-side, not in the UI: **nobody
+changes their own role**, and **a company always keeps at least one active OWNER**.
 
 ---
 
@@ -177,15 +206,39 @@ Current endpoints:
 | `GET` | `/api/health` | public |
 | `POST` | `/api/auth/otp/request` | public (rate limited) |
 | `POST` | `/api/auth/otp/verify` | public |
+| `GET` | `/api/auth/onboarding` | onboarding ticket |
+| `POST` | `/api/auth/onboarding/complete` | onboarding ticket |
+| `GET` | `/api/auth/invitations` | invitation ticket |
+| `POST` | `/api/auth/invitations/accept` | invitation ticket |
 | `DELETE` | `/api/auth/session` | required |
 | `GET` | `/api/me` | required |
 | `GET` | `/api/dashboard/summary` | required |
 | `GET` | `/api/tasks` | required (`scope=mine\|team\|all`) |
-| `GET` | `/api/teams` | required |
 | `GET` | `/api/leaderboard` | required |
 | `GET` | `/api/achievements` | required |
 | `GET` | `/api/rewards` | required |
 | `GET` | `/api/notifications` | required |
+| `GET` | `/api/companies/slug` | public (boolean only) |
+
+People and teams:
+
+| Method | Path | Auth |
+| --- | --- | --- |
+| `GET` | `/api/members` | `member:read` (`scope=mine\|team\|all`; `all` is admin-only) |
+| `GET` | `/api/members/:id` | self, own reports, or admin |
+| `PATCH` | `/api/members/:id` | admin; managers only retitle/move their reports |
+| `DELETE` | `/api/members/:id` | `member:manage` |
+| `POST` | `/api/members/invite` | `member:invite` |
+| `GET` | `/api/invitations` | `member:invite` (managers see only their own) |
+| `DELETE` | `/api/invitations/:id` | admin, or the inviter |
+| `GET` | `/api/teams` | required (scoped to the teams you lead or staff) |
+| `POST` | `/api/teams` | `team:manage` |
+| `GET` | `/api/teams/:id` | lead, member, their manager, or admin |
+| `PATCH` | `/api/teams/:id` | `team:manage`; a lead may only rename their own |
+| `DELETE` | `/api/teams/:id` | `team:manage` |
+| `POST` | `/api/teams/:id/members` | `team:manage` or the team's lead |
+| `PATCH` | `/api/teams/:id/members/:userId` | `team:manage` or the team's lead |
+| `DELETE` | `/api/teams/:id/members/:userId` | `team:manage` or the team's lead |
 
 ---
 
@@ -250,6 +303,50 @@ makes it revocable and replay-proof.
 The phone comes from the ticket and the role is assigned server-side — neither is an input, so a
 caller cannot register a number they do not control or grant themselves a higher role.
 
+### Employee invitation
+
+Adding a person to an existing company is a separate flow, because the company and the role
+already exist:
+
+```
+manager enters phone/name/title/team/role
+   → Invitation row (PENDING)
+   → invitee signs in with an OTP
+   → verify returns `invitation_pending` + invitation ticket
+   → /invitations/join → accept → EMPLOYEE/MANAGER session in that company
+```
+
+`POST /api/auth/otp/verify` has **three** outcomes, checked in this order: an existing account
+opens a session; otherwise a pending invitation issues an *invitation* ticket; otherwise an
+onboarding ticket. The order is a security property — an invited phone must not be able to
+sidestep the invitation and self-register as an `OWNER`.
+
+Invitations are their own table rather than `User` rows with `status = INVITED`:
+
+- the invitee has no account yet, and a phantom user would appear in the people list unable to
+  sign in;
+- one phone may be invited by several companies at once;
+- invitations expire and can be revoked, which must not touch the user table.
+
+`pendingPhone` carries the phone only while the invitation is open and is nulled on
+accept/revoke/expire, so the unique `(companyId, pendingPhone)` index enforces "one open
+invitation per company and phone" while keeping the history of closed ones (Postgres treats
+NULLs as distinct).
+
+`POST /api/auth/invitations/accept` takes **only** the invitation id. Phone comes from the
+ticket; company, role, team, name and title come from the invitation row. The ticket and the
+invitation are both closed inside one transaction, so neither a double submit nor a concurrent
+revoke can produce two accounts. Acceptance also creates the `UserProgress` row, the optional
+`TeamMember`, a notification for the inviter, and an audit entry.
+
+Scope limits on inviting:
+
+| Caller | Role they may grant | Teams they may invite into | Invitations they may see |
+| --- | --- | --- | --- |
+| OWNER / ADMIN | up to `ADMIN` | any | all |
+| MANAGER | `EMPLOYEE` only | teams they lead | their own |
+| EMPLOYEE | — | — | — (403) |
+
 ### Public API routes
 
 `server/middleware/1.auth-context.ts` holds an explicit allowlist of routes reachable without a
@@ -261,10 +358,11 @@ already-public prefix is not enough — add the exact path.
 
 ## 7. Data model
 
-24 tables, grouped by concern:
+26 tables, grouped by concern:
 
 - **Tenancy & auth** — `Company`, `User`, `OtpCode`, `Session`, `OnboardingTicket`
-- **Structure** — `Team`, `TeamMember` (carries `managerId`, the manager-scope edge)
+- **Structure** — `Team`, `TeamMember` (carries `managerId`, the manager-scope edge),
+  `Invitation`
 - **Gamification** — `Level`, `UserProgress`, `XpTransaction`, `CoinTransaction`, `Achievement`,
   `UserAchievement`, `Badge`, `UserBadge`, `Recognition`
 - **Work** — `Task`, `TaskReview`
@@ -279,6 +377,10 @@ Conventions:
 - Counters (`xp`, `coins`, streaks) are denormalised in `UserProgress`, but every change must be
   mirrored by an immutable `XpTransaction` / `CoinTransaction` ledger row.
 - Statuses are enums, not free text.
+- `TeamMember` is unique on `(companyId, userId)` as well as `(teamId, userId)`: **one primary
+  team per employee** is a data rule, not a UI convention. The endpoints that would create a
+  second membership answer `409` naming the team the person is already in, rather than letting
+  the unique index surface as a `500`.
 
 ---
 
@@ -341,9 +443,10 @@ npm run test:integration    # real server + real PostgreSQL, over HTTP
 ```
 
 `npm test` covers the framework-free layers (`shared/**` and `server/utils/crypto`) and needs no
-database. `npm run test:integration` boots a real dev server against the configured database and
-drives the API over HTTP: registration, login, invalid/expired/brute-forced codes, unauthorized
-access and cross-company isolation.
+database — including the whole role × action scope matrix in `test/member-scope.test.ts`.
+`npm run test:integration` boots a real dev server against the configured database and drives the
+API over HTTP: registration, login, invalid/expired/brute-forced codes, unauthorized access,
+cross-company isolation, and the full invitation lifecycle for every role combination.
 
 The integration runner (`scripts/run-integration.sh`) starts its own server on `TEST_PORT`
 (default 3100), so it must not collide with a running `npm run dev`. It boots the server from a
@@ -353,7 +456,7 @@ provider prints from that output.
 
 ---
 
-## 11. Remaining work for phase 1
+## 11. Remaining work
 
 **Writes / core loop**
 
@@ -373,15 +476,23 @@ provider prints from that output.
 
 **Administration**
 
-- Member management (invite by phone/email, role changes, suspend).
+- ~~Member management~~ — done in phase 2 (invite by phone, role changes, suspend, remove,
+  team CRUD, invitation lifecycle).
+- Transferring company ownership. Deliberately absent: nobody can change an `OWNER` role today,
+  so a tenant cannot be left ownerless by accident either.
+- Assigning a member's **direct manager** from the UI. The field and its validation exist
+  (`TeamMember.managerId`, `MANAGER_NOT_IN_TEAM`); only the owner/manager-facing control is
+  missing, so manager scope currently comes from the seed data.
 - Company settings: level ladder editor, reward catalogue, achievement catalogue.
 - Cross-company identity (`Membership` join model) if a person must belong to several tenants.
+  Today `User` is per-company and `TeamMember` is unique per company, so one person per tenant.
 
 **Platform**
 
 - Company profile editing (name, logo upload, timezone) — the onboarding form only creates them.
-- Invite-based onboarding for the other three roles; self-service signup currently creates owners.
-- Browser tests (Playwright) for the wizard; the HTTP-level flows are already covered.
+- Avatar upload for members; the profile shows initials until then.
+- Browser tests (Playwright) for the wizard and the people screens; the HTTP-level flows are
+  already covered.
 - Structured logging, request IDs and error reporting.
 - CI pipeline: `npm run verify` + migration dry-run.
 - Persian/English parity pass on `en.json` once the UI settles.

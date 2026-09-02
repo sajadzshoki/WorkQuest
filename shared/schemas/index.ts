@@ -111,3 +111,102 @@ export const leaderboardRangeSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(10),
 })
 export type LeaderboardRangeInput = z.infer<typeof leaderboardRangeSchema>
+
+// ---------------------------------------------------------------------------
+// People & teams
+// ---------------------------------------------------------------------------
+
+const jobTitleSchema = z.string().trim().max(80).optional().or(z.literal(''))
+
+/** `POST /api/members/invite` — an admin or manager invites an employee. */
+export const inviteMemberSchema = z.object({
+  phone: phoneSchema,
+  fullName: z.string().trim().min(3, 'نام و نام خانوادگی را کامل وارد کنید').max(80),
+  jobTitle: jobTitleSchema,
+  teamId: z.string().uuid('تیم انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+  role: z.enum(['ADMIN', 'MANAGER', 'EMPLOYEE']).default('EMPLOYEE'),
+  /** Days the invitation stays open; capped again on the server. */
+  expiresInDays: z.coerce.number().int().min(1).max(30).default(7),
+})
+export type InviteMemberInput = z.infer<typeof inviteMemberSchema>
+
+/**
+ * `PATCH /api/members/:id`.
+ *
+ * Everything is optional because the endpoint serves several distinct actions
+ * (rename, retitle, move team, change role, suspend). `role` and `status` are
+ * additionally gated to OWNER/ADMIN in the handler — a MANAGER can move people
+ * between their teams but never promote anyone.
+ */
+export const updateMemberSchema = z.object({
+  fullName: z.string().trim().min(3).max(80).optional(),
+  jobTitle: jobTitleSchema,
+  role: z.enum(['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE']).optional(),
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'DEACTIVATED']).optional(),
+  teamId: z.string().uuid('تیم انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+  /** Direct manager inside the team — the manager-scope edge. */
+  managerId: z.string().uuid('مدیر انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+})
+export type UpdateMemberInput = z.infer<typeof updateMemberSchema>
+
+/** `GET /api/members` */
+export const memberListSchema = paginationSchema.extend({
+  search: z.string().trim().max(80).optional(),
+  teamId: z.string().uuid().optional(),
+  role: z.enum(['OWNER', 'ADMIN', 'MANAGER', 'EMPLOYEE']).optional(),
+  /** `mine` = the caller plus their subordinates, `all` = the whole company. */
+  scope: z.enum(['mine', 'team', 'all']).default('mine'),
+})
+export type MemberListInput = z.infer<typeof memberListSchema>
+
+/** `POST /api/teams` */
+export const createTeamSchema = z.object({
+  name: z.string().trim().min(2, 'نام تیم را وارد کنید').max(80),
+  description: z.string().trim().max(300).optional().or(z.literal('')),
+  slug: z
+    .string()
+    .trim()
+    .max(60)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'آدرس تیم فقط می‌تواند شامل حروف کوچک انگلیسی، عدد و خط تیره باشد')
+    .optional()
+    .or(z.literal('')),
+  leadId: z.string().uuid('سرپرست انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+})
+export type CreateTeamInput = z.infer<typeof createTeamSchema>
+
+/** `PATCH /api/teams/:id` */
+export const updateTeamSchema = createTeamSchema.partial()
+export type UpdateTeamInput = z.infer<typeof updateTeamSchema>
+
+/** `POST /api/teams/:id/members` */
+export const addTeamMemberSchema = z.object({
+  userId: z.string().uuid('کاربر انتخاب‌شده معتبر نیست'),
+  role: z.enum(['LEAD', 'MEMBER']).default('MEMBER'),
+  managerId: z.string().uuid().optional().or(z.literal('')),
+})
+export type AddTeamMemberInput = z.infer<typeof addTeamMemberSchema>
+
+/** `PATCH /api/teams/:id/members/:userId` */
+export const updateTeamMemberSchema = z.object({
+  role: z.enum(['LEAD', 'MEMBER']).optional(),
+  managerId: z.string().uuid().optional().or(z.literal('')),
+})
+export type UpdateTeamMemberInput = z.infer<typeof updateTeamMemberSchema>
+
+/** `GET /api/invitations` */
+export const invitationListSchema = paginationSchema.extend({
+  status: z.enum(['PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED']).default('PENDING'),
+})
+export type InvitationListInput = z.infer<typeof invitationListSchema>
+
+/**
+ * `POST /api/auth/invitations/accept`.
+ *
+ * Only the invitation id is accepted. Everything that decides *who the new
+ * user becomes* — phone, company, role, team, name, job title — is read from
+ * the invitation row and the verified ticket, never from this body.
+ */
+export const acceptInvitationSchema = z.object({
+  invitationId: z.string().uuid('دعوت‌نامه انتخاب‌شده معتبر نیست'),
+})
+export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>

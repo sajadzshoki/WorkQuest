@@ -62,6 +62,19 @@ async function submit() {
       return
     }
 
+    if (result.status === 'invitation_pending') {
+      // A company is waiting on this phone — joining takes priority over
+      // self-service registration, because the invitation carries the role.
+      toast.add({
+        title: t('invitations.verifySuccess'),
+        description: t('invitations.verifySuccessDetail'),
+        color: 'success',
+        icon: 'i-heroicons-envelope-open',
+      })
+      await router.push(localePath('/invitations/join'))
+      return
+    }
+
     await refresh()
     toast.add({
       title: t('auth.welcomeBack', { name: result.user.fullName }),

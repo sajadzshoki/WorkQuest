@@ -14,6 +14,10 @@ import { readSessionToken, setSessionCookie, tokenNeedsRenewal, signSessionToken
  *  - `/api/auth/otp/*`        pre-auth by definition; guarded by rate limits.
  *  - `/api/health`            liveness probe.
  *  - `/api/auth/onboarding`   guarded by the httpOnly onboarding ticket.
+ *  - `/api/auth/invitations`  guarded by the httpOnly invitation ticket, which
+ *                             only ever answers for the phone it was issued
+ *                             to and can accept an invitation, never create a
+ *                             company.
  *  - `/api/companies/slug`    returns a boolean only; used before any session
  *                             exists. Deliberately an exact path so the rest of
  *                             `/api/companies/*` stays behind the session.
@@ -23,6 +27,8 @@ const PUBLIC_API_ROUTES = [
   '/api/auth/otp/verify',
   '/api/auth/onboarding',
   '/api/auth/onboarding/complete',
+  '/api/auth/invitations',
+  '/api/auth/invitations/accept',
   '/api/companies/slug',
   '/api/health',
 ]

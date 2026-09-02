@@ -45,6 +45,13 @@ enum OtpPurpose {
   REGISTER
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
 enum UserStatus {
   INVITED
   ACTIVE
@@ -155,6 +162,8 @@ enum NotificationType {
   REDEMPTION_UPDATE
   RECOGNITION_RECEIVED
   CHALLENGE_UPDATE
+  INVITATION
+  TEAM_UPDATE
   SYSTEM
 }
 
@@ -203,6 +212,7 @@ model Company {
   participants  ChallengeParticipant[]
   notifications Notification[]
   auditLogs     AuditLog[]
+  invitations   Invitation[]
 }
 
 /// A person inside a company. One user row == one company membership.
@@ -243,6 +253,8 @@ model User {
   notifications   Notification[]
   sessions        Session[]
   auditLogs       AuditLog[]
+  invitationsSent     Invitation[] @relation("InvitationInviter")
+  invitationsAccepted Invitation[] @relation("InvitationAccepted")
 
   @@unique([companyId, email])
   @@unique([companyId, phone])
@@ -327,8 +339,9 @@ model Team {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members TeamMember[]
-  tasks   Task[]
+  members     TeamMember[]
+  tasks       Task[]
+  invitations Invitation[]
 
   @@unique([companyId, slug])
   @@index([companyId])
@@ -349,6 +362,9 @@ model TeamMember {
   joinedAt  DateTime  @default(now())
 
   @@unique([teamId, userId])
+  /// One primary team per employee: a second membership in the same company is
+  /// a data error, not a feature.
+  @@unique([companyId, userId])
   @@index([companyId, userId])
   @@index([companyId, managerId])
 }
@@ -374,6 +390,50 @@ model Level {
 
 /// Denormalised counters for a user. Mutations must always be paired with a
 /// ledger row so the numbers stay explainable.
+///
+/// A pending employee invitation.
+///
+/// Invitations are deliberately **not** `User` rows: the invitee has no account
+/// yet, may be invited by several companies at once, and the invitation must be
+/// revocable and expirable without touching the user table. Accepting one is
+/// what creates the `User`.
+///
+/// `pendingPhone` carries the phone only while the invitation is open, and is
+/// nulled when it is accepted/revoked/expired. PostgreSQL treats NULLs as
+/// distinct in unique indexes, so this enforces "at most one open invitation per
+/// company + phone" while keeping the full history of closed ones.
+///
+model Invitation {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  companyId    String           @db.Uuid
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  phone        String
+  /// Set while PENDING, cleared afterwards — see the note above.
+  pendingPhone String?
+  fullName     String
+  jobTitle     String?
+  teamId       String?          @db.Uuid
+  team         Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  /// The role the invitee receives on acceptance. Never client-controlled for
+  /// anyone below ADMIN.
+  role         UserRole         @default(EMPLOYEE)
+  status       InvitationStatus @default(PENDING)
+  invitedById  String           @db.Uuid
+  invitedBy    User             @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+  /// The user created when the invitation was accepted.
+  acceptedById String?          @db.Uuid
+  acceptedBy   User?            @relation("InvitationAccepted", fields: [acceptedById], references: [id], onDelete: SetNull)
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@unique([companyId, pendingPhone])
+  @@index([companyId, status])
+  @@index([phone, status])
+  @@index([expiresAt])
+}
+
 model UserProgress {
   id             String    @id @default(uuid(7)) @db.Uuid
   companyId      String    @db.Uuid
