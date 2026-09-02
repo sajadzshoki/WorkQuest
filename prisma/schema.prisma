@@ -1,0 +1,755 @@
+// ---------------------------------------------------------------------------
+// WorkQuest domain schema.
+//
+// Conventions
+// -----------
+// * Every tenant-owned model carries `companyId` and is listed in
+//   `server/utils/tenant.ts` so the tenant-scoped Prisma client can enforce
+//   isolation automatically (see `createTenantClient`).
+// * Ids are UUIDv7 (`uuid(7)`) so they sort chronologically and shard well.
+// * Timestamps are `createdAt` / `updatedAt`; soft state is modelled with
+//   explicit status enums rather than deleted flags for now.
+// * Counters that drive the gamification loop (XP, coins, streaks) live in
+//   `UserProgress`, and every mutation is accompanied by an immutable ledger
+//   row (`XpTransaction` / `CoinTransaction`) for auditing.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "./generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+/// Why an OTP was requested. A code issued for registration cannot be replayed
+/// to sign in to an existing account, and vice versa.
+enum OtpPurpose {
+  LOGIN
+  REGISTER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum TeamRole {
+  LEAD
+  MEMBER
+}
+
+enum TaskStatus {
+  DRAFT
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ReviewDecision {
+  APPROVED
+  APPROVED_WITH_NOTES
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+enum LedgerSource {
+  TASK_REVIEW
+  ACHIEVEMENT
+  CHALLENGE
+  STREAK
+  RECOGNITION
+  REWARD_REDEMPTION
+  REFUND
+  MANUAL_ADJUSTMENT
+}
+
+enum AchievementType {
+  MILESTONE
+  STREAK
+  SKILL
+  TEAM
+  SPECIAL
+}
+
+enum CatalogStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum RewardType {
+  PHYSICAL
+  VOUCHER
+  TIME_OFF
+  DONATION
+  CUSTOM
+}
+
+enum RedemptionStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  FULFILLED
+  CANCELLED
+}
+
+enum ChallengeStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ENDED
+  CANCELLED
+}
+
+enum ParticipantStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  CLAIMED
+}
+
+enum RecognitionType {
+  PEER
+  MANAGER
+  COMPANY
+  SYSTEM
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_REVIEWED
+  ACHIEVEMENT_UNLOCKED
+  LEVEL_UP
+  REWARD_AVAILABLE
+  REDEMPTION_UPDATE
+  RECOGNITION_RECEIVED
+  CHALLENGE_UPDATE
+  INVITATION
+  TEAM_UPDATE
+  SYSTEM
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy
+// ---------------------------------------------------------------------------
+
+/// A tenant. Every other resource in the system belongs to exactly one company.
+model Company {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  industry  String?
+  /// Default locale for the tenant's UI and digests.
+  locale    String   @default("fa")
+  /// IANA timezone used for streaks, digests and due-date math.
+  timezone  String   @default("Asia/Tehran")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  teams         Team[]
+  teamMembers   TeamMember[]
+  levels        Level[]
+  userProgress  UserProgress[]
+  xpLedger      XpTransaction[]
+  coinLedger    CoinTransaction[]
+  tasks         Task[]
+  taskReviews   TaskReview[]
+  achievements  Achievement[]
+  userAchievements UserAchievement[]
+  badges        Badge[]
+  userBadges    UserBadge[]
+  recognitions  Recognition[]
+  rewards       Reward[]
+  redemptions   RewardRedemption[]
+  challenges    Challenge[]
+  participants  ChallengeParticipant[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  invitations   Invitation[]
+}
+
+/// A person inside a company. One user row == one company membership.
+/// (Cross-company membership would be introduced as a `Membership` join model.)
+model User {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  companyId    String     @db.Uuid
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email        String?
+  /// Iranian mobile number in E.164 form, e.g. +989121234567 — the primary login handle.
+  phone        String?
+  fullName     String
+  avatarUrl    String?
+  jobTitle     String?
+  role         UserRole   @default(EMPLOYEE)
+  status       UserStatus @default(ACTIVE)
+  locale       String     @default("fa")
+  timezone     String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  progress        UserProgress?
+  teamMemberships TeamMember[]
+  managedTeams    TeamMember[]       @relation("TeamMemberManager")
+  ownedTeams      Team[]
+  assignedTasks   Task[]             @relation("TaskAssignee")
+  createdTasks    Task[]             @relation("TaskAssigner")
+  reviews         TaskReview[]
+  achievements    UserAchievement[]
+  badges          UserBadge[]
+  xpLedger        XpTransaction[]
+  coinLedger      CoinTransaction[]
+  recognitionsGiven  Recognition[]   @relation("RecognitionFrom")
+  recognitionsReceived Recognition[] @relation("RecognitionTo")
+  redemptions     RewardRedemption[]
+  participations  ChallengeParticipant[]
+  notifications   Notification[]
+  sessions        Session[]
+  auditLogs       AuditLog[]
+  invitationsSent     Invitation[] @relation("InvitationInviter")
+  invitationsAccepted Invitation[] @relation("InvitationAccepted")
+
+  @@unique([companyId, email])
+  @@unique([companyId, phone])
+  /// Login resolves an account from the phone number across companies, so the
+  /// composite unique index above cannot serve that lookup.
+  @@index([phone])
+  @@index([companyId, role])
+  @@index([companyId, status])
+}
+
+/// Short-lived, pre-authentication one-time password. Deliberately not tenant-scoped:
+/// the company is resolved only after the phone number is verified.
+model OtpCode {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  phone        String
+  purpose      OtpPurpose @default(LOGIN)
+  /// scrypt digest — the plaintext code is never stored.
+  codeHash     String
+  expiresAt    DateTime
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(5)
+  consumedAt   DateTime?
+  requestIp    String?
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+
+  /// Lookup used by verification: newest unconsumed code for a phone+purpose.
+  @@index([phone, purpose, createdAt])
+  /// Housekeeping / abuse review: find codes that expired unused.
+  @@index([expiresAt])
+}
+
+///
+/// Single-use authorisation to finish self-service registration.
+///
+/// Issued after a phone number is OTP-verified but no account exists yet. It
+/// lives in an httpOnly cookie (the browser never sees the id) and is backed by
+/// this row so it can be revoked and is genuinely single-use — a stateless
+/// ticket could otherwise create unlimited companies within its TTL.
+///
+model OnboardingTicket {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  phone      String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, consumedAt])
+  @@index([expiresAt])
+}
+
+/// Server-side session record. The cookie holds a signed JWT carrying `sid`,
+/// which makes sessions revocable without giving up stateless verification.
+model Session {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Structure
+// ---------------------------------------------------------------------------
+
+model Team {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  companyId   String   @db.Uuid
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  leadId      String?  @db.Uuid
+  lead        User?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     TeamMember[]
+  tasks       Task[]
+  invitations Invitation[]
+
+  @@unique([companyId, slug])
+  @@index([companyId])
+}
+
+model TeamMember {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  companyId String    @db.Uuid
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  teamId    String    @db.Uuid
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Direct manager for this membership — the edge used for manager-scoped access.
+  managerId String?   @db.Uuid
+  manager   User?     @relation("TeamMemberManager", fields: [managerId], references: [id], onDelete: SetNull)
+  role      TeamRole  @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+
+  @@unique([teamId, userId])
+  /// One primary team per employee: a second membership in the same company is
+  /// a data error, not a feature.
+  @@unique([companyId, userId])
+  @@index([companyId, userId])
+  @@index([companyId, managerId])
+}
+
+// ---------------------------------------------------------------------------
+// Gamification
+// ---------------------------------------------------------------------------
+
+/// Level ladder for a tenant. `minXp` is the inclusive lower bound of the level.
+model Level {
+  id        String  @id @default(uuid(7)) @db.Uuid
+  companyId String  @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  level     Int
+  minXp     Int
+  /// Human friendly Persian title, e.g. «کاوشگر» or «راهبر».
+  title     String?
+  iconKey   String?
+
+  @@unique([companyId, level])
+  @@index([companyId, minXp])
+}
+
+/// Denormalised counters for a user. Mutations must always be paired with a
+/// ledger row so the numbers stay explainable.
+///
+/// A pending employee invitation.
+///
+/// Invitations are deliberately **not** `User` rows: the invitee has no account
+/// yet, may be invited by several companies at once, and the invitation must be
+/// revocable and expirable without touching the user table. Accepting one is
+/// what creates the `User`.
+///
+/// `pendingPhone` carries the phone only while the invitation is open, and is
+/// nulled when it is accepted/revoked/expired. PostgreSQL treats NULLs as
+/// distinct in unique indexes, so this enforces "at most one open invitation per
+/// company + phone" while keeping the full history of closed ones.
+///
+model Invitation {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  companyId    String           @db.Uuid
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  phone        String
+  /// Set while PENDING, cleared afterwards — see the note above.
+  pendingPhone String?
+  fullName     String
+  jobTitle     String?
+  teamId       String?          @db.Uuid
+  team         Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  /// The role the invitee receives on acceptance. Never client-controlled for
+  /// anyone below ADMIN.
+  role         UserRole         @default(EMPLOYEE)
+  status       InvitationStatus @default(PENDING)
+  invitedById  String           @db.Uuid
+  invitedBy    User             @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+  /// The user created when the invitation was accepted.
+  acceptedById String?          @db.Uuid
+  acceptedBy   User?            @relation("InvitationAccepted", fields: [acceptedById], references: [id], onDelete: SetNull)
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@unique([companyId, pendingPhone])
+  @@index([companyId, status])
+  @@index([phone, status])
+  @@index([expiresAt])
+}
+
+model UserProgress {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  companyId      String    @db.Uuid
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId         String    @unique @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  xp             Int       @default(0)
+  coins          Int       @default(0)
+  levelId        String?   @db.Uuid
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  /// Calendar date (in the user's timezone) of the last activity that fed the streak.
+  lastActiveDate DateTime? @db.Date
+  updatedAt      DateTime  @updatedAt
+
+  @@index([companyId, xp])
+}
+
+/// Immutable XP ledger.
+model XpTransaction {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  companyId     String       @db.Uuid
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId        String       @db.Uuid
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Int
+  source        LedgerSource
+  reason        String?
+  referenceType String?
+  referenceId   String?      @db.Uuid
+  createdAt     DateTime     @default(now())
+
+  @@index([companyId, userId, createdAt])
+  @@index([companyId, source])
+}
+
+/// Immutable coin ledger.
+model CoinTransaction {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  companyId     String       @db.Uuid
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId        String       @db.Uuid
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Int
+  source        LedgerSource
+  reason        String?
+  referenceType String?
+  referenceId   String?      @db.Uuid
+  createdAt     DateTime     @default(now())
+
+  @@index([companyId, userId, createdAt])
+  @@index([companyId, source])
+}
+
+model Achievement {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  companyId   String          @db.Uuid
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// Stable machine key, e.g. `first_approved_task`.
+  key         String
+  title       String
+  description String?
+  type        AchievementType @default(MILESTONE)
+  /// Declarative rule evaluated by the Phase 1 rule engine.
+  criteria    Json            @default("{}")
+  xpReward    Int             @default(0)
+  coinReward  Int             @default(0)
+  iconKey     String?
+  status      CatalogStatus   @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  unlocks UserAchievement[]
+  badges  Badge[]
+
+  @@unique([companyId, key])
+  @@index([companyId, status])
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid(7)) @db.Uuid
+  companyId     String      @db.Uuid
+  company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId        String      @db.Uuid
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String      @db.Uuid
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  progress      Json        @default("{}")
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([companyId, userId])
+}
+
+model Badge {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  companyId     String        @db.Uuid
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  imageUrl      String?
+  achievementId String?       @db.Uuid
+  achievement   Achievement?  @relation(fields: [achievementId], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+
+  holders UserBadge[]
+
+  @@index([companyId])
+}
+
+model UserBadge {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  companyId String   @db.Uuid
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId   String   @db.Uuid
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+  @@index([companyId, userId])
+}
+
+/// Kudos sent between colleagues.
+model Recognition {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  companyId   String          @db.Uuid
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fromUserId  String          @db.Uuid
+  fromUser    User            @relation("RecognitionFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId    String          @db.Uuid
+  toUser      User            @relation("RecognitionTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  taskId      String?         @db.Uuid
+  task        Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  type        RecognitionType @default(PEER)
+  message     String
+  xpAwarded   Int             @default(0)
+  createdAt   DateTime        @default(now())
+
+  @@index([companyId, toUserId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Work
+// ---------------------------------------------------------------------------
+
+model Task {
+  id           String       @id @default(uuid(7)) @db.Uuid
+  companyId    String       @db.Uuid
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  status       TaskStatus   @default(ASSIGNED)
+  priority     TaskPriority @default(MEDIUM)
+  teamId       String?      @db.Uuid
+  team         Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  assigneeId   String?      @db.Uuid
+  assignee     User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assignerId   String?      @db.Uuid
+  assigner     User?        @relation("TaskAssigner", fields: [assignerId], references: [id], onDelete: SetNull)
+  xpReward     Int          @default(0)
+  coinReward   Int          @default(0)
+  dueDate      DateTime?
+  assignedAt   DateTime?
+  submittedAt  DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  reviews      TaskReview[]
+  recognitions Recognition[]
+
+  @@index([companyId, status])
+  @@index([companyId, assigneeId, status])
+  @@index([companyId, dueDate])
+}
+
+model TaskReview {
+  id            String         @id @default(uuid(7)) @db.Uuid
+  companyId     String         @db.Uuid
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taskId        String         @db.Uuid
+  task          Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reviewerId    String         @db.Uuid
+  reviewer      User           @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  decision      ReviewDecision
+  /// 0-100 quality score driving XP/coin awards.
+  score         Int
+  feedback      String?
+  xpAwarded     Int            @default(0)
+  coinsAwarded  Int            @default(0)
+  createdAt     DateTime       @default(now())
+
+  @@index([companyId, taskId])
+  @@index([companyId, reviewerId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Rewards & challenges
+// ---------------------------------------------------------------------------
+
+model Reward {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  companyId   String        @db.Uuid
+  company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  type        RewardType    @default(CUSTOM)
+  cost        Int
+  stock       Int?
+  imageUrl    String?
+  status      CatalogStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  redemptions RewardRedemption[]
+
+  @@index([companyId, status])
+}
+
+model RewardRedemption {
+  id         String           @id @default(uuid(7)) @db.Uuid
+  companyId  String           @db.Uuid
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  rewardId   String           @db.Uuid
+  reward     Reward           @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  userId     String           @db.Uuid
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     RedemptionStatus @default(REQUESTED)
+  cost       Int
+  note       String?
+  decidedBy  String?
+  decidedAt  DateTime?
+  requestedAt DateTime        @default(now())
+
+  @@index([companyId, userId, status])
+  @@index([companyId, status])
+}
+
+model Challenge {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  companyId   String          @db.Uuid
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  /// Machine key of the tracked metric, e.g. `tasks_approved`.
+  goalKey     String
+  goalValue   Int             @default(1)
+  xpReward    Int             @default(0)
+  coinReward  Int             @default(0)
+  startsAt    DateTime
+  endsAt      DateTime
+  status      ChallengeStatus @default(DRAFT)
+  badgeId     String?         @db.Uuid
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  participants ChallengeParticipant[]
+
+  @@index([companyId, status])
+}
+
+model ChallengeParticipant {
+  id          String            @id @default(uuid(7)) @db.Uuid
+  companyId   String            @db.Uuid
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  challengeId String            @db.Uuid
+  challenge   Challenge         @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userId      String            @db.Uuid
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progress    Int               @default(0)
+  status      ParticipantStatus @default(NOT_STARTED)
+  completedAt DateTime?
+  joinedAt    DateTime          @default(now())
+
+  @@unique([challengeId, userId])
+  @@index([companyId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Messaging & audit
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String             @id @default(uuid(7)) @db.Uuid
+  companyId String             @db.Uuid
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String             @db.Uuid
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String?
+  data      Json               @default("{}")
+  status    NotificationStatus @default(UNREAD)
+  readAt    DateTime?
+  createdAt DateTime           @default(now())
+
+  @@index([companyId, userId, status])
+  @@index([companyId, userId, createdAt])
+}
+
+/// Append-only audit trail for security-relevant and gamification events.
+model AuditLog {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  companyId    String   @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actorId      String?  @db.Uuid
+  actor        User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action       String
+  targetType   String?
+  targetId     String?
+  data         Json     @default("{}")
+  ip           String?
+  createdAt    DateTime @default(now())
+
+  @@index([companyId, action, createdAt])
+  @@index([companyId, actorId])
+}

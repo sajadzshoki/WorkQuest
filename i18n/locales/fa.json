@@ -1,0 +1,502 @@
+{
+  "app": {
+    "name": "ورک‌کوئست",
+    "shortName": "ورک‌کوئست",
+    "tagline": "مدیریت عملکرد کارکنان، با چاشنی بازی",
+    "description": "ورک‌کوئست کار روزمره تیم‌ها را به مسیری شفاف از تسک، بازخورد و پاداش تبدیل می‌کند."
+  },
+  "common": {
+    "loading": "در حال بارگذاری…",
+    "save": "ذخیره",
+    "saving": "در حال ذخیره…",
+    "cancel": "انصراف",
+    "delete": "حذف",
+    "edit": "ویرایش",
+    "search": "جست‌وجو",
+    "searchPlaceholder": "جست‌وجو کنید…",
+    "filter": "فیلتر",
+    "back": "بازگشت",
+    "next": "ادامه",
+    "previous": "قبلی",
+    "confirm": "تأیید",
+    "close": "بستن",
+    "retry": "تلاش دوباره",
+    "optional": "اختیاری",
+    "required": "الزامی",
+    "all": "همه",
+    "status": "وضعیت",
+    "actions": "عملیات",
+    "viewAll": "مشاهده همه",
+    "comingSoon": "به‌زودی",
+    "empty": "موردی وجود ندارد",
+    "yes": "بله",
+    "no": "خیر",
+    "of": "از",
+    "items": "مورد",
+    "page": "صفحه",
+    "language": "زبان",
+    "theme": "پوسته",
+    "light": "روشن",
+    "dark": "تیره",
+    "system": "خودکار",
+    "today": "امروز",
+    "yesterday": "دیروز",
+    "days": "روز",
+    "logout": "خروج از حساب",
+    "copy": "کپی",
+    "copied": "کپی شد"
+  },
+  "nav": {
+    "dashboard": "داشبورد",
+    "tasks": "تسک‌ها",
+    "team": "تیم من",
+    "leaderboard": "جدول امتیازها",
+    "achievements": "دستاوردها",
+    "rewards": "پاداش‌ها",
+    "notifications": "اعلان‌ها",
+    "settings": "تنظیمات",
+    "main": "منوی اصلی",
+    "account": "حساب کاربری",
+    "collapse": "بستن منو",
+    "expand": "باز کردن منو",
+    "members": "کارکنان",
+    "invitations": "دعوت‌نامه‌ها"
+  },
+  "auth": {
+    "loginTitle": "ورود به ورک‌کوئست",
+    "loginSubtitle": "شماره موبایل سازمانی خود را وارد کنید تا کد ورود برایتان ارسال شود.",
+    "phoneLabel": "شماره موبایل",
+    "phonePlaceholder": "۰۹۱۲ ۱۲۳ ۴۵۶۷",
+    "sendCode": "ارسال کد ورود",
+    "sending": "در حال ارسال…",
+    "codeTitle": "کد ورود را وارد کنید",
+    "codeSubtitle": "کد {length} رقمی ارسال‌شده به {phone} را وارد کنید.",
+    "codeLabel": "کد ورود",
+    "verifyCode": "ورود به حساب",
+    "verifying": "در حال بررسی…",
+    "resendCode": "ارسال دوباره کد",
+    "resendIn": "ارسال دوباره تا {seconds} ثانیه دیگر",
+    "changePhone": "تغییر شماره موبایل",
+    "expiresIn": "اعتبار کد تا {seconds} ثانیه",
+    "codeSent": "کد ورود ارسال شد",
+    "welcomeBack": "خوش آمدید، {name}",
+    "signedOut": "با موفقیت خارج شدید",
+    "devHint": "در محیط توسعه، کد ورود در گزارش سرور چاپ می‌شود.",
+    "errors": {
+      "invalidPhone": "شماره موبایل معتبر نیست",
+      "invalidCode": "کد وارد شده نادرست است",
+      "expiredCode": "کد منقضی شده است؛ کد جدید درخواست دهید",
+      "userNotFound": "حسابی با این شماره یافت نشد. با مدیر سازمان تماس بگیرید.",
+      "rateLimited": "کمی بعد دوباره تلاش کنید",
+      "generic": "ورود ناموفق بود"
+    },
+    "orDivider": "یا",
+    "registerTitle": "سازمان شما هنوز عضو نیست؟",
+    "registerSubtitle": "شرکت خود را ثبت کنید و تیمتان را به ورک‌کوئست بیاورید. شماره موبایل بالا برای ساخت حساب مدیر ارشد استفاده می‌شود.",
+    "registerCompany": "ثبت شرکت جدید",
+    "codeTitleRegister": "کد تأیید را وارد کنید",
+    "codeSentDetail": "از طریق درگاه {provider} ارسال شد",
+    "securityNote": "کد ورود هرگز به‌صورت متن ساده ذخیره نمی‌شود و تنها چند دقیقه اعتبار دارد.",
+    "otpSecurityNote": "این کد یک‌بار مصرف است و پس از چند تلاش ناموفق باطل می‌شود."
+  },
+  "onboarding": {
+    "stepsLabel": "مراحل ثبت‌نام",
+    "steps": {
+      "verify": "تأیید موبایل",
+      "profile": "پروفایل شما",
+      "company": "شرکت شما"
+    },
+    "verifySuccess": "شماره موبایل تأیید شد",
+    "verifySuccessDetail": "حالا حساب و شرکت خود را بسازید",
+    "profileTitle": "خودتان را معرفی کنید",
+    "profileSubtitle": "شماره {phone} تأیید شد. این اطلاعات در پروفایل شما به همکارانتان نمایش داده می‌شود.",
+    "fullNameLabel": "نام و نام خانوادگی",
+    "fullNamePlaceholder": "مثلاً ساینا رستمی",
+    "fullNameHint": "حداقل ۳ حرف",
+    "jobTitleLabel": "عنوان شغلی",
+    "jobTitlePlaceholder": "مثلاً مدیرعامل",
+    "companyTitle": "شرکت خود را بسازید",
+    "companySubtitle": "این شرکت فضای کاری تیم شماست و تمام داده‌ها در آن جدا از سایر سازمان‌ها نگهداری می‌شود.",
+    "companyNameLabel": "نام شرکت",
+    "companyNamePlaceholder": "مثلاً نواندیشان پایا",
+    "slugLabel": "آدرس شرکت",
+    "slugHint": "فقط حروف کوچک انگلیسی، عدد و خط تیره",
+    "slugTaken": "این آدرس گرفته شده است.",
+    "slugUseSuggestion": "پیشنهاد ما: {slug}",
+    "industryLabel": "حوزه فعالیت",
+    "industryPlaceholder": "مثلاً فناوری اطلاعات",
+    "timezoneLabel": "منطقه زمانی",
+    "advanced": "تنظیمات پیشرفته",
+    "logoUrlLabel": "آدرس لوگو",
+    "continue": "ادامه",
+    "back": "مرحله قبل",
+    "createCompany": "ساخت شرکت و ورود",
+    "creating": "در حال ساخت شرکت…",
+    "creatingDetail": "فضای کاری شما در حال آماده‌سازی است؛ سطح‌بندی و امتیازهای اولیه ساخته می‌شوند.",
+    "successTitle": "«{company}» ساخته شد",
+    "ticketNotice": "این نشست ثبت‌نام تا {seconds} ثانیه دیگر معتبر است. اگر زمان تمام شد، دوباره کد ورود بگیرید.",
+    "errors": {
+      "fullName": "نام و نام خانوادگی را کامل وارد کنید",
+      "companyName": "نام شرکت را وارد کنید",
+      "generic": "ساخت شرکت ناموفق بود"
+    }
+  },
+  "dashboard": {
+    "greeting": "سلام {name}",
+    "subtitle": "وضعیت امروز شما در یک نگاه",
+    "yourProgress": "پیشرفت شما",
+    "level": "سطح {level}",
+    "xpToNext": "{current} از {needed} امتیاز تا سطح بعد",
+    "weeklySummary": "خلاصه این هفته",
+    "openTasks": "تسک‌های باز",
+    "completedTasks": "تسک‌های انجام‌شده",
+    "pendingReview": "در انتظار بازبینی",
+    "overdue": "گذشته از سررسید",
+    "myTasks": "تسک‌های من",
+    "noOpenTasks": "تسک بازی ندارید. آفرین!",
+    "topPerformers": "پیشروهای سازمان",
+    "recentRecognition": "تقدیرهای اخیر",
+    "noRecognition": "هنوز تقدیری دریافت نکرده‌اید",
+    "activeChallenge": "چالش فعال",
+    "challengeGoal": "هدف: {goal}",
+    "endsIn": "تا پایان {days} روز",
+    "myRank": "رتبه من",
+    "rankValue": "{rank} از {total}"
+  },
+  "tasks": {
+    "title": "تسک‌ها",
+    "subtitle": "کارهای محول‌شده به شما و تیم‌تان",
+    "scope": {
+      "mine": "تسک‌های من",
+      "team": "تیم من",
+      "all": "همه تسک‌ها"
+    },
+    "assignee": "انجام‌دهنده",
+    "team": "تیم",
+    "dueDate": "سررسید",
+    "dueIn": "{days} روز مانده",
+    "dueToday": "سررسید امروز",
+    "overdue": "{days} روز تأخیر",
+    "noDueDate": "بدون سررسید",
+    "rewards": "پاداش",
+    "xp": "{value} امتیاز",
+    "coins": "{value} سکه",
+    "empty": "تسکی با این فیلترها پیدا نشد",
+    "total": "{count} تسک"
+  },
+  "status": {
+    "task": {
+      "DRAFT": "پیش‌نویس",
+      "ASSIGNED": "محول‌شده",
+      "IN_PROGRESS": "در حال انجام",
+      "SUBMITTED": "ارسال‌شده",
+      "APPROVED": "تأیید شده",
+      "CHANGES_REQUESTED": "نیازمند اصلاح",
+      "REJECTED": "رد شده",
+      "CANCELLED": "لغو شده"
+    },
+    "redemption": {
+      "REQUESTED": "درخواست شده",
+      "APPROVED": "تأیید شده",
+      "REJECTED": "رد شده",
+      "FULFILLED": "تحویل شده",
+      "CANCELLED": "لغو شده"
+    },
+    "user": {
+      "ACTIVE": "فعال",
+      "SUSPENDED": "معلق",
+      "DEACTIVATED": "غیرفعال",
+      "INVITED": "دعوت‌شده"
+    },
+    "invitation": {
+      "PENDING": "در انتظار",
+      "ACCEPTED": "پذیرفته‌شده",
+      "REVOKED": "لغو شده",
+      "EXPIRED": "منقضی شده"
+    }
+  },
+  "priority": {
+    "LOW": "کم",
+    "MEDIUM": "متوسط",
+    "HIGH": "زیاد",
+    "URGENT": "فوری"
+  },
+  "gamification": {
+    "xp": "امتیاز تجربه",
+    "coins": "سکه",
+    "level": "سطح",
+    "streak": "روزهای پیاپی",
+    "currentStreak": "رکورد جاری",
+    "longestStreak": "بیشترین رکورد",
+    "rank": "رتبه",
+    "achievement": "دستاوردها",
+    "badge": "نشان‌ها",
+    "unlocked": "کسب شده",
+    "locked": "قفل",
+    "unlockedOn": "کسب‌شده در {date}",
+    "progress": "{current} از {total}",
+    "noAchievements": "هنوز دستاوردی باز نشده است"
+  },
+  "team": {
+    "title": "تیم من",
+    "subtitle": "همکاران، مدیر مستقیم و وضعیت تیم‌ها",
+    "members": "اعضا",
+    "memberCount": "{count} عضو",
+    "taskCount": "{count} تسک فعال",
+    "lead": "سرپرست تیم",
+    "manager": "مدیر مستقیم",
+    "noTeams": "شما عضو هیچ تیمی نیستید",
+    "noMembers": "عضوی ثبت نشده است",
+    "create": "تیم جدید",
+    "createTitle": "ساخت تیم",
+    "createSubtitle": "پس از ساخت، می‌توانید سرپرست و اعضا را تعیین کنید.",
+    "createSuccess": "تیم ساخته شد",
+    "nameLabel": "نام تیم",
+    "namePlaceholder": "مثلاً تیم محصول",
+    "descriptionLabel": "توضیحات",
+    "descriptionPlaceholder": "این تیم چه کاری انجام می‌دهد؟",
+    "openTeam": "جزئیات تیم",
+    "notFound": "این تیم پیدا نشد یا دسترسی مشاهده آن را ندارید",
+    "aboutTitle": "درباره تیم",
+    "noLead": "سرپرست تعیین نشده",
+    "noManager": "بدون مدیر مستقیم",
+    "createdAt": "تاریخ ساخت",
+    "delete": "حذف تیم",
+    "deleteConfirm": "تیم «{name}» حذف شود؟ اعضا در شرکت می‌مانند ولی عضویت تیمی آن‌ها حذف می‌شود.",
+    "deleteSuccess": "تیم حذف شد",
+    "editTitle": "ویرایش تیم",
+    "editSuccess": "تغییرات تیم ذخیره شد",
+    "addMember": "افزودن عضو",
+    "addMemberTitle": "افزودن عضو به تیم",
+    "addMemberSubtitle": "فقط کسانی که هنوز عضو تیمی نیستند در این فهرست هستند.",
+    "addSuccess": "عضو به تیم اضافه شد",
+    "removeMember": "حذف",
+    "removeMemberConfirm": "«{name}» از این تیم حذف شود؟",
+    "candidateLabel": "عضو",
+    "noCandidates": "کسی برای افزودن نیست",
+    "noCandidatesHint": "همه اعضای شرکت در تیم دیگری عضو هستند.",
+    "errors": {
+      "generic": "انجام این کار ناموفق بود"
+    },
+    "leadNeedsManager": "ابتدا نقش او را به «مدیر تیم» ارتقا دهید"
+  },
+  "leaderboard": {
+    "title": "جدول امتیازها",
+    "subtitle": "رقابت سالم میان همکاران",
+    "range": {
+      "week": "این هفته",
+      "month": "این ماه",
+      "all": "همه زمان‌ها"
+    },
+    "yourPosition": "جایگاه شما",
+    "points": "امتیاز",
+    "noData": "داده‌ای برای نمایش وجود ندارد"
+  },
+  "achievements": {
+    "title": "دستاوردها و نشان‌ها",
+    "subtitle": "مسیر رشد شما در ورک‌کوئست",
+    "unlockedCount": "{count} دستاورد کسب شده",
+    "badgeCount": "{count} نشان",
+    "rewards": "پاداش دستاورد"
+  },
+  "rewards": {
+    "title": "فروشگاه پاداش",
+    "subtitle": "سکه‌هایتان را خرج چیزهای خوب کنید",
+    "balance": "موجودی سکه",
+    "cost": "{value} سکه",
+    "stock": "{count} عدد باقی‌مانده",
+    "outOfStock": "ناموجود",
+    "notAffordable": "سکه کافی ندارید",
+    "redeem": "درخواست",
+    "myRedemptions": "درخواست‌های من",
+    "noRewards": "پاداشی ثبت نشده است",
+    "noRedemptions": "هنوز درخواستی ثبت نکرده‌اید",
+    "type": {
+      "PHYSICAL": "کالای فیزیکی",
+      "VOUCHER": "کارت هدیه",
+      "TIME_OFF": "مرخصی تشویقی",
+      "DONATION": "خیریه",
+      "CUSTOM": "پاداش ویژه"
+    }
+  },
+  "notifications": {
+    "title": "اعلان‌ها",
+    "subtitle": "رویدادهای مهم مربوط به شما",
+    "unreadCount": "{count} خوانده‌نشده",
+    "markAllRead": "خواندن همه",
+    "empty": "اعلان جدیدی ندارید",
+    "type": {
+      "TASK_ASSIGNED": "تسک جدید",
+      "TASK_REVIEWED": "بازبینی تسک",
+      "ACHIEVEMENT_UNLOCKED": "دستاورد تازه",
+      "LEVEL_UP": "ارتقای سطح",
+      "REWARD_AVAILABLE": "پاداش تازه",
+      "REDEMPTION_UPDATE": "وضعیت درخواست",
+      "RECOGNITION_RECEIVED": "تقدیر",
+      "CHALLENGE_UPDATE": "چالش",
+      "SYSTEM": "سیستم"
+    }
+  },
+  "settings": {
+    "title": "تنظیمات",
+    "subtitle": "حساب کاربری و ترجیحات نمایش",
+    "profile": "پروفایل",
+    "preferences": "ترجیحات",
+    "company": "سازمان",
+    "fullName": "نام و نام خانوادگی",
+    "jobTitle": "عنوان شغلی",
+    "email": "رایانامه",
+    "phone": "شماره موبایل",
+    "role": "نقش",
+    "languageLabel": "زبان رابط کاربری",
+    "themeLabel": "پوسته",
+    "saved": "تغییرات ذخیره شد",
+    "companyInfo": "اطلاعات سازمان",
+    "timezone": "منطقه زمانی"
+  },
+  "roles": {
+    "OWNER": "مالک",
+    "ADMIN": "مدیر سازمان",
+    "MANAGER": "مدیر تیم",
+    "EMPLOYEE": "کارمند"
+  },
+  "errors": {
+    "notFound": "صفحه مورد نظر پیدا نشد",
+    "notFoundHint": "ممکن است نشانی را اشتباه وارد کرده باشید.",
+    "forbidden": "دسترسی لازم را ندارید",
+    "unauthorized": "برای ادامه وارد شوید",
+    "serverError": "خطای غیرمنتظره در سرور",
+    "networkError": "اتصال برقرار نشد",
+    "backHome": "بازگشت به خانه",
+    "statusCode": "کد خطا"
+  },
+  "landing": {
+    "hero": {
+      "badge": "نسخه پایه — فاز صفر",
+      "title": "کار خوب باید دیده شود",
+      "subtitle": "ورک‌کوئست تسک‌ها، بازخوردها و پاداش‌ها را در یک مسیر روشن به هم وصل می‌کند؛ با امتیاز، سطح و نشان، بدون آنکه از جدیت کار کم شود.",
+      "cta": "ورود به سازمان",
+      "secondary": "دیدن امکانات"
+    },
+    "features": {
+      "title": "یک حلقه ساده، یک تیم پرانرژی",
+      "tasks": {
+        "title": "تسک و بازبینی",
+        "body": "تسک محول می‌شود، انجام می‌شود و مدیر آن را با امتیاز و بازخورد مشخص می‌بندد."
+      },
+      "xp": {
+        "title": "امتیاز و سطح",
+        "body": "هر بازخورد مثبت به امتیاز تجربه و پیشرفت در نردبان سطح تبدیل می‌شود."
+      },
+      "rewards": {
+        "title": "سکه و پاداش",
+        "body": "سکه‌ها در فروشگاه داخلی سازمان خرج می‌شوند؛ از مرخصی تشویقی تا کارت هدیه."
+      },
+      "teams": {
+        "title": "چندسازمانی و امن",
+        "body": "داده‌ی هر سازمان کاملاً جدا می‌ماند؛ دسترسی‌ها سمت سرور بررسی می‌شوند."
+      }
+    },
+    "footer": "ساخته‌شده برای تیم‌های ایرانی"
+  },
+  "members": {
+    "title": "کارکنان",
+    "subtitle": "افزودن، ویرایش و مدیریت اعضای شرکت",
+    "searchPlaceholder": "جست‌وجو بر اساس نام، عنوان شغلی یا شماره موبایل",
+    "total": "{count} نفر",
+    "you": "شما",
+    "noJobTitle": "بدون عنوان شغلی",
+    "noTeam": "بدون تیم",
+    "memberCount": "{count} عضو",
+    "backToList": "بازگشت به فهرست کارکنان",
+    "notFound": "این کاربر پیدا نشد یا دسترسی مشاهده آن را ندارید",
+    "removeConfirm": "«{name}» از شرکت حذف شود؟ دسترسی او بلافاصله قطع می‌شود.",
+    "empty": {
+      "title": "هنوز عضوی ثبت نشده است",
+      "description": "اولین همکار خود را با شماره موبایل دعوت کنید.",
+      "descriptionReadOnly": "شما هنوز عضو هیچ تیمی نیستید."
+    },
+    "filters": {
+      "team": "همه تیم‌ها",
+      "role": "همه نقش‌ها"
+    },
+    "actions": {
+      "view": "مشاهده پروفایل",
+      "remove": "حذف از شرکت"
+    },
+    "invite": {
+      "cta": "دعوت همکار",
+      "title": "دعوت همکار جدید",
+      "subtitle": "همکار شما با کد ورود پیامکی به شرکت می‌پیوندد؛ نیازی به رمز عبور نیست.",
+      "phoneLabel": "شماره موبایل",
+      "phoneHint": "مثال: ۰۹۱۲۱۲۳۴۵۶۷",
+      "nameLabel": "نام و نام خانوادگی",
+      "namePlaceholder": "مثلاً سارا محمدی",
+      "jobTitleLabel": "عنوان شغلی",
+      "jobTitlePlaceholder": "مثلاً توسعه‌دهنده ارشد",
+      "teamLabel": "تیم",
+      "roleLabel": "نقش",
+      "expiryLabel": "اعتبار دعوت‌نامه",
+      "expiryOption": "{count} روز",
+      "noTeam": "بدون تیم",
+      "noticeTitle": "همکار شما چه می‌بیند؟",
+      "noticeDetail": "پس از ورود با کد پیامکی، این دعوت‌نامه را می‌بیند و با یک کلیک می‌پذیرد.",
+      "submit": "ارسال دعوت‌نامه",
+      "sending": "در حال ارسال…",
+      "successTitle": "دعوت‌نامه ارسال شد",
+      "successDetail": "{name} می‌تواند با شماره موبایل خود وارد شود.",
+      "errors": {
+        "generic": "ارسال دعوت‌نامه ناموفق بود"
+      }
+    },
+    "detail": {
+      "profile": "شناسنامه",
+      "role": "نقش سازمانی",
+      "status": "وضعیت",
+      "team": "تیم",
+      "lastLogin": "آخرین ورود",
+      "neverLoggedIn": "هنوز وارد نشده است",
+      "subordinates": "زیردستان",
+      "gamification": "امتیازها و عملکرد",
+      "performance": "خلاصه عملکرد",
+      "overdue": "عقب‌افتاده",
+      "achievements": "دستاوردها",
+      "noAchievements": "هنوز دستاوردی کسب نکرده است"
+    },
+    "edit": {
+      "title": "ویرایش عضو",
+      "success": "تغییرات ذخیره شد",
+      "managerNotice": "به‌عنوان مدیر تیم می‌توانید عنوان شغلی و تیم را تغییر دهید؛ تغییر نقش در اختیار مدیران شرکت است.",
+      "errors": {
+        "generic": "ذخیره تغییرات ناموفق بود"
+      }
+    }
+  },
+  "invitations": {
+    "title": "دعوت‌نامه‌ها",
+    "subtitle": "دعوت‌نامه‌های ارسال‌شده و وضعیت پذیرش آن‌ها",
+    "empty": "دعوت‌نامه‌ای در این وضعیت نیست",
+    "emptyHint": "با دکمه «دعوت همکار» اولین دعوت‌نامه را بسازید.",
+    "expires": "اعتبار",
+    "daysLeft": "{count} روز باقی‌مانده",
+    "revoke": "لغو",
+    "revokeConfirm": "دعوت‌نامه «{name}» لغو شود؟",
+    "revoked": "دعوت‌نامه لغو شد",
+    "noJobTitle": "بدون عنوان شغلی",
+    "teamLabel": "تیم",
+    "errors": {
+      "generic": "انجام این کار ناموفق بود"
+    },
+    "verifySuccess": "کد تأیید شد",
+    "verifySuccessDetail": "یک دعوت‌نامه در انتظار شماست.",
+    "joinTitle": "دعوت‌نامه شما",
+    "joinSubtitle": "شرکت زیر شما را دعوت کرده است. با پذیرش، حساب شما در همان شرکت ساخته می‌شود.",
+    "nonePending": "دعوت‌نامه معتبری برای این شماره وجود ندارد",
+    "acceptButton": "پذیرش دعوت‌نامه و ورود",
+    "acceptNotice": "نقش و تیم شما را مدیر شرکت تعیین کرده است و پس از ورود قابل مشاهده است.",
+    "joinAs": "پیوستن به‌عنوان {name}",
+    "joinAsDetail": "نقش شما در این شرکت: {role}",
+    "joinedTitle": "خوش آمدید",
+    "joinedDetail": "به «{company}» پیوستید."
+  }
+}
