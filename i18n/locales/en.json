@@ -1,0 +1,306 @@
+{
+  "app": {
+    "name": "WorkQuest",
+    "shortName": "WorkQuest",
+    "tagline": "Employee performance management, gamified",
+    "description": "WorkQuest turns everyday team work into a clear loop of tasks, feedback and rewards."
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "searchPlaceholder": "Search…",
+    "filter": "Filter",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "confirm": "Confirm",
+    "close": "Close",
+    "retry": "Retry",
+    "optional": "Optional",
+    "required": "Required",
+    "all": "All",
+    "status": "Status",
+    "actions": "Actions",
+    "viewAll": "View all",
+    "comingSoon": "Coming soon",
+    "empty": "Nothing here yet",
+    "yes": "Yes",
+    "no": "No",
+    "of": "of",
+    "items": "items",
+    "page": "Page",
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "days": "days",
+    "logout": "Sign out",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "team": "My team",
+    "leaderboard": "Leaderboard",
+    "achievements": "Achievements",
+    "rewards": "Rewards",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "main": "Main navigation",
+    "account": "Account",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu"
+  },
+  "auth": {
+    "loginTitle": "Sign in to WorkQuest",
+    "loginSubtitle": "Enter your work mobile number and we will send you a sign-in code.",
+    "phoneLabel": "Mobile number",
+    "phonePlaceholder": "+98 912 123 4567",
+    "sendCode": "Send code",
+    "sending": "Sending…",
+    "codeTitle": "Enter the code",
+    "codeSubtitle": "Enter the {length}-digit code sent to {phone}.",
+    "codeLabel": "Sign-in code",
+    "verifyCode": "Sign in",
+    "verifying": "Verifying…",
+    "resendCode": "Resend code",
+    "resendIn": "Resend in {seconds}s",
+    "changePhone": "Change number",
+    "expiresIn": "Code expires in {seconds}s",
+    "codeSent": "Code sent",
+    "welcomeBack": "Welcome back, {name}",
+    "signedOut": "You have been signed out",
+    "devHint": "In development the code is printed to the server log.",
+    "errors": {
+      "invalidPhone": "That mobile number does not look right",
+      "invalidCode": "The code is incorrect",
+      "expiredCode": "That code expired — request a new one",
+      "userNotFound": "No account for this number. Ask your company admin.",
+      "rateLimited": "Please wait a moment and try again",
+      "generic": "Sign-in failed"
+    }
+  },
+  "dashboard": {
+    "greeting": "Hello {name}",
+    "subtitle": "Your day at a glance",
+    "yourProgress": "Your progress",
+    "level": "Level {level}",
+    "xpToNext": "{current} of {needed} XP to the next level",
+    "weeklySummary": "This week",
+    "openTasks": "Open tasks",
+    "completedTasks": "Completed",
+    "pendingReview": "Awaiting review",
+    "overdue": "Overdue",
+    "myTasks": "My tasks",
+    "noOpenTasks": "No open tasks. Nice work!",
+    "topPerformers": "Top performers",
+    "recentRecognition": "Recent recognition",
+    "noRecognition": "No recognition yet",
+    "activeChallenge": "Active challenge",
+    "challengeGoal": "Goal: {goal}",
+    "endsIn": "{days} days left",
+    "myRank": "My rank",
+    "rankValue": "{rank} of {total}"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": "Work assigned to you and your team",
+    "scope": {
+      "mine": "My tasks",
+      "team": "My team",
+      "all": "All tasks"
+    },
+    "assignee": "Assignee",
+    "team": "Team",
+    "dueDate": "Due date",
+    "dueIn": "{days} days left",
+    "dueToday": "Due today",
+    "overdue": "{days} days late",
+    "noDueDate": "No due date",
+    "rewards": "Reward",
+    "xp": "{value} XP",
+    "coins": "{value} coins",
+    "empty": "No tasks match these filters",
+    "total": "{count} tasks"
+  },
+  "status": {
+    "task": {
+      "DRAFT": "Draft",
+      "ASSIGNED": "Assigned",
+      "IN_PROGRESS": "In progress",
+      "SUBMITTED": "Submitted",
+      "APPROVED": "Approved",
+      "CHANGES_REQUESTED": "Changes requested",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "redemption": {
+      "REQUESTED": "Requested",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "FULFILLED": "Fulfilled",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "priority": {
+    "LOW": "Low",
+    "MEDIUM": "Medium",
+    "HIGH": "High",
+    "URGENT": "Urgent"
+  },
+  "gamification": {
+    "xp": "Experience",
+    "coins": "Coins",
+    "level": "Level",
+    "streak": "Day streak",
+    "currentStreak": "Current streak",
+    "longestStreak": "Longest streak",
+    "rank": "Rank",
+    "achievement": "Achievements",
+    "badge": "Badges",
+    "unlocked": "Unlocked",
+    "locked": "Locked",
+    "unlockedOn": "Unlocked on {date}",
+    "progress": "{current} of {total}",
+    "noAchievements": "No achievements unlocked yet"
+  },
+  "team": {
+    "title": "My team",
+    "subtitle": "Colleagues, direct managers and team status",
+    "members": "Members",
+    "memberCount": "{count} members",
+    "taskCount": "{count} active tasks",
+    "lead": "Team lead",
+    "manager": "Direct manager",
+    "noTeams": "You are not in a team yet",
+    "noMembers": "No members yet"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "subtitle": "A little friendly competition",
+    "range": {
+      "week": "This week",
+      "month": "This month",
+      "all": "All time"
+    },
+    "yourPosition": "Your position",
+    "points": "Points",
+    "noData": "Nothing to show yet"
+  },
+  "achievements": {
+    "title": "Achievements & badges",
+    "subtitle": "Your growth path in WorkQuest",
+    "unlockedCount": "{count} unlocked",
+    "badgeCount": "{count} badges",
+    "rewards": "Achievement reward"
+  },
+  "rewards": {
+    "title": "Reward store",
+    "subtitle": "Spend your coins on something good",
+    "balance": "Coin balance",
+    "cost": "{value} coins",
+    "stock": "{count} left",
+    "outOfStock": "Out of stock",
+    "notAffordable": "Not enough coins",
+    "redeem": "Redeem",
+    "myRedemptions": "My requests",
+    "noRewards": "No rewards published yet",
+    "noRedemptions": "You have not requested anything yet",
+    "type": {
+      "PHYSICAL": "Physical",
+      "VOUCHER": "Voucher",
+      "TIME_OFF": "Time off",
+      "DONATION": "Donation",
+      "CUSTOM": "Custom"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Things worth your attention",
+    "unreadCount": "{count} unread",
+    "markAllRead": "Mark all read",
+    "empty": "You are all caught up",
+    "type": {
+      "TASK_ASSIGNED": "New task",
+      "TASK_REVIEWED": "Task reviewed",
+      "ACHIEVEMENT_UNLOCKED": "Achievement",
+      "LEVEL_UP": "Level up",
+      "REWARD_AVAILABLE": "New reward",
+      "REDEMPTION_UPDATE": "Request update",
+      "RECOGNITION_RECEIVED": "Recognition",
+      "CHALLENGE_UPDATE": "Challenge",
+      "SYSTEM": "System"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your account and display preferences",
+    "profile": "Profile",
+    "preferences": "Preferences",
+    "company": "Company",
+    "fullName": "Full name",
+    "jobTitle": "Job title",
+    "email": "Email",
+    "phone": "Mobile number",
+    "role": "Role",
+    "languageLabel": "Interface language",
+    "themeLabel": "Theme",
+    "saved": "Changes saved",
+    "companyInfo": "Company details",
+    "timezone": "Timezone"
+  },
+  "roles": {
+    "OWNER": "Owner",
+    "ADMIN": "Company admin",
+    "MANAGER": "Team manager",
+    "EMPLOYEE": "Employee"
+  },
+  "errors": {
+    "notFound": "Page not found",
+    "notFoundHint": "The address may be wrong.",
+    "forbidden": "You do not have access",
+    "unauthorized": "Sign in to continue",
+    "serverError": "Unexpected server error",
+    "networkError": "Connection failed",
+    "backHome": "Back home",
+    "statusCode": "Status code"
+  },
+  "landing": {
+    "hero": {
+      "badge": "Foundation build — phase zero",
+      "title": "Good work deserves to be seen",
+      "subtitle": "WorkQuest connects tasks, feedback and rewards into one clear path — with XP, levels and badges, without turning work into a toy.",
+      "cta": "Sign in",
+      "secondary": "See features"
+    },
+    "features": {
+      "title": "One simple loop, one energetic team",
+      "tasks": {
+        "title": "Tasks & reviews",
+        "body": "A task is assigned, delivered, and closed by a manager with a score and real feedback."
+      },
+      "xp": {
+        "title": "XP & levels",
+        "body": "Every positive review turns into experience and progress up the level ladder."
+      },
+      "rewards": {
+        "title": "Coins & rewards",
+        "body": "Coins are spent in your company store — from time off to gift cards."
+      },
+      "teams": {
+        "title": "Multi-tenant & secure",
+        "body": "Every company's data stays isolated, and permissions are checked server-side."
+      }
+    },
+    "footer": "Built for Iranian teams"
+  }
+}

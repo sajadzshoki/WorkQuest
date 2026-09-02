@@ -1,0 +1,150 @@
+/* Vazirmatn (variable, self-hosted from node_modules) must load first so the
+   design tokens below can reference the real family name. */
+@import '@fontsource-variable/vazirmatn';
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+/* ---------------------------------------------------------------------------
+ * WorkQuest design tokens
+ *
+ * Tailwind CSS v4 (bundled with Nuxt UI). Everything the design system needs is
+ * declared here as CSS custom properties so components can reference them
+ * without hard-coding hex values, and so dark mode stays a variable swap.
+ * ------------------------------------------------------------------------- */
+
+@theme {
+  --font-sans: 'Vazirmatn Variable', 'Vazirmatn', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --font-display: 'Vazirmatn Variable', 'Vazirmatn', ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand: indigo → violet. Professional, slightly energetic. */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand-950: #1e1b4b;
+
+  /* Gamification accents — used for coins, streaks and XP only. */
+  --color-coin-50: #fffbeb;
+  --color-coin-100: #fef3c7;
+  --color-coin-200: #fde68a;
+  --color-coin-300: #fcd34d;
+  --color-coin-400: #fbbf24;
+  --color-coin-500: #f59e0b;
+  --color-coin-600: #d97706;
+  --color-coin-700: #b45309;
+  --color-coin-800: #92400e;
+  --color-coin-900: #78350f;
+  --color-coin-950: #451a03;
+
+  --color-streak-50: #fff7ed;
+  --color-streak-400: #fb923c;
+  --color-streak-500: #f97316;
+  --color-streak-600: #ea580c;
+
+  --shadow-soft: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
+  --shadow-lifted: 0 2px 4px 0 rgb(15 23 42 / 0.05), 0 20px 40px -20px rgb(15 23 42 / 0.25);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    /* Keep Persian/Arabic shaping consistent across engines. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Numerals: Vazirmatn renders Persian digits for fa; keep tabular alignment
+     in tables and leaderboards. */
+  table,
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--ui-primary) 25%, transparent);
+  }
+
+  /* Subtle, always-visible focus ring that respects RTL. */
+  :focus-visible {
+    outline: 2px solid var(--ui-primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Standard surface used by every panel in the product. */
+  .wq-panel {
+    background-color: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .wq-panel-elevated {
+    background-color: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lifted);
+  }
+
+  /* Gradient hero used on the landing page and auth screens. */
+  .wq-hero-gradient {
+    background:
+      radial-gradient(60rem 30rem at 100% -10%, color-mix(in oklab, var(--ui-primary) 22%, transparent), transparent 60%),
+      radial-gradient(45rem 25rem at -10% 110%, color-mix(in oklab, var(--color-streak-500) 16%, transparent), transparent 55%),
+      var(--ui-bg-muted);
+  }
+
+  /* Shimmer for skeleton placeholders. */
+  .wq-skeleton {
+    background-image: linear-gradient(
+      90deg,
+      var(--ui-bg-elevated) 0%,
+      color-mix(in oklab, var(--ui-bg-elevated) 60%, var(--ui-border)) 50%,
+      var(--ui-bg-elevated) 100%
+    );
+    background-size: 200% 100%;
+    animation: wq-shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes wq-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Reduced motion: honour the OS setting globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

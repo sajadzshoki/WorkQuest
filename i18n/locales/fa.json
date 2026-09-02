@@ -1,0 +1,306 @@
+{
+  "app": {
+    "name": "ورک‌کوئست",
+    "shortName": "ورک‌کوئست",
+    "tagline": "مدیریت عملکرد کارکنان، با چاشنی بازی",
+    "description": "ورک‌کوئست کار روزمره تیم‌ها را به مسیری شفاف از تسک، بازخورد و پاداش تبدیل می‌کند."
+  },
+  "common": {
+    "loading": "در حال بارگذاری…",
+    "save": "ذخیره",
+    "saving": "در حال ذخیره…",
+    "cancel": "انصراف",
+    "delete": "حذف",
+    "edit": "ویرایش",
+    "search": "جست‌وجو",
+    "searchPlaceholder": "جست‌وجو کنید…",
+    "filter": "فیلتر",
+    "back": "بازگشت",
+    "next": "ادامه",
+    "previous": "قبلی",
+    "confirm": "تأیید",
+    "close": "بستن",
+    "retry": "تلاش دوباره",
+    "optional": "اختیاری",
+    "required": "الزامی",
+    "all": "همه",
+    "status": "وضعیت",
+    "actions": "عملیات",
+    "viewAll": "مشاهده همه",
+    "comingSoon": "به‌زودی",
+    "empty": "موردی وجود ندارد",
+    "yes": "بله",
+    "no": "خیر",
+    "of": "از",
+    "items": "مورد",
+    "page": "صفحه",
+    "language": "زبان",
+    "theme": "پوسته",
+    "light": "روشن",
+    "dark": "تیره",
+    "system": "خودکار",
+    "today": "امروز",
+    "yesterday": "دیروز",
+    "days": "روز",
+    "logout": "خروج از حساب",
+    "copy": "کپی",
+    "copied": "کپی شد"
+  },
+  "nav": {
+    "dashboard": "داشبورد",
+    "tasks": "تسک‌ها",
+    "team": "تیم من",
+    "leaderboard": "جدول امتیازها",
+    "achievements": "دستاوردها",
+    "rewards": "پاداش‌ها",
+    "notifications": "اعلان‌ها",
+    "settings": "تنظیمات",
+    "main": "منوی اصلی",
+    "account": "حساب کاربری",
+    "collapse": "بستن منو",
+    "expand": "باز کردن منو"
+  },
+  "auth": {
+    "loginTitle": "ورود به ورک‌کوئست",
+    "loginSubtitle": "شماره موبایل سازمانی خود را وارد کنید تا کد ورود برایتان ارسال شود.",
+    "phoneLabel": "شماره موبایل",
+    "phonePlaceholder": "۰۹۱۲ ۱۲۳ ۴۵۶۷",
+    "sendCode": "ارسال کد ورود",
+    "sending": "در حال ارسال…",
+    "codeTitle": "کد ورود را وارد کنید",
+    "codeSubtitle": "کد {length} رقمی ارسال‌شده به {phone} را وارد کنید.",
+    "codeLabel": "کد ورود",
+    "verifyCode": "ورود به حساب",
+    "verifying": "در حال بررسی…",
+    "resendCode": "ارسال دوباره کد",
+    "resendIn": "ارسال دوباره تا {seconds} ثانیه دیگر",
+    "changePhone": "تغییر شماره موبایل",
+    "expiresIn": "اعتبار کد تا {seconds} ثانیه",
+    "codeSent": "کد ورود ارسال شد",
+    "welcomeBack": "خوش آمدید، {name}",
+    "signedOut": "با موفقیت خارج شدید",
+    "devHint": "در محیط توسعه، کد ورود در گزارش سرور چاپ می‌شود.",
+    "errors": {
+      "invalidPhone": "شماره موبایل معتبر نیست",
+      "invalidCode": "کد وارد شده نادرست است",
+      "expiredCode": "کد منقضی شده است؛ کد جدید درخواست دهید",
+      "userNotFound": "حسابی با این شماره یافت نشد. با مدیر سازمان تماس بگیرید.",
+      "rateLimited": "کمی بعد دوباره تلاش کنید",
+      "generic": "ورود ناموفق بود"
+    }
+  },
+  "dashboard": {
+    "greeting": "سلام {name}",
+    "subtitle": "وضعیت امروز شما در یک نگاه",
+    "yourProgress": "پیشرفت شما",
+    "level": "سطح {level}",
+    "xpToNext": "{current} از {needed} امتیاز تا سطح بعد",
+    "weeklySummary": "خلاصه این هفته",
+    "openTasks": "تسک‌های باز",
+    "completedTasks": "تسک‌های انجام‌شده",
+    "pendingReview": "در انتظار بازبینی",
+    "overdue": "گذشته از سررسید",
+    "myTasks": "تسک‌های من",
+    "noOpenTasks": "تسک بازی ندارید. آفرین!",
+    "topPerformers": "پیشروهای سازمان",
+    "recentRecognition": "تقدیرهای اخیر",
+    "noRecognition": "هنوز تقدیری دریافت نکرده‌اید",
+    "activeChallenge": "چالش فعال",
+    "challengeGoal": "هدف: {goal}",
+    "endsIn": "تا پایان {days} روز",
+    "myRank": "رتبه من",
+    "rankValue": "{rank} از {total}"
+  },
+  "tasks": {
+    "title": "تسک‌ها",
+    "subtitle": "کارهای محول‌شده به شما و تیم‌تان",
+    "scope": {
+      "mine": "تسک‌های من",
+      "team": "تیم من",
+      "all": "همه تسک‌ها"
+    },
+    "assignee": "انجام‌دهنده",
+    "team": "تیم",
+    "dueDate": "سررسید",
+    "dueIn": "{days} روز مانده",
+    "dueToday": "سررسید امروز",
+    "overdue": "{days} روز تأخیر",
+    "noDueDate": "بدون سررسید",
+    "rewards": "پاداش",
+    "xp": "{value} امتیاز",
+    "coins": "{value} سکه",
+    "empty": "تسکی با این فیلترها پیدا نشد",
+    "total": "{count} تسک"
+  },
+  "status": {
+    "task": {
+      "DRAFT": "پیش‌نویس",
+      "ASSIGNED": "محول‌شده",
+      "IN_PROGRESS": "در حال انجام",
+      "SUBMITTED": "ارسال‌شده",
+      "APPROVED": "تأیید شده",
+      "CHANGES_REQUESTED": "نیازمند اصلاح",
+      "REJECTED": "رد شده",
+      "CANCELLED": "لغو شده"
+    },
+    "redemption": {
+      "REQUESTED": "درخواست شده",
+      "APPROVED": "تأیید شده",
+      "REJECTED": "رد شده",
+      "FULFILLED": "تحویل شده",
+      "CANCELLED": "لغو شده"
+    }
+  },
+  "priority": {
+    "LOW": "کم",
+    "MEDIUM": "متوسط",
+    "HIGH": "زیاد",
+    "URGENT": "فوری"
+  },
+  "gamification": {
+    "xp": "امتیاز تجربه",
+    "coins": "سکه",
+    "level": "سطح",
+    "streak": "روزهای پیاپی",
+    "currentStreak": "رکورد جاری",
+    "longestStreak": "بیشترین رکورد",
+    "rank": "رتبه",
+    "achievement": "دستاوردها",
+    "badge": "نشان‌ها",
+    "unlocked": "کسب شده",
+    "locked": "قفل",
+    "unlockedOn": "کسب‌شده در {date}",
+    "progress": "{current} از {total}",
+    "noAchievements": "هنوز دستاوردی باز نشده است"
+  },
+  "team": {
+    "title": "تیم من",
+    "subtitle": "همکاران، مدیر مستقیم و وضعیت تیم‌ها",
+    "members": "اعضا",
+    "memberCount": "{count} عضو",
+    "taskCount": "{count} تسک فعال",
+    "lead": "سرپرست تیم",
+    "manager": "مدیر مستقیم",
+    "noTeams": "شما عضو هیچ تیمی نیستید",
+    "noMembers": "عضوی ثبت نشده است"
+  },
+  "leaderboard": {
+    "title": "جدول امتیازها",
+    "subtitle": "رقابت سالم میان همکاران",
+    "range": {
+      "week": "این هفته",
+      "month": "این ماه",
+      "all": "همه زمان‌ها"
+    },
+    "yourPosition": "جایگاه شما",
+    "points": "امتیاز",
+    "noData": "داده‌ای برای نمایش وجود ندارد"
+  },
+  "achievements": {
+    "title": "دستاوردها و نشان‌ها",
+    "subtitle": "مسیر رشد شما در ورک‌کوئست",
+    "unlockedCount": "{count} دستاورد کسب شده",
+    "badgeCount": "{count} نشان",
+    "rewards": "پاداش دستاورد"
+  },
+  "rewards": {
+    "title": "فروشگاه پاداش",
+    "subtitle": "سکه‌هایتان را خرج چیزهای خوب کنید",
+    "balance": "موجودی سکه",
+    "cost": "{value} سکه",
+    "stock": "{count} عدد باقی‌مانده",
+    "outOfStock": "ناموجود",
+    "notAffordable": "سکه کافی ندارید",
+    "redeem": "درخواست",
+    "myRedemptions": "درخواست‌های من",
+    "noRewards": "پاداشی ثبت نشده است",
+    "noRedemptions": "هنوز درخواستی ثبت نکرده‌اید",
+    "type": {
+      "PHYSICAL": "کالای فیزیکی",
+      "VOUCHER": "کارت هدیه",
+      "TIME_OFF": "مرخصی تشویقی",
+      "DONATION": "خیریه",
+      "CUSTOM": "پاداش ویژه"
+    }
+  },
+  "notifications": {
+    "title": "اعلان‌ها",
+    "subtitle": "رویدادهای مهم مربوط به شما",
+    "unreadCount": "{count} خوانده‌نشده",
+    "markAllRead": "خواندن همه",
+    "empty": "اعلان جدیدی ندارید",
+    "type": {
+      "TASK_ASSIGNED": "تسک جدید",
+      "TASK_REVIEWED": "بازبینی تسک",
+      "ACHIEVEMENT_UNLOCKED": "دستاورد تازه",
+      "LEVEL_UP": "ارتقای سطح",
+      "REWARD_AVAILABLE": "پاداش تازه",
+      "REDEMPTION_UPDATE": "وضعیت درخواست",
+      "RECOGNITION_RECEIVED": "تقدیر",
+      "CHALLENGE_UPDATE": "چالش",
+      "SYSTEM": "سیستم"
+    }
+  },
+  "settings": {
+    "title": "تنظیمات",
+    "subtitle": "حساب کاربری و ترجیحات نمایش",
+    "profile": "پروفایل",
+    "preferences": "ترجیحات",
+    "company": "سازمان",
+    "fullName": "نام و نام خانوادگی",
+    "jobTitle": "عنوان شغلی",
+    "email": "رایانامه",
+    "phone": "شماره موبایل",
+    "role": "نقش",
+    "languageLabel": "زبان رابط کاربری",
+    "themeLabel": "پوسته",
+    "saved": "تغییرات ذخیره شد",
+    "companyInfo": "اطلاعات سازمان",
+    "timezone": "منطقه زمانی"
+  },
+  "roles": {
+    "OWNER": "مالک",
+    "ADMIN": "مدیر سازمان",
+    "MANAGER": "مدیر تیم",
+    "EMPLOYEE": "کارمند"
+  },
+  "errors": {
+    "notFound": "صفحه مورد نظر پیدا نشد",
+    "notFoundHint": "ممکن است نشانی را اشتباه وارد کرده باشید.",
+    "forbidden": "دسترسی لازم را ندارید",
+    "unauthorized": "برای ادامه وارد شوید",
+    "serverError": "خطای غیرمنتظره در سرور",
+    "networkError": "اتصال برقرار نشد",
+    "backHome": "بازگشت به خانه",
+    "statusCode": "کد خطا"
+  },
+  "landing": {
+    "hero": {
+      "badge": "نسخه پایه — فاز صفر",
+      "title": "کار خوب باید دیده شود",
+      "subtitle": "ورک‌کوئست تسک‌ها، بازخوردها و پاداش‌ها را در یک مسیر روشن به هم وصل می‌کند؛ با امتیاز، سطح و نشان، بدون آنکه از جدیت کار کم شود.",
+      "cta": "ورود به سازمان",
+      "secondary": "دیدن امکانات"
+    },
+    "features": {
+      "title": "یک حلقه ساده، یک تیم پرانرژی",
+      "tasks": {
+        "title": "تسک و بازبینی",
+        "body": "تسک محول می‌شود، انجام می‌شود و مدیر آن را با امتیاز و بازخورد مشخص می‌بندد."
+      },
+      "xp": {
+        "title": "امتیاز و سطح",
+        "body": "هر بازخورد مثبت به امتیاز تجربه و پیشرفت در نردبان سطح تبدیل می‌شود."
+      },
+      "rewards": {
+        "title": "سکه و پاداش",
+        "body": "سکه‌ها در فروشگاه داخلی سازمان خرج می‌شوند؛ از مرخصی تشویقی تا کارت هدیه."
+      },
+      "teams": {
+        "title": "چندسازمانی و امن",
+        "body": "داده‌ی هر سازمان کاملاً جدا می‌ماند؛ دسترسی‌ها سمت سرور بررسی می‌شوند."
+      }
+    },
+    "footer": "ساخته‌شده برای تیم‌های ایرانی"
+  }
+}
