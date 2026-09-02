@@ -104,7 +104,6 @@ async function revoke(id: string, fullName: string) {
     </div>
 
     <CommonSectionCard
-      class="overflow-x-auto"
       :title="t(`status.invitation.${status}`)"
       :description="data ? t('members.total', { count: format.number(data.total) }) : undefined"
       icon="i-heroicons-envelope"
@@ -116,88 +115,94 @@ async function revoke(id: string, fullName: string) {
         :description="t('invitations.emptyHint')"
       />
 
-      <table
+      <!-- Horizontal scroll on narrow screens: the table keeps its columns
+           rather than collapsing into something unreadable. -->
+      <div
         v-else
-        class="w-full min-w-[640px] border-collapse text-sm"
+        class="-mx-4 overflow-x-auto sm:-mx-5"
       >
-        <thead>
-          <tr class="border-b border-default text-start text-xs text-muted">
-            <th class="py-2 text-start font-semibold">
-              {{ t('members.invite.nameLabel') }}
-            </th>
-            <th class="py-2 text-start font-semibold">
-              {{ t('members.invite.phoneLabel') }}
-            </th>
-            <th class="py-2 text-start font-semibold">
-              {{ t('members.invite.teamLabel') }}
-            </th>
-            <th class="py-2 text-start font-semibold">
-              {{ t('members.invite.roleLabel') }}
-            </th>
-            <th class="py-2 text-start font-semibold">
-              {{ t('common.status') }}
-            </th>
-            <th class="py-2 text-start font-semibold">
-              {{ t('invitations.expires') }}
-            </th>
-            <th class="py-2" />
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-default">
-          <tr
-            v-for="invitation in data?.invitations ?? []"
-            :key="invitation.id"
-          >
-            <td class="py-3">
-              <p class="font-bold text-highlighted">
-                {{ invitation.fullName }}
-              </p>
-              <p class="text-xs text-muted">
-                {{ invitation.jobTitle ?? t('members.noJobTitle') }}
-              </p>
-            </td>
-            <td
-              dir="ltr"
-              class="py-3 text-start text-muted"
+        <table
+          class="w-full min-w-[640px] border-collapse text-sm"
+        >
+          <thead>
+            <tr class="border-b border-default text-start text-xs text-muted">
+              <th class="py-2 text-start font-semibold">
+                {{ t('members.invite.nameLabel') }}
+              </th>
+              <th class="py-2 text-start font-semibold">
+                {{ t('members.invite.phoneLabel') }}
+              </th>
+              <th class="py-2 text-start font-semibold">
+                {{ t('members.invite.teamLabel') }}
+              </th>
+              <th class="py-2 text-start font-semibold">
+                {{ t('members.invite.roleLabel') }}
+              </th>
+              <th class="py-2 text-start font-semibold">
+                {{ t('common.status') }}
+              </th>
+              <th class="py-2 text-start font-semibold">
+                {{ t('invitations.expires') }}
+              </th>
+              <th class="py-2" />
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-default">
+            <tr
+              v-for="invitation in data?.invitations ?? []"
+              :key="invitation.id"
             >
-              {{ format.phone(invitation.phone) }}
-            </td>
-            <td class="py-3 text-muted">
-              {{ invitation.team?.name ?? t('members.noTeam') }}
-            </td>
-            <td class="py-3">
-              <MembersRoleBadge :role="invitation.role" />
-            </td>
-            <td class="py-3">
-              <MembersStatusBadge :status="invitation.status" />
-            </td>
-            <td class="py-3 text-muted">
-              <template v-if="invitation.status === 'PENDING'">
-                {{ t('invitations.daysLeft', { count: daysLeft(invitation.expiresAt) }) }}
-              </template>
-              <template v-else-if="invitation.acceptedAt">
-                {{ format.date(invitation.acceptedAt, { month: 'short', day: 'numeric' }) }}
-              </template>
-              <template v-else>
-                {{ format.date(invitation.expiresAt, { month: 'short', day: 'numeric' }) }}
-              </template>
-            </td>
-            <td class="py-3 text-end">
-              <UButton
-                v-if="invitation.status === 'PENDING' && (data?.canRevoke || can('member:invite'))"
-                color="error"
-                variant="ghost"
-                size="xs"
-                icon="i-heroicons-x-circle"
-                :loading="revokingId === invitation.id"
-                @click="revoke(invitation.id, invitation.fullName)"
+              <td class="py-3">
+                <p class="font-bold text-highlighted">
+                  {{ invitation.fullName }}
+                </p>
+                <p class="text-xs text-muted">
+                  {{ invitation.jobTitle ?? t('members.noJobTitle') }}
+                </p>
+              </td>
+              <td
+                dir="ltr"
+                class="py-3 text-start text-muted"
               >
-                {{ t('invitations.revoke') }}
-              </UButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                {{ format.phone(invitation.phone) }}
+              </td>
+              <td class="py-3 text-muted">
+                {{ invitation.team?.name ?? t('members.noTeam') }}
+              </td>
+              <td class="py-3">
+                <MembersRoleBadge :role="invitation.role" />
+              </td>
+              <td class="py-3">
+                <MembersStatusBadge :status="invitation.status" />
+              </td>
+              <td class="py-3 text-muted">
+                <template v-if="invitation.status === 'PENDING'">
+                  {{ t('invitations.daysLeft', { count: daysLeft(invitation.expiresAt) }) }}
+                </template>
+                <template v-else-if="invitation.acceptedAt">
+                  {{ format.date(invitation.acceptedAt, { month: 'short', day: 'numeric' }) }}
+                </template>
+                <template v-else>
+                  {{ format.date(invitation.expiresAt, { month: 'short', day: 'numeric' }) }}
+                </template>
+              </td>
+              <td class="py-3 text-end">
+                <UButton
+                  v-if="invitation.status === 'PENDING' && (data?.canRevoke || can('member:invite'))"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-heroicons-x-circle"
+                  :loading="revokingId === invitation.id"
+                  @click="revoke(invitation.id, invitation.fullName)"
+                >
+                  {{ t('invitations.revoke') }}
+                </UButton>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </CommonSectionCard>
 
     <MembersInviteModal
