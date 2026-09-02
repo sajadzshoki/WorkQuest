@@ -1,36 +1,51 @@
+import type { VerifyOtpResponse } from '#shared/types/api'
+
 import { verifyOtpSchema } from '#shared/schemas'
 import { normalizeIranianPhone } from '#shared/utils/format'
 
+import { issueSession, startSession, toCompanySummary, toUserSummary } from '../../../utils/auth'
 import { usePrisma } from '../../../utils/db'
 import { errors, readValidated } from '../../../utils/http'
 import { verifyOtpCode } from '../../../utils/crypto'
-import { setSessionCookie, signSessionToken } from '../../../utils/session'
+import { issueOnboardingTicket } from '../../../utils/onboarding'
 
 /**
- * Step 2 of login: verify the code and open a session.
+ * Step 2 of authentication: verify the code.
  *
- * Auto-provisioning is intentionally disabled — accounts are created by an
- * admin, so an unknown phone is a 404 rather than a new user.
+ * Two outcomes:
+ *  - the phone belongs to an active account → open a session;
+ *  - it does not → issue a single-use onboarding ticket so the founder can
+ *    create a company (see `server/utils/onboarding.ts`).
+ *
+ * The code itself is checked as a scrypt digest, expires after
+ * `otpTtlSeconds`, and is burned after `otpMaxAttempts` wrong guesses.
  */
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event): Promise<VerifyOtpResponse> => {
   const { phone, code } = await readValidated(event, verifyOtpSchema)
   const normalized = normalizeIranianPhone(phone)
   if (!normalized) throw errors.badRequest('AUTH_INVALID_PHONE', 'شماره موبایل معتبر نیست')
 
   const db = usePrisma()
 
+  // The newest pending code wins regardless of purpose; the purpose recorded on
+  // it then constrains what the verified code is allowed to do (see below).
   const otp = await db.otpCode.findFirst({
     where: { phone: normalized, consumedAt: null },
     orderBy: { createdAt: 'desc' },
   })
 
-  if (!otp || otp.expiresAt.getTime() < Date.now()) {
+  if (!otp) {
     throw errors.badRequest('AUTH_CODE_EXPIRED', 'کد وارد شده منقضی شده است')
+  }
+
+  if (otp.expiresAt.getTime() < Date.now()) {
+    await db.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } })
+    throw errors.badRequest('AUTH_CODE_EXPIRED', 'کد وارد شده منقضی شده است؛ کد جدید درخواست دهید')
   }
 
   if (otp.attempts >= otp.maxAttempts) {
     await db.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } })
-    throw errors.tooManyRequests('تعداد تلاش‌های ناموفق بیش از حد مجاز است')
+    throw errors.tooManyRequests('تعداد تلاش‌های ناموفق بیش از حد مجاز است؛ کد جدید درخواست دهید')
   }
 
   if (!verifyOtpCode(code, otp.codeHash)) {
@@ -38,7 +53,9 @@ export default defineEventHandler(async (event) => {
     const remaining = Math.max(0, otp.maxAttempts - otp.attempts - 1)
     throw errors.badRequest(
       'AUTH_INVALID_CODE',
-      remaining > 0 ? `کد وارد شده نادرست است (${remaining} تلاش باقی‌مانده)` : 'کد وارد شده نادرست است',
+      remaining > 0
+        ? `کد وارد شده نادرست است (${remaining.toLocaleString('fa-IR')} تلاش باقی‌مانده)`
+        : 'کد وارد شده نادرست است',
     )
   }
 
@@ -48,60 +65,36 @@ export default defineEventHandler(async (event) => {
     include: { company: true },
   })
 
-  if (!user || !user.company.isActive) {
-    throw errors.notFound('حسابی با این شماره موبایل یافت نشد. با مدیر سازمان خود تماس بگیرید.')
+  // The code was correct, so it is spent either way.
+  await db.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } })
+
+  // `REGISTER` is the stricter of the two purposes: it may only ever create a
+  // new tenant, never open a session on an account that already exists.
+  // `LOGIN` is permissive — a login attempt on an unknown phone simply becomes
+  // a registration, since self-service signup is open to anyone.
+  if (otp.purpose === 'REGISTER' && user) {
+    throw errors.conflict('این شماره موبایل قبلاً ثبت شده است. لطفاً وارد شوید.')
   }
 
-  const session = await db.$transaction(async (tx) => {
-    const created = await tx.session.create({
-      data: {
-        userId: user.id,
-        expiresAt: new Date(Date.now() + Number(useRuntimeConfig().sessionMaxAgeSeconds) * 1000),
-        ip: getRequestIP(event, { xForwardedFor: true }),
-        userAgent: getHeader(event, 'user-agent'),
-      },
-    })
+  if (!user) {
+    const ticket = await issueOnboardingTicket(event, normalized)
+    return {
+      status: 'onboarding_required',
+      phone: normalized,
+      expiresAt: ticket.expiresAt.toISOString(),
+    }
+  }
 
-    await tx.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
-    await tx.otpCode.update({ where: { id: otp.id }, data: { consumedAt: new Date() } })
-    await tx.auditLog.create({
-      data: {
-        companyId: user.companyId,
-        actorId: user.id,
-        action: 'auth.login',
-        targetType: 'Session',
-        targetId: created.id,
-        ip: getRequestIP(event, { xForwardedFor: true }),
-      },
-    })
+  if (!user.company.isActive) {
+    throw errors.forbidden('حساب سازمانی شما غیرفعال است. با پشتیبانی تماس بگیرید.')
+  }
 
-    return created
-  })
-
-  const token = await signSessionToken({
-    sub: user.id,
-    sid: session.id,
-    cid: user.companyId,
-    role: user.role,
-  })
-  setSessionCookie(event, token)
+  const session = await issueSession(event, user)
+  startSession(event, session)
 
   return {
-    user: {
-      id: user.id,
-      fullName: user.fullName,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      avatarUrl: user.avatarUrl,
-      locale: user.locale,
-    },
-    company: {
-      id: user.company.id,
-      name: user.company.name,
-      slug: user.company.slug,
-      locale: user.company.locale,
-      timezone: user.company.timezone,
-    },
+    status: 'authenticated',
+    user: toUserSummary(user),
+    company: toCompanySummary(user.company),
   }
 })

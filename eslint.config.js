@@ -1,6 +1,12 @@
 import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
+  {
+    // Generated output. Without this, `eslint .` walks into the Nuxt build
+    // directories — and the `eslint.config.mjs` Nuxt generates inside them makes
+    // the config loader fail outright.
+    ignores: ['.nuxt/**', '.nuxt-test/**', '.output/**', 'dist/**', 'prisma/generated/**', 'node_modules/**'],
+  },
   // Project-wide overrides live here. Keep this list short: the generated
   // Nuxt/ESLint config already encodes the Vue + TS + import rules we want.
   {

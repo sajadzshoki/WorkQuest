@@ -5,11 +5,32 @@ import { usePrisma } from '../utils/db'
 import { errors } from '../utils/http'
 import { readSessionToken, setSessionCookie, tokenNeedsRenewal, signSessionToken, verifySessionToken } from '../utils/session'
 
-/** Routes that must be reachable without a session. */
-const PUBLIC_API_PREFIXES = ['/api/auth/otp/', '/api/health']
+/**
+ * Routes reachable without a session.
+ *
+ * Each entry is public for a specific reason and is guarded some other way;
+ * nothing tenant-scoped belongs here.
+ *
+ *  - `/api/auth/otp/*`        pre-auth by definition; guarded by rate limits.
+ *  - `/api/health`            liveness probe.
+ *  - `/api/auth/onboarding`   guarded by the httpOnly onboarding ticket.
+ *  - `/api/companies/slug`    returns a boolean only; used before any session
+ *                             exists. Deliberately an exact path so the rest of
+ *                             `/api/companies/*` stays behind the session.
+ */
+const PUBLIC_API_ROUTES = [
+  '/api/auth/otp/request',
+  '/api/auth/otp/verify',
+  '/api/auth/onboarding',
+  '/api/auth/onboarding/complete',
+  '/api/companies/slug',
+  '/api/health',
+]
 
 function isPublicApiRoute(path: string): boolean {
-  return PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))
+  // Query strings must not change the answer.
+  const pathname = path.split('?')[0] ?? path
+  return PUBLIC_API_ROUTES.includes(pathname.replace(/\/$/, ''))
 }
 
 /**

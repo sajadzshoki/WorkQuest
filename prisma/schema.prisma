@@ -38,6 +38,13 @@ enum UserRole {
   EMPLOYEE
 }
 
+/// Why an OTP was requested. A code issued for registration cannot be replayed
+/// to sign in to an existing account, and vice versa.
+enum OtpPurpose {
+  LOGIN
+  REGISTER
+}
+
 enum UserStatus {
   INVITED
   ACTIVE
@@ -239,6 +246,9 @@ model User {
 
   @@unique([companyId, email])
   @@unique([companyId, phone])
+  /// Login resolves an account from the phone number across companies, so the
+  /// composite unique index above cannot serve that lookup.
+  @@index([phone])
   @@index([companyId, role])
   @@index([companyId, status])
 }
@@ -248,7 +258,8 @@ model User {
 model OtpCode {
   id           String    @id @default(uuid(7)) @db.Uuid
   phone        String
-  /// scrypt/bcrypt digest — the plaintext code is never stored.
+  purpose      OtpPurpose @default(LOGIN)
+  /// scrypt digest — the plaintext code is never stored.
   codeHash     String
   expiresAt    DateTime
   attempts     Int       @default(0)
@@ -258,7 +269,31 @@ model OtpCode {
   userAgent    String?
   createdAt    DateTime  @default(now())
 
-  @@index([phone, createdAt])
+  /// Lookup used by verification: newest unconsumed code for a phone+purpose.
+  @@index([phone, purpose, createdAt])
+  /// Housekeeping / abuse review: find codes that expired unused.
+  @@index([expiresAt])
+}
+
+///
+/// Single-use authorisation to finish self-service registration.
+///
+/// Issued after a phone number is OTP-verified but no account exists yet. It
+/// lives in an httpOnly cookie (the browser never sees the id) and is backed by
+/// this row so it can be revoked and is genuinely single-use — a stateless
+/// ticket could otherwise create unlimited companies within its TTL.
+///
+model OnboardingTicket {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  phone      String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, consumedAt])
+  @@index([expiresAt])
 }
 
 /// Server-side session record. The cookie holds a signed JWT carrying `sid`,

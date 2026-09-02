@@ -77,3 +77,137 @@ export function formatPhone(phone: string, locale?: string | null): string {
     ? grouped
     : grouped.replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)] ?? d)
 }
+
+/**
+ * Persian/Arabic → Latin transliteration used for URL slugs.
+ *
+ * Company slugs appear in URLs, so they must be ASCII even though the name is
+ * Persian. Persian script does not write short vowels, so this is an
+ * approximation, not a transcription — which is exactly why the slug field in
+ * the UI is editable and only *prefilled* with this suggestion.
+ */
+const TRANSLITERATION: Record<string, string> = {
+  آ: 'a', أ: 'a', إ: 'e', ا: 'a', ب: 'b', پ: 'p', ت: 't', ث: 's', ج: 'j', چ: 'ch',
+  ح: 'h', خ: 'kh', د: 'd', ذ: 'z', ر: 'r', ز: 'z', ژ: 'zh', س: 's', ش: 'sh',
+  ص: 's', ض: 'z', ط: 't', ظ: 'z', ع: 'a', غ: 'gh', ف: 'f', ق: 'gh', ک: 'k',
+  ك: 'k', گ: 'g', ل: 'l', م: 'm', ن: 'n', ه: 'h', ة: 'h',
+}
+
+const ZERO_WIDTH = /[\u200B-\u200D\uFEFF]/g
+const LATIN_VOWELS = 'aeiou'
+/** Digraphs produced by the table above; treated as one consonant unit. */
+const DIGRAPHS = ['ch', 'sh', 'gh', 'kh', 'zh']
+
+function toLatinDigits(input: string): string {
+  return input
+    .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+}
+
+/** Split a Latin word into vowel / digit / consonant(-digraph) tokens. */
+function tokenize(word: string): string[] {
+  const tokens: string[] = []
+  let index = 0
+  while (index < word.length) {
+    const digraph = word.slice(index, index + 2)
+    if (DIGRAPHS.includes(digraph)) {
+      tokens.push(digraph)
+      index += 2
+      continue
+    }
+    tokens.push(word[index] as string)
+    index += 1
+  }
+  return tokens
+}
+
+/**
+ * Persian omits short vowels, which leaves unreadable consonant clusters
+ * ("shrkt" for «شرکت»). Insert an `a` inside every run of three or more
+ * consonants so the suggested slug stays pronounceable. Digits and vowels end a
+ * run; anything that is not a letter or digit has already been dropped.
+ */
+function breakUpClusters(word: string): string {
+  const tokens = tokenize(word)
+  const out: string[] = []
+  let run: string[] = []
+
+  const flush = () => {
+    if (run.length >= 3) {
+      run.forEach((token, position) => {
+        out.push(token)
+        if (position < run.length - 1) out.push('a')
+      })
+    }
+    else {
+      out.push(...run)
+    }
+    run = []
+  }
+
+  for (const token of tokens) {
+    if (/[a-z]/.test(token) && !LATIN_VOWELS.includes(token)) {
+      run.push(token)
+      continue
+    }
+    flush()
+    out.push(token)
+  }
+  flush()
+
+  return out.join('').replace(/([aeiou])\1+/g, '$1')
+}
+
+/**
+ * Build a URL-safe slug. Persian names are transliterated, Latin names are
+ * lower-cased as-is. Returns `''` when nothing usable remains.
+ */
+export function slugify(input: string): string {
+  const cleaned = toLatinDigits(input.replace(ZERO_WIDTH, ' ')).trim()
+
+  const words = cleaned.split(/\s+/).map((word) => {
+    const letters = [...word]
+    const latin: string[] = []
+
+    letters.forEach((char, position) => {
+      const next = letters[position + 1]
+      const previousLatin = latin.join('')
+      const previousIsConsonant = previousLatin.length > 0 && !LATIN_VOWELS.includes(previousLatin.at(-1) as string)
+
+      // و is a consonant ("v") when it starts a word or follows a vowel, and a
+      // vowel ("o") when it sits between two consonants.
+      if (char === 'و') {
+        const nextIsConsonantLetter = next !== undefined && next !== 'ا' && next !== 'آ' && next !== 'ی' && next !== 'و'
+        latin.push(previousIsConsonant && nextIsConsonantLetter ? 'o' : 'v')
+        return
+      }
+
+      // ی reads as "i" between consonants or at the end of a word, "y" otherwise.
+      if (char === 'ی' || char === 'ي' || char === 'ئ') {
+        const atWordEnd = next === undefined
+        const nextIsConsonantLetter = next !== undefined && !['ا', 'آ', 'و', 'ی'].includes(next)
+        latin.push(previousIsConsonant && (atWordEnd || nextIsConsonantLetter) ? 'i' : 'y')
+        return
+      }
+
+      if (char === 'ء') return
+      if (char === 'ؤ') {
+        latin.push('o')
+        return
+      }
+      latin.push(TRANSLITERATION[char] ?? char)
+    })
+
+    // Only letters and digits can reach the slug, so punctuation must be
+    // stripped *before* cluster breaking — otherwise "!!!" would read as a
+    // consonant run and gain inserted vowels.
+    return breakUpClusters(latin.join('').toLowerCase().replace(/[^a-z0-9]+/g, ' '))
+  })
+
+  return words
+    .join(' ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 60)
+}

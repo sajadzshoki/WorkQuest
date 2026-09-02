@@ -14,6 +14,8 @@
 import { PrismaPg } from '@prisma/adapter-pg'
 import 'dotenv/config'
 
+import { DEFAULT_LEVELS } from '../shared/constants'
+
 import { PrismaClient } from './generated/prisma/client.ts'
 
 const databaseUrl = process.env.DATABASE_URL
@@ -24,14 +26,8 @@ if (!databaseUrl) {
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) })
 
-const LEVELS = [
-  { level: 1, minXp: 0, title: 'جوانه', iconKey: 'i-heroicons-sparkles' },
-  { level: 2, minXp: 500, title: 'کاوشگر', iconKey: 'i-heroicons-bolt' },
-  { level: 3, minXp: 1500, title: 'سازنده', iconKey: 'i-heroicons-wrench-screwdriver' },
-  { level: 4, minXp: 3000, title: 'راهبر', iconKey: 'i-heroicons-rocket-launch' },
-  { level: 5, minXp: 5000, title: 'استاد', iconKey: 'i-heroicons-academic-cap' },
-  { level: 6, minXp: 8000, title: 'پیشرو', iconKey: 'i-heroicons-star' },
-]
+/** The default ladder every tenant starts with (shared with onboarding). */
+const LEVELS = DEFAULT_LEVELS
 
 const ACHIEVEMENTS = [
   {

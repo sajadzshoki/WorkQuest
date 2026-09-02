@@ -12,8 +12,8 @@ import { usePrisma } from './db'
  *
  * Rules:
  *  - models listed in TENANT_MODELS always carry `companyId`;
- *  - `Company`, `OtpCode` and `Session` are deliberately excluded (pre-auth or
- *    tenant root);
+ *  - `Company`, `OtpCode`, `Session` and `OnboardingTicket` are deliberately
+ *    excluded (pre-auth or tenant root);
  *  - an explicit `companyId` that disagrees with the session is a hard error,
  *    never a silent override.
  */

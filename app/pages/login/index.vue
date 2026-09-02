@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApiErrorBody } from '#shared/types/api'
+import type { ApiErrorBody, RequestOtpResponse } from '#shared/types/api'
 
 definePageMeta({ layout: 'auth', middleware: ['guest'] })
 
@@ -9,24 +9,35 @@ const toast = useToast()
 const router = useRouter()
 
 const phone = ref('')
-const pending = ref(false)
+const pending = ref<'LOGIN' | 'REGISTER' | null>(null)
 const errorMessage = ref<string | null>(null)
 
-async function submit() {
+/** Both buttons share one flow; only the purpose sent to the server differs. */
+async function request(purpose: 'LOGIN' | 'REGISTER') {
   errorMessage.value = null
-  pending.value = true
+  pending.value = purpose
 
   try {
-    const result = await $fetch<{ phone: string, resendAfterSeconds: number }>('/api/auth/otp/request', {
+    const result = await $fetch<RequestOtpResponse>('/api/auth/otp/request', {
       method: 'POST',
-      body: { phone: phone.value },
+      body: { phone: phone.value, purpose },
     })
 
-    toast.add({ title: t('auth.codeSent'), color: 'success', icon: 'i-heroicons-check-circle' })
+    toast.add({
+      title: t('auth.codeSent'),
+      description: t('auth.codeSentDetail', { provider: result.provider }),
+      color: 'success',
+      icon: 'i-heroicons-check-circle',
+    })
+
     await router.push(
       localePath({
         path: '/login/verify',
-        query: { phone: result.phone, resend: String(result.resendAfterSeconds) },
+        query: {
+          phone: result.phone,
+          resend: String(result.resendAfterSeconds),
+          purpose: result.purpose,
+        },
       }),
     )
   }
@@ -35,7 +46,7 @@ async function submit() {
     errorMessage.value = data?.message ?? t('auth.errors.generic')
   }
   finally {
-    pending.value = false
+    pending.value = null
   }
 }
 </script>
@@ -51,7 +62,7 @@ async function submit() {
 
     <form
       class="mt-6 space-y-4"
-      @submit.prevent="submit"
+      @submit.prevent="request('LOGIN')"
     >
       <UFormField
         :label="t('auth.phoneLabel')"
@@ -62,10 +73,12 @@ async function submit() {
           type="tel"
           dir="ltr"
           autocomplete="tel"
+          inputmode="tel"
           size="xl"
           :placeholder="t('auth.phonePlaceholder')"
           icon="i-heroicons-device-phone-mobile"
           class="w-full text-start"
+          :disabled="pending !== null"
         />
       </UFormField>
 
@@ -81,11 +94,48 @@ async function submit() {
         type="submit"
         size="xl"
         block
-        :loading="pending"
-        :disabled="phone.length < 10"
+        :loading="pending === 'LOGIN'"
+        :disabled="phone.length < 10 || pending !== null"
       >
-        {{ pending ? t('auth.sending') : t('auth.sendCode') }}
+        {{ pending === 'LOGIN' ? t('auth.sending') : t('auth.sendCode') }}
       </UButton>
     </form>
+
+    <div class="my-6 flex items-center gap-3 text-xs text-dimmed">
+      <span class="h-px flex-1 bg-default" />
+      {{ t('auth.orDivider') }}
+      <span class="h-px flex-1 bg-default" />
+    </div>
+
+    <div class="rounded-2xl border border-dashed border-default p-4">
+      <h2 class="text-sm font-bold text-highlighted">
+        {{ t('auth.registerTitle') }}
+      </h2>
+      <p class="mt-1 text-xs leading-6 text-muted">
+        {{ t('auth.registerSubtitle') }}
+      </p>
+
+      <UButton
+        color="neutral"
+        variant="outline"
+        size="lg"
+        block
+        class="mt-3"
+        icon="i-heroicons-building-office"
+        :loading="pending === 'REGISTER'"
+        :disabled="phone.length < 10 || pending !== null"
+        @click="request('REGISTER')"
+      >
+        {{ pending === 'REGISTER' ? t('auth.sending') : t('auth.registerCompany') }}
+      </UButton>
+    </div>
+
+    <p class="mt-5 flex items-start gap-2 text-xs leading-6 text-dimmed">
+      <UIcon
+        name="i-heroicons-shield-check"
+        class="mt-0.5 size-4 shrink-0 text-success"
+      />
+      {{ t('auth.securityNote') }}
+    </p>
   </div>
 </template>

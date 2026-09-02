@@ -57,9 +57,13 @@ export default defineNuxtConfig({
     otpTtlSeconds: 120,
     otpMaxAttempts: 5,
     otpResendCooldownSeconds: 90,
+    /** Rolling per-IP cap on OTP requests (0 disables the check). */
+    otpMaxRequestsPerIpPerHour: 30,
     otpHttpUrl: '',
     otpHttpApiKey: '',
     otpHttpTemplate: '',
+    /** How long a verified phone may take to finish creating its company. */
+    onboardingTicketTtlSeconds: 60 * 15,
     bootstrapAdminPhone: '',
 
     // Public (NUXT_PUBLIC_*)
@@ -71,6 +75,10 @@ export default defineNuxtConfig({
       supportEmail: 'support@workquest.local',
     },
   },
+
+  // Overridable so the integration suite can boot a second dev server next to
+  // the one used for the live preview without the two fighting over `.nuxt`.
+  buildDir: process.env.NUXT_BUILD_DIR || '.nuxt',
 
   // ---------------------------------------------------------------------------
   // Aliases. `#prisma/client` points at the generated Prisma client

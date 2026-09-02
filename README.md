@@ -91,26 +91,30 @@ app/                          # everything rendered in the browser (Nuxt 4 srcDi
     layout/                   # shell: sidebar, topbar, mobile tab bar, switchers
     common/                   # PageHeader, SectionCard, EmptyState
     gamification/             # XpProgress, StatTile, StreakPill, status/priority badges
-    auth/                     # OtpCodeInput
-  composables/                # useSession, useCan, useLocaleFormat, useNavItems…
+    auth/                     # OtpCodeInput, OnboardingStepper
+  composables/                # useSession, useOnboarding, useCan, useLocaleFormat, useNavItems…
   layouts/                    # default (app shell), auth, landing
-  middleware/                 # auth.ts, guest.ts (route guards)
-  pages/                      # index, login, dashboard, tasks, team, leaderboard, …
+  middleware/                 # auth.ts, guest.ts, onboarding.ts (route guards)
+  pages/                      # index, login, onboarding, dashboard, tasks, team, …
 i18n/locales/                 # fa.json (source of truth), en.json
 server/
   middleware/1.auth-context.ts# resolves the session cookie → event.context.auth
-  utils/                      # db, tenant, auth, session, http, otp, crypto, error-handler
+  utils/                      # db, tenant, auth, session, onboarding, http, otp, crypto,
+                              # error-handler
   api/                        # one file per endpoint (Nitro file routing)
 shared/                       # code shared by client and server
+  constants.ts                # default level ladder, supported timezones/locales
   schemas/                    # zod request/query schemas
-  types/                      # API contracts (AuthContext, MeResponse, ApiErrorBody)
-  utils/                      # permissions matrix, XP maths, locale formatting
+  types/                      # API contracts (AuthContext, MeResponse, onboarding payloads)
+  utils/                      # permissions matrix, XP maths, locale formatting, slugify
 prisma/
   schema.prisma               # domain model
   migrations/                 # SQL migrations
   generated/prisma/           # generated client (git-ignored, aliased as #prisma/client)
   seed.ts                     # demo data for two tenants
-test/                         # unit tests for shared/** (no database needed)
+test/                         # unit tests (no database needed)
+  integration/                # HTTP tests against a real server + database
+scripts/run-integration.sh    # boots that server for the integration suite
 ```
 
 ### Aliases
@@ -207,24 +211,59 @@ Adding Kavenegar/SMS.ir/Twilio means implementing `OtpProvider` and registering 
 
 Flow:
 
-1. `POST /api/auth/otp/request` → cooldown check, invalidate previous codes, store a **scrypt
-   digest**, deliver through the provider. The plaintext is never returned.
-2. `POST /api/auth/otp/verify` → attempt counter, timing-safe compare, consume the code, create a
-   `Session` row, write an `AuditLog`, sign a JWT (`sub`, `sid`, `cid`, `role`), set the
-   httpOnly/`SameSite=Lax` cookie.
+1. `POST /api/auth/otp/request` → per-IP cap, per-phone resend cooldown, invalidate previous
+   codes, store a **scrypt digest**, deliver through the provider. The plaintext is never
+   returned, and `accountExists` in the response is the only existence signal the API exposes.
+2. `POST /api/auth/otp/verify` → attempt counter, timing-safe compare, consume the code, then
+   either open a session or hand out an onboarding ticket (below).
 3. `server/middleware/1.auth-context.ts` re-verifies the JWT **and** the `Session` row on every
    API call, so revocation works, and re-signs the token inside the renewal window (sliding
    expiry).
 
-Accounts are never auto-provisioned: an unknown phone number is a `404`, not a signup.
+Rate limiting has three layers: a rolling per-IP cap
+(`NUXT_OTP_MAX_REQUESTS_PER_IP_PER_HOUR`), a per-phone resend cooldown, and a per-code attempt
+budget that burns the code after `NUXT_OTP_MAX_ATTEMPTS` wrong guesses.
+
+### Self-service registration
+
+A verified phone with no account is the entry point for creating a company:
+
+```
+phone → OTP → verify → onboarding ticket (httpOnly cookie)
+      → /onboarding/profile → /onboarding/company → OWNER session
+```
+
+`server/utils/onboarding.ts` issues a **single-use `OnboardingTicket` row** whose id lives in an
+httpOnly, `SameSite=Lax` cookie. The browser never sees the id, so it cannot be lifted by script
+or leak into a URL or log; `GET /api/auth/onboarding` is the only way the client learns which
+phone it is registering for. Backing the ticket with a row rather than a stateless JWT is what
+makes it revocable and replay-proof.
+
+`POST /api/auth/onboarding/complete` then creates the tenant in one transaction:
+
+- consumes the ticket **inside the transaction** — two concurrent submits cannot both win;
+- derives and de-duplicates the slug (`reserveCompanySlug`), so a name collision never blocks
+  a founder;
+- creates the `Company`, its `OWNER` and the default level ladder + zeroed `UserProgress`;
+- writes an `AuditLog` row and opens the session.
+
+The phone comes from the ticket and the role is assigned server-side — neither is an input, so a
+caller cannot register a number they do not control or grant themselves a higher role.
+
+### Public API routes
+
+`server/middleware/1.auth-context.ts` holds an explicit allowlist of routes reachable without a
+session. Every entry is guarded some other way (OTP rate limits, the onboarding ticket, or a
+boolean-only response) and nothing tenant-scoped belongs there. Adding an endpoint under an
+already-public prefix is not enough — add the exact path.
 
 ---
 
 ## 7. Data model
 
-23 tables, grouped by concern:
+24 tables, grouped by concern:
 
-- **Tenancy** — `Company`, `User`, `OtpCode`, `Session`
+- **Tenancy & auth** — `Company`, `User`, `OtpCode`, `Session`, `OnboardingTicket`
 - **Structure** — `Team`, `TeamMember` (carries `managerId`, the manager-scope edge)
 - **Gamification** — `Level`, `UserProgress`, `XpTransaction`, `CoinTransaction`, `Achievement`,
   `UserAchievement`, `Badge`, `UserBadge`, `Recognition`
@@ -296,8 +335,21 @@ NUXT_APP_URL=https://app.example.com
 ### Checks
 
 ```bash
-npm run verify     # lint + typecheck + test + build
+npm run verify              # lint + typecheck + unit tests + build
+npm test                    # unit tests — no database needed
+npm run test:integration    # real server + real PostgreSQL, over HTTP
 ```
+
+`npm test` covers the framework-free layers (`shared/**` and `server/utils/crypto`) and needs no
+database. `npm run test:integration` boots a real dev server against the configured database and
+drives the API over HTTP: registration, login, invalid/expired/brute-forced codes, unauthorized
+access and cross-company isolation.
+
+The integration runner (`scripts/run-integration.sh`) starts its own server on `TEST_PORT`
+(default 3100), so it must not collide with a running `npm run dev`. It boots the server from a
+shell rather than from inside Vitest on purpose: a `npx nuxt dev` child answers HTTP but its
+stdout does not reliably reach a Node worker here, and the suite reads the OTP codes the `console`
+provider prints from that output.
 
 ---
 
@@ -327,8 +379,9 @@ npm run verify     # lint + typecheck + test + build
 
 **Platform**
 
-- Automated tests for handlers (happy path + cross-tenant negative cases).
-- Rate limiting beyond the OTP cooldown (per-IP token bucket).
+- Company profile editing (name, logo upload, timezone) — the onboarding form only creates them.
+- Invite-based onboarding for the other three roles; self-service signup currently creates owners.
+- Browser tests (Playwright) for the wizard; the HTTP-level flows are already covered.
 - Structured logging, request IDs and error reporting.
 - CI pipeline: `npm run verify` + migration dry-run.
 - Persian/English parity pass on `en.json` once the UI settles.
