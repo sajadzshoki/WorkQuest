@@ -271,7 +271,7 @@ const progress = computed(() => member.value?.progress ?? null)
             </h3>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <GamificationStatTile
-                :label="t('status.task.ASSIGNED')"
+                :label="t('status.task.TODO')"
                 :value="format.number(performance?.assigned ?? 0)"
                 icon="i-heroicons-clipboard-document-list"
                 tone="primary"

@@ -16,7 +16,10 @@ export function db(): Pool {
   if (!pool) {
     const connectionString = process.env.DATABASE_URL
     if (!connectionString) throw new Error('DATABASE_URL is not set for the integration suite')
-    pool = new pg.Pool({ connectionString, max: 3 })
+    // Two connections, deliberately: the suite shares the database with the
+    // dev server it drives, and the local dev server allows ~10 in total.
+    // A greedy test pool starves the thing under test.
+    pool = new pg.Pool({ connectionString, max: 2 })
   }
   return pool
 }

@@ -46,6 +46,16 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Server-only
     databaseUrl: '',
+    /**
+     * Maximum PostgreSQL connections held by this worker's pool.
+     *
+     * Must be sized against the *server's* `max_connections` divided by the
+     * number of workers — not left at a hopeful default. Small local servers
+     * (`prisma dev`, a shared pooler) cap out around 10 in total, so anything
+     * else connecting concurrently, including the integration suite, has to
+     * fit inside the same budget. Override with NUXT_DB_POOL_MAX.
+     */
+    dbPoolMax: 10,
     sessionSecret: '',
     sessionCookieName: 'workquest_session',
     sessionIssuer: 'workquest',

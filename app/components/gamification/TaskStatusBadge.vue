@@ -1,27 +1,30 @@
 <script setup lang="ts">
-const props = defineProps<{ status: string }>()
+import type { TaskStatus } from '#shared/utils/task'
+
+/**
+ * The one place a task status is turned into colour and iconography, so the
+ * board, the cards, the dashboards and the detail page always read the same.
+ */
+const props = withDefaults(defineProps<{ status: TaskStatus, size?: 'sm' | 'md' }>(), {
+  size: 'sm',
+})
+
 const { t } = useI18n()
 
-const tones: Record<string, 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral'> = {
-  DRAFT: 'neutral',
-  ASSIGNED: 'info',
+const tones: Record<TaskStatus, 'primary' | 'success' | 'warning' | 'info' | 'neutral'> = {
+  TODO: 'neutral',
   IN_PROGRESS: 'primary',
-  SUBMITTED: 'warning',
+  SUBMITTED: 'info',
+  NEEDS_REVISION: 'warning',
   APPROVED: 'success',
-  CHANGES_REQUESTED: 'warning',
-  REJECTED: 'error',
-  CANCELLED: 'neutral',
 }
 
-const icons: Record<string, string> = {
-  DRAFT: 'i-heroicons-pencil-square',
-  ASSIGNED: 'i-heroicons-paper-airplane',
+const icons: Record<TaskStatus, string> = {
+  TODO: 'i-heroicons-inbox-stack',
   IN_PROGRESS: 'i-heroicons-play-circle',
-  SUBMITTED: 'i-heroicons-arrow-up-tray',
+  SUBMITTED: 'i-heroicons-paper-airplane',
+  NEEDS_REVISION: 'i-heroicons-arrow-path',
   APPROVED: 'i-heroicons-check-badge',
-  CHANGES_REQUESTED: 'i-heroicons-pencil',
-  REJECTED: 'i-heroicons-x-circle',
-  CANCELLED: 'i-heroicons-no-symbol',
 }
 </script>
 
@@ -30,7 +33,8 @@ const icons: Record<string, string> = {
     :color="tones[props.status] ?? 'neutral'"
     variant="subtle"
     :icon="icons[props.status]"
-    size="sm"
+    :size="props.size"
+    class="shrink-0"
   >
     {{ t(`status.task.${props.status}`) }}
   </UBadge>

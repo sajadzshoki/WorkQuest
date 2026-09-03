@@ -64,29 +64,32 @@ enum TeamRole {
   MEMBER
 }
 
+/// Task lifecycle.
+///
+///   TODO → IN_PROGRESS → SUBMITTED → APPROVED
+///                            ↓
+///                     NEEDS_REVISION → IN_PROGRESS → SUBMITTED
+///
+/// The legal edges live in `shared/utils/task.ts` (`TASK_TRANSITIONS`) and are
+/// enforced on every mutation, so a client can never post a status directly.
 enum TaskStatus {
-  DRAFT
-  ASSIGNED
+  TODO
   IN_PROGRESS
   SUBMITTED
+  NEEDS_REVISION
   APPROVED
-  CHANGES_REQUESTED
-  REJECTED
-  CANCELLED
 }
 
 enum TaskPriority {
   LOW
   MEDIUM
   HIGH
-  URGENT
 }
 
+/// A reviewer either accepts the work or sends it back for revision.
 enum ReviewDecision {
   APPROVED
-  APPROVED_WITH_NOTES
   CHANGES_REQUESTED
-  REJECTED
 }
 
 enum LedgerSource {
@@ -155,6 +158,7 @@ enum RecognitionType {
 
 enum NotificationType {
   TASK_ASSIGNED
+  TASK_SUBMITTED
   TASK_REVIEWED
   ACHIEVEMENT_UNLOCKED
   LEVEL_UP
@@ -201,6 +205,9 @@ model Company {
   coinLedger    CoinTransaction[]
   tasks         Task[]
   taskReviews   TaskReview[]
+  taskComments  TaskComment[]
+  taskAttachments TaskAttachment[]
+  taskEvents    TaskEvent[]
   achievements  Achievement[]
   userAchievements UserAchievement[]
   badges        Badge[]
@@ -241,6 +248,9 @@ model User {
   ownedTeams      Team[]
   assignedTasks   Task[]             @relation("TaskAssignee")
   createdTasks    Task[]             @relation("TaskAssigner")
+  taskComments    TaskComment[]
+  taskAttachments TaskAttachment[]
+  taskEvents      TaskEvent[]
   reviews         TaskReview[]
   achievements    UserAchievement[]
   badges          UserBadge[]
@@ -581,13 +591,17 @@ model Recognition {
 // Work
 // ---------------------------------------------------------------------------
 
+/// A unit of work. The lifecycle is `TODO → IN_PROGRESS → SUBMITTED →
+/// APPROVED`, with `SUBMITTED → NEEDS_REVISION → IN_PROGRESS` as the rework
+/// loop. Status is never written directly by a client: every change goes
+/// through a transition endpoint that validates the edge and the actor's role.
 model Task {
   id           String       @id @default(uuid(7)) @db.Uuid
   companyId    String       @db.Uuid
   company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   title        String
   description  String?
-  status       TaskStatus   @default(ASSIGNED)
+  status       TaskStatus   @default(TODO)
   priority     TaskPriority @default(MEDIUM)
   teamId       String?      @db.Uuid
   team         Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
@@ -597,19 +611,93 @@ model Task {
   assigner     User?        @relation("TaskAssigner", fields: [assignerId], references: [id], onDelete: SetNull)
   xpReward     Int          @default(0)
   coinReward   Int          @default(0)
+  /// Planned effort in hours, as estimated by the manager at creation time.
+  estimatedHours Decimal?   @db.Decimal(6, 2)
+  /// Self-reported completion, 0-100. Employees move it while working.
+  progress     Int          @default(0)
   dueDate      DateTime?
   assignedAt   DateTime?
+  startedAt    DateTime?
   submittedAt  DateTime?
   completedAt  DateTime?
+  /// How many times the task has come back from review. Drives the
+  /// "needs attention" surfaces on the manager dashboard.
+  revisionCount Int         @default(0)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
   reviews      TaskReview[]
+  comments     TaskComment[]
+  attachments  TaskAttachment[]
+  events       TaskEvent[]
   recognitions Recognition[]
 
   @@index([companyId, status])
   @@index([companyId, assigneeId, status])
+  @@index([companyId, teamId, status])
   @@index([companyId, dueDate])
+  @@index([companyId, status, dueDate])
+  @@index([companyId, assigneeId, dueDate])
+  @@index([companyId, priority, dueDate])
+}
+
+/// Discussion thread on a task. Visible to the assignee, the assigner and
+/// anyone who can review the task.
+model TaskComment {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  companyId String   @db.Uuid
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taskId    String   @db.Uuid
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String   @db.Uuid
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, taskId, createdAt])
+  @@index([companyId, authorId])
+}
+
+/// A file linked to a task. Storage is out of scope for this phase, so the row
+/// records a URL plus its metadata — an uploader can be swapped in later
+/// without touching the task endpoints.
+model TaskAttachment {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  companyId   String   @db.Uuid
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taskId      String   @db.Uuid
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedById String  @db.Uuid
+  uploadedBy  User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  fileName    String
+  url         String
+  mimeType    String?
+  sizeBytes   Int?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, taskId, createdAt])
+}
+
+/// Append-only lifecycle trail: who moved the task, from what, to what.
+/// Kept separate from `AuditLog` because it is user-facing (the activity feed
+/// on the task page) rather than a security record.
+model TaskEvent {
+  id        String      @id @default(uuid(7)) @db.Uuid
+  companyId String      @db.Uuid
+  company   Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  taskId    String      @db.Uuid
+  task      Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actorId   String?     @db.Uuid
+  actor     User?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  /// Machine key, e.g. `task.created`, `task.started`, `task.approved`.
+  action    String
+  fromStatus TaskStatus?
+  toStatus   TaskStatus?
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([companyId, taskId, createdAt])
 }
 
 model TaskReview {
@@ -621,8 +709,9 @@ model TaskReview {
   reviewerId    String         @db.Uuid
   reviewer      User           @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
   decision      ReviewDecision
-  /// 0-100 quality score driving XP/coin awards.
-  score         Int
+  /// 0-100 quality score driving XP/coin awards. Null when the reviewer sent
+  /// the task back without grading it.
+  score         Int?
   feedback      String?
   xpAwarded     Int            @default(0)
   coinsAwarded  Int            @default(0)

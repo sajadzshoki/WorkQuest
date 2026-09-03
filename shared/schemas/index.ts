@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { SUPPORTED_LOCALES, SUPPORTED_TIMEZONES } from '../constants'
+import { TASK_ACTIONS, TASK_PRIORITIES, TASK_STATUSES } from '../utils/task'
 
 /**
  * Every request body/query crossing the client-server boundary is described here
@@ -90,19 +91,18 @@ export const paginationSchema = z.object({
 export type PaginationInput = z.infer<typeof paginationSchema>
 
 export const taskFilterSchema = paginationSchema.extend({
-  status: z
-    .enum([
-      'ASSIGNED',
-      'IN_PROGRESS',
-      'SUBMITTED',
-      'APPROVED',
-      'CHANGES_REQUESTED',
-      'REJECTED',
-      'CANCELLED',
-      'DRAFT',
-    ])
+  status: z.enum(TASK_STATUSES).optional(),
+  priority: z.enum(TASK_PRIORITIES).optional(),
+  teamId: z.string().uuid('تیم انتخاب‌شده معتبر نیست').optional(),
+  assigneeId: z.string().uuid('کاربر انتخاب‌شده معتبر نیست').optional(),
+  search: z.string().trim().max(120).optional(),
+  /** Narrow to work that is late — the manager dashboard's headline filter. */
+  overdue: z
+    .union([z.boolean(), z.enum(['true', 'false'])])
+    .transform(value => value === true || value === 'true')
     .optional(),
   scope: z.enum(['mine', 'team', 'all']).default('mine'),
+  sort: z.enum(['dueDate', 'priority', 'createdAt', 'status']).default('dueDate'),
 })
 export type TaskFilterInput = z.infer<typeof taskFilterSchema>
 
@@ -210,3 +210,104 @@ export const acceptInvitationSchema = z.object({
   invitationId: z.string().uuid('دعوت‌نامه انتخاب‌شده معتبر نیست'),
 })
 export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>
+
+// ---------------------------------------------------------------------------
+// Tasks
+// ---------------------------------------------------------------------------
+
+/**
+ * A file linked to a task.
+ *
+ * Storage is not part of this phase, so the client supplies a URL it already
+ * has. Everything about the row is validated here anyway: an unchecked `url`
+ * rendered as a link is a stored-XSS vector, hence the explicit protocol
+ * allow-list rather than a bare `.url()`.
+ */
+export const taskAttachmentSchema = z.object({
+  fileName: z.string().trim().min(1, 'نام فایل را وارد کنید').max(200),
+  url: z
+    .string()
+    .trim()
+    .max(1000)
+    .refine(value => /^https?:\/\//i.test(value), 'آدرس فایل باید با http یا https شروع شود'),
+  mimeType: z.string().trim().max(120).optional().or(z.literal('')),
+  sizeBytes: z.coerce.number().int().min(0).max(100 * 1024 * 1024).optional(),
+})
+export type TaskAttachmentInput = z.infer<typeof taskAttachmentSchema>
+
+/**
+ * `POST /api/tasks` — a manager creates work.
+ *
+ * `dueDate` is accepted as an ISO string and coerced to a `Date` so the handler
+ * never has to parse it, and an unparseable value fails validation rather than
+ * silently becoming `Invalid Date`.
+ */
+export const createTaskSchema = z.object({
+  title: z.string().trim().min(3, 'عنوان تسک را وارد کنید').max(160),
+  description: z.string().trim().max(5000).optional().or(z.literal('')),
+  assigneeId: z.string().uuid('انجام‌دهنده انتخاب‌شده معتبر نیست'),
+  teamId: z.string().uuid('تیم انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+  priority: z.enum(TASK_PRIORITIES).default('MEDIUM'),
+  dueDate: z
+    .union([z.string().trim(), z.date()])
+    .optional()
+    .transform(value => (value === undefined || value === '' ? undefined : new Date(value)))
+    .refine(value => value === undefined || !Number.isNaN(value.getTime()), 'تاریخ سررسید معتبر نیست'),
+  /** Planned effort in hours. Quarter-hour granularity is plenty. */
+  estimatedHours: z.coerce
+    .number()
+    .min(0.25, 'برآورد زمان باید حداقل ۱۵ دقیقه باشد')
+    .max(1000, 'برآورد زمان بیش از حد بزرگ است')
+    .optional(),
+  xpReward: z.coerce.number().int().min(0).max(10_000).default(100),
+  coinReward: z.coerce.number().int().min(0).max(10_000).default(50),
+  attachments: z.array(taskAttachmentSchema).max(10, 'حداکثر ۱۰ پیوست مجاز است').default([]),
+})
+export type CreateTaskInput = z.infer<typeof createTaskSchema>
+
+/**
+ * `PATCH /api/tasks/:id` — a manager edits an existing task.
+ *
+ * Deliberately *without* `status`: the lifecycle is only reachable through
+ * `POST /api/tasks/:id/transition`, so there is no path that skips the
+ * transition rules. `.partial()` plus the refine below keeps an empty body from
+ * counting as a successful no-op edit.
+ */
+export const updateTaskSchema = createTaskSchema
+  .omit({ attachments: true })
+  .partial()
+  .refine(value => Object.keys(value).length > 0, 'تغییری برای ذخیره وجود ندارد')
+export type UpdateTaskInput = z.infer<typeof updateTaskSchema>
+
+/**
+ * `POST /api/tasks/:id/transition` — the one door the lifecycle goes through.
+ *
+ * `note` becomes the review feedback for `request_revision`/`approve` and the
+ * event note otherwise. A revision request without a reason is rejected in the
+ * handler, where the action is known.
+ */
+export const taskTransitionSchema = z.object({
+  action: z.enum(TASK_ACTIONS),
+  note: z.string().trim().max(2000).optional().or(z.literal('')),
+  /** 0-100 quality score, reviewers only. */
+  score: z.coerce.number().int().min(0).max(100).optional(),
+  /** Self-reported completion the employee submits alongside the transition. */
+  progress: z.coerce.number().int().min(0).max(100).optional(),
+})
+export type TaskTransitionInput = z.infer<typeof taskTransitionSchema>
+
+/** `PATCH /api/tasks/:id/progress` — the assignee's slider. */
+export const taskProgressSchema = z.object({
+  progress: z.coerce.number().int().min(0, 'درصد پیشرفت معتبر نیست').max(100, 'درصد پیشرفت معتبر نیست'),
+})
+export type TaskProgressInput = z.infer<typeof taskProgressSchema>
+
+/** `POST /api/tasks/:id/comments` */
+export const createTaskCommentSchema = z.object({
+  body: z.string().trim().min(1, 'متن یادداشت را وارد کنید').max(2000),
+})
+export type CreateTaskCommentInput = z.infer<typeof createTaskCommentSchema>
+
+/** `POST /api/tasks/:id/attachments` */
+export const createTaskAttachmentSchema = taskAttachmentSchema
+export type CreateTaskAttachmentInput = z.infer<typeof createTaskAttachmentSchema>

@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   const db = createTenantClient(auth)
   const since = new Date(Date.now() - 30 * 86_400_000)
 
-  const [progress, boundaries, taskCounts, openTasks, leaderboard, recognitions, achievements, challenge]
+  const [progress, boundaries, taskCounts, leaderboard, recognitions, achievements, challenge]
     = await Promise.all([
       db.userProgress.findUnique({ where: { userId: auth.userId } }),
       db.level.findMany({ orderBy: { level: 'asc' }, select: { level: true, minXp: true, title: true, iconKey: true } }),
@@ -23,20 +23,6 @@ export default defineEventHandler(async (event) => {
         by: ['status'],
         where: { assigneeId: auth.userId },
         _count: { _all: true },
-      }),
-      db.task.findMany({
-        where: { assigneeId: auth.userId, status: { in: ['ASSIGNED', 'IN_PROGRESS', 'SUBMITTED'] } },
-        orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
-        take: 5,
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          priority: true,
-          dueDate: true,
-          xpReward: true,
-          coinReward: true,
-        },
       }),
       db.userProgress.findMany({
         orderBy: { xp: 'desc' },
@@ -85,10 +71,9 @@ export default defineEventHandler(async (event) => {
       rank: myRankRow + 1,
       achievementsUnlocked: achievements,
     },
-    tasks: {
-      open: openTasks,
-      counts,
-    },
+    // Counts only: the task *lists* are served by `/api/tasks/dashboard`, which
+    // owns every task surface and applies the lifecycle rules.
+    tasks: { counts },
     leaderboard: leaderboard.map((row, index) => ({
       rank: index + 1,
       xp: row.xp,

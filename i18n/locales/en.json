@@ -161,7 +161,28 @@
     "challengeGoal": "Goal: {goal}",
     "endsIn": "{days} days left",
     "myRank": "My rank",
-    "rankValue": "{rank} of {total}"
+    "rankValue": "{rank} of {total}",
+    "todaysTasks": "Today’s tasks",
+    "activeTasks": "Active tasks",
+    "pendingSubmissions": "Pending submissions",
+    "completedTasksTitle": "Completed tasks",
+    "upcomingDeadlines": "Upcoming deadlines",
+    "managerView": "Manager view",
+    "employeeView": "My work",
+    "pendingReviews": "Pending reviews",
+    "overdueTasks": "Overdue tasks",
+    "teamCompletion": "Team completion rate",
+    "completionRate": "Completion rate",
+    "noTasksToday": "Nothing due today",
+    "noPendingReviews": "No reviews waiting",
+    "noOverdue": "Nothing is overdue",
+    "noUpcoming": "No deadlines coming up",
+    "noActiveTasks": "No active tasks",
+    "noSubmissions": "Nothing awaiting review",
+    "noCompleted": "No approved tasks yet",
+    "noTeams": "No team data yet",
+    "reviewNow": "Review",
+    "viewAll": "View all"
   },
   "tasks": {
     "title": "Tasks",
@@ -182,18 +203,104 @@
     "xp": "{value} XP",
     "coins": "{value} coins",
     "empty": "No tasks match these filters",
-    "total": "{count} tasks"
+    "total": "{count} tasks",
+    "dueTomorrow": "Due tomorrow",
+    "progress": "Progress",
+    "progressValue": "{value}%",
+    "estimate": "Estimate",
+    "estimateHours": "{hours} h",
+    "revisionCount": "Sent back {count} times",
+    "comments": "Comments",
+    "attachments": "Attachments",
+    "history": "History",
+    "reviews": "Reviews",
+    "noComments": "No comments yet",
+    "noAttachments": "No attachments",
+    "addComment": "Add comment",
+    "commentPlaceholder": "Write a comment…",
+    "addAttachment": "Add attachment",
+    "fileName": "File name",
+    "fileUrl": "File URL",
+    "create": "New task",
+    "createTitle": "Create a task",
+    "edit": "Edit task",
+    "save": "Save",
+    "created": "Task created",
+    "updated": "Task updated",
+    "detailTitle": "Task details",
+    "backToList": "Back to tasks",
+    "filters": "Filters",
+    "search": "Search tasks",
+    "sort": "Sort",
+    "sortBy": {
+      "dueDate": "Due date",
+      "priority": "Priority",
+      "createdAt": "Newest",
+      "status": "Status"
+    },
+    "onlyOverdue": "Overdue only",
+    "reward": "Reward",
+    "assignedBy": "Assigned by {name}",
+    "unassigned": "Unassigned",
+    "actions": {
+      "start": "Start task",
+      "submit": "Submit for review",
+      "approve": "Approve",
+      "request_revision": "Request revision",
+      "reopen": "Send back to queue"
+    },
+    "actionDone": {
+      "start": "Task started",
+      "submit": "Task submitted for review",
+      "approve": "Task approved",
+      "request_revision": "Revision requested",
+      "reopen": "Task reopened"
+    },
+    "review": {
+      "title": "Review task",
+      "score": "Quality score",
+      "feedback": "Feedback",
+      "feedbackPlaceholder": "Explain what needs to change…",
+      "feedbackRequired": "Please explain what needs revision",
+      "approveHint": "Approving pays the task reward to the assignee",
+      "selfReview": "You cannot review your own task"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "e.g. Redesign the sign-in page",
+      "description": "Description",
+      "descriptionPlaceholder": "Expected output and acceptance criteria…",
+      "assignee": "Assignee",
+      "selectAssignee": "Pick someone",
+      "team": "Team",
+      "selectTeam": "Pick a team (optional)",
+      "priority": "Priority",
+      "dueDate": "Due date",
+      "estimatedHours": "Estimated effort (hours)",
+      "xpReward": "XP reward",
+      "coinReward": "Coins",
+      "attachments": "Attachments (optional)",
+      "submit": "Create task"
+    },
+    "events": {
+      "task.created": "Task created",
+      "task.start": "Task started",
+      "task.submit": "Submitted for review",
+      "task.approve": "Approved",
+      "task.request_revision": "Revision requested",
+      "task.reopen": "Reopened",
+      "task.updated": "Edited",
+      "task.reassigned": "Assignee changed",
+      "task.attachment_added": "Attachment added"
+    }
   },
   "status": {
     "task": {
-      "DRAFT": "Draft",
-      "ASSIGNED": "Assigned",
+      "TODO": "To do",
       "IN_PROGRESS": "In progress",
       "SUBMITTED": "Submitted",
-      "APPROVED": "Approved",
-      "CHANGES_REQUESTED": "Changes requested",
-      "REJECTED": "Rejected",
-      "CANCELLED": "Cancelled"
+      "NEEDS_REVISION": "Needs revision",
+      "APPROVED": "Approved"
     },
     "redemption": {
       "REQUESTED": "Requested",
@@ -218,8 +325,7 @@
   "priority": {
     "LOW": "Low",
     "MEDIUM": "Medium",
-    "HIGH": "High",
-    "URGENT": "Urgent"
+    "HIGH": "High"
   },
   "gamification": {
     "xp": "Experience",
@@ -368,7 +474,8 @@
     "serverError": "Unexpected server error",
     "networkError": "Connection failed",
     "backHome": "Back home",
-    "statusCode": "Status code"
+    "statusCode": "Status code",
+    "generic": "Something went wrong"
   },
   "landing": {
     "hero": {
