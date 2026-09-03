@@ -227,6 +227,15 @@ export interface MemberDetail extends MemberSummary {
     iconKey: string | null
     unlockedAt: string
   }[]
+  badges: {
+    id: string
+    name: string
+    description: string | null
+    iconKey: string | null
+    tone: string | null
+    imageUrl: string | null
+    awardedAt: string
+  }[]
   /** Performance summary for the current cycle. */
   performance: {
     assigned: number

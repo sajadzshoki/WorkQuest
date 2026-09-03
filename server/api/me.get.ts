@@ -1,6 +1,5 @@
-import { computeLevelProgress } from '#shared/utils/xp'
-
 import { requireAuth } from '../utils/auth'
+import { resolveLevelProgress } from '../utils/levels'
 import { createTenantClient } from '../utils/tenant'
 
 /** Everything the app shell needs on first paint: identity + gamification state. */
@@ -9,13 +8,9 @@ export default defineEventHandler(async (event) => {
   const db = createTenantClient(auth)
 
   const progress = await db.userProgress.findUnique({ where: { userId: auth.userId } })
-  const boundaries = await db.level.findMany({
-    orderBy: { level: 'asc' },
-    select: { level: true, minXp: true, title: true, iconKey: true },
-  })
 
   const xp = progress?.xp ?? 0
-  const level = computeLevelProgress(xp, boundaries)
+  const level = await resolveLevelProgress(db, auth.companyId, xp)
 
   const unreadNotifications = await db.notification.count({
     where: { userId: auth.userId, status: 'UNREAD' },

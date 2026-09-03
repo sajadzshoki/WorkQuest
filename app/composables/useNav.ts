@@ -24,6 +24,7 @@ export function useNavItems() {
 
   const items: NavItem[] = [
     { key: 'dashboard', label: t('nav.dashboard'), to: localePath('/dashboard'), icon: 'i-heroicons-squares-2x2' },
+    { key: 'profile', label: t('nav.profile'), to: localePath('/profile'), icon: 'i-heroicons-user-circle' },
     { key: 'tasks', label: t('nav.tasks'), to: localePath('/tasks'), icon: 'i-heroicons-clipboard-document-list' },
     { key: 'team', label: t('nav.team'), to: localePath('/team'), icon: 'i-heroicons-user-group' },
     // People management: an EMPLOYEE has nobody to manage, so the entry would

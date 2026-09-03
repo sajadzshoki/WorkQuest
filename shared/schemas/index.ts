@@ -340,7 +340,14 @@ export const walletTransactionQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   type: z
-    .enum(['TASK_REWARD', 'RECOGNITION_REWARD', 'CHALLENGE_REWARD', 'REWARD_REDEMPTION', 'ADMIN_ADJUSTMENT'])
+    .enum([
+      'TASK_REWARD',
+      'RECOGNITION_REWARD',
+      'ACHIEVEMENT_REWARD',
+      'CHALLENGE_REWARD',
+      'REWARD_REDEMPTION',
+      'ADMIN_ADJUSTMENT',
+    ])
     .optional(),
 })
 export type WalletTransactionQuery = z.infer<typeof walletTransactionQuerySchema>

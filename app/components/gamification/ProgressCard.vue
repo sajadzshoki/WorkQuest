@@ -56,6 +56,7 @@ function typeIcon(type: string): string {
   switch (type) {
     case 'TASK_REWARD': return 'i-heroicons-clipboard-document-check'
     case 'RECOGNITION_REWARD': return 'i-heroicons-hand-thumb-up'
+    case 'ACHIEVEMENT_REWARD': return 'i-heroicons-star'
     case 'CHALLENGE_REWARD': return 'i-heroicons-flag'
     case 'REWARD_REDEMPTION': return 'i-heroicons-gift'
     default: return 'i-heroicons-adjustments-horizontal'

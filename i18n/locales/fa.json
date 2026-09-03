@@ -341,7 +341,10 @@
     "locked": "قفل",
     "unlockedOn": "کسب‌شده در {date}",
     "progress": "{current} از {total}",
-    "noAchievements": "هنوز دستاوردی باز نشده است"
+    "noAchievements": "هنوز دستاوردی باز نشده است",
+    "streakMilestone": "رکورد {days} روزه",
+    "streakNext": "مقصد بعدی: رکورد {days} روزه",
+    "streakMax": "به بالاترین رکورد رسیده‌اید!"
   },
   "team": {
     "title": "تیم من",
@@ -620,6 +623,7 @@
       "RECOGNITION_REWARD": "پاداش قدردانی",
       "CHALLENGE_REWARD": "پاداش چالش",
       "REWARD_REDEMPTION": "خرید از فروشگاه",
+      "ACHIEVEMENT_REWARD": "پاداش دستاورد",
       "ADMIN_ADJUSTMENT": "تعدیل مدیریتی"
     }
   },
@@ -661,5 +665,31 @@
       "penalty.revision": "دفعات اصلاح",
       "clamp": "محدودسازی سقف"
     }
+  },
+  "profile": {
+    "title": "پروفایل من",
+    "levelProgress": "سطح و پیشرفت",
+    "lifetimeXp": "امتیاز کل",
+    "nextLevel": "سطح بعد",
+    "noBadges": "هنوز نشانی ندارید",
+    "achievements": "دستاوردها",
+    "noAchievements": "هنوز دستاوردی ندارید",
+    "recentActivity": "فعالیت‌های اخیر",
+    "noActivity": "فعالیتی ثبت نشده است"
+  },
+  "activity": {
+    "default": "فعالیت",
+    "ACHIEVEMENT": "دستاورد",
+    "TASK_REVIEW": "بازبینی تسک",
+    "RECOGNITION": "قدردانی",
+    "STREAK": "روزهای پیاپی",
+    "CHALLENGE": "چالش",
+    "MANUAL_ADJUSTMENT": "تعدیل دستی"
+  },
+  "celebration": {
+    "coinsEarned": "{amount} سکه دریافت کردید",
+    "levelUp": "به سطح {level} رسیدید",
+    "achievementUnlocked": "دستاورد جدید باز شد",
+    "badgeUnlocked": "نشان جدید باز شد"
   }
 }

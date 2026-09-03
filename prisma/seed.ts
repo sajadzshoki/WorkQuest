@@ -218,13 +218,19 @@ async function main() {
     { title: 'بررسی بازخوردهای پشتیبانی', assignee: 'پویا محمدی', team: 'engineering', status: 'SUBMITTED', priority: 'MEDIUM', xp: 110, coins: 55, dueInDays: 4, hours: 5, progress: 100, reviewer: 'امیر شریفی' },
   ] as const
 
+  // Badges are the visual face of achievements, so each is linked to the
+  // achievement that awards it — `runGamification` hands a badge out the moment
+  // its achievement unlocks. `achievementIndex` maps onto `ACHIEVEMENTS` order.
   const badges = [
-    { name: 'نشان شروع', description: 'برای اولین تسک تأیید شده' },
-    { name: 'نشان پایداری', description: 'برای هفت روز فعالیت پیاپی' },
+    { name: 'نشان شروع', description: 'برای اولین تسک تأیید شده', achievementIndex: 0, iconKey: 'i-heroicons-flag', tone: 'primary' },
+    { name: 'نشان پایداری', description: 'برای هفت روز فعالیت پیاپی', achievementIndex: 1, iconKey: 'i-heroicons-fire', tone: 'streak' },
   ]
   const createdBadges = []
   for (const badge of badges) {
-    createdBadges.push(await prisma.badge.create({ data: { companyId: company.id, ...badge } }))
+    const { achievementIndex, ...data } = badge
+    createdBadges.push(await prisma.badge.create({
+      data: { companyId: company.id, ...data, achievementId: achievements[achievementIndex]!.id },
+    }))
   }
 
   for (const task of tasks) {

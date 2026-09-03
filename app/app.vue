@@ -20,5 +20,7 @@ await ensureLoaded()
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+
+    <GamificationCelebration />
   </UApp>
 </template>

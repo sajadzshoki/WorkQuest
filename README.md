@@ -17,10 +17,14 @@ Implemented so far:
   score), a centralized, configurable, versioned reward calculation service, permanent XP with
   level progression, and a transactional coin wallet whose balance is only ever reached through
   an immutable ledger — see `docs/reward-engine.md`.
+- **Phase 5 — gamification.** A server-side gamification engine (streaks, achievements, badges)
+  that runs in the approval transaction, a reusable server-side level calculation service,
+  a data-driven achievement catalogue, an employee profile and a quiet celebration feed —
+  see `docs/gamification.md`.
 
 Still not implemented (see [Remaining work](#11-remaining-work)): the reward **catalogue**
-redemption flow, the challenge engine, achievement rule evaluation, and streak calculation —
-modelled in the database, but not wired to endpoints yet.
+redemption flow, the challenge engine, and windowed leaderboards — modelled in the database,
+but not wired to endpoints yet.
 
 ---
 
@@ -457,8 +461,10 @@ npm run test:integration:local  # same suite, on PGlite — no Docker, no DATABA
 database — including the whole role × action scope matrix in `test/member-scope.test.ts`.
 `npm run test:integration` boots a real dev server against the configured database and drives the
 API over HTTP: registration, login, invalid/expired/brute-forced codes, unauthorized access,
-cross-company isolation, the full invitation lifecycle, the task lifecycle, and the reward
-engine (duplicate approval, duplicate reward prevention, invalid scores, authorization).
+cross-company isolation, the full invitation lifecycle, the task lifecycle, the reward
+engine (duplicate approval, duplicate reward prevention, invalid scores, authorization), and
+the gamification engine (achievement unlock, badge award, streak advancement, no duplicate
+rewards).
 
 The integration runner (`scripts/run-integration.sh`) starts its own server on `TEST_PORT`
 (default 3100), so it must not collide with a running `npm run dev`. It boots the server from a
@@ -492,8 +498,12 @@ throwaway one, and `npm run test:integration` reads it from `.env` like the serv
 
 **Gamification rules**
 
-- Server-side achievement rule evaluation from `Achievement.criteria` (already stored as JSON).
-- Streak calculation bound to the company timezone.
+- ~~Server-side achievement rule evaluation from `Achievement.criteria`~~ — done in phase 5:
+  `server/utils/gamification.ts` evaluates the ACTIVE catalogue against server-computed metrics
+  inside the approval transaction.
+- ~~Streak calculation bound to the company timezone~~ — done in phase 5:
+  `shared/utils/streak.ts` + `advanceUserStreak` (at most once per calendar day).
+- Badges are awarded alongside achievements (linked via `Badge.achievementId`).
 - Windowed leaderboards computed from `XpTransaction` instead of the denormalised counter.
 
 **Administration**

@@ -110,6 +110,7 @@ enum LedgerSource {
 enum CoinTransactionType {
   TASK_REWARD
   RECOGNITION_REWARD
+  ACHIEVEMENT_REWARD
   CHALLENGE_REWARD
   REWARD_REDEMPTION
   ADMIN_ADJUSTMENT
@@ -576,6 +577,11 @@ model Badge {
   name          String
   description   String?
   imageUrl      String?
+  /// Iconify icon name, e.g. `i-heroicons-flag`. Falls back to a shield glyph.
+  iconKey       String?
+  /// Semantic rendering tone: `primary`, `coin`, `streak`, `success`, `info`,
+  /// `warning` or `neutral`. Read by the reusable badge components.
+  tone          String?
   achievementId String?       @db.Uuid
   achievement   Achievement?  @relation(fields: [achievementId], references: [id], onDelete: SetNull)
   createdAt     DateTime      @default(now())

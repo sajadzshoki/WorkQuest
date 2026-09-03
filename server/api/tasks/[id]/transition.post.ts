@@ -7,6 +7,7 @@ import { calculateReward, taskRewardKey } from '#shared/utils/rewards'
 import { nextStatus } from '#shared/utils/task'
 
 import { requireAuth } from '../../../utils/auth'
+import { runGamification, type GamificationOutcome } from '../../../utils/gamification'
 import { errors, readValidated } from '../../../utils/http'
 import { createTenantClient } from '../../../utils/tenant'
 import { applyCoinDelta, applyXpDelta, loadRewardRules, syncLevel } from '../../../utils/wallet'
@@ -85,6 +86,7 @@ export default defineEventHandler(async (event) => {
     : null
 
   let payout: TaskPayout | null = null
+  let gamification: GamificationOutcome | null = null
 
   const updated = await db.$transaction(async (tx) => {
     await tx.task.update({
@@ -145,6 +147,15 @@ export default defineEventHandler(async (event) => {
         xp: breakdown.xp,
         coins: breakdown.coins,
       })
+
+      // Streaks and achievements follow the payout in the same transaction, so
+      // an unlock and its ledger rows never diverge from the task's status.
+      gamification = await runGamification(tx, {
+        companyId: auth.companyId,
+        userId: assigneeId,
+        activityAt: now,
+        timezone: auth.company.timezone,
+      })
     }
 
     // --- submission -------------------------------------------------------
@@ -178,6 +189,7 @@ export default defineEventHandler(async (event) => {
     task: toTaskSummary(updated as never, now),
     reward: breakdown ? { ...breakdown, ruleVersion: rules.version } : null,
     payout,
+    gamification,
   }
 })
 

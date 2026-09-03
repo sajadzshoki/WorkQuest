@@ -1,6 +1,5 @@
-import { computeLevelProgress } from '#shared/utils/xp'
-
 import { requireAuth } from '../../utils/auth'
+import { resolveLevelProgress } from '../../utils/levels'
 import { createTenantClient } from '../../utils/tenant'
 import { COIN_TRANSACTION_SELECT } from '../../utils/wallet'
 
@@ -15,7 +14,7 @@ export default defineEventHandler(async (event) => {
   const auth = requireAuth(event)
   const db = createTenantClient(auth)
 
-  const [wallet, progress, boundaries, recent, earnedAgg, spentAgg] = await Promise.all([
+  const [wallet, progress, recent, earnedAgg, spentAgg] = await Promise.all([
     db.wallet.findUnique({
       where: { userId: auth.userId },
       select: { balance: true, lifetimeEarned: true, lifetimeSpent: true },
@@ -23,10 +22,6 @@ export default defineEventHandler(async (event) => {
     db.userProgress.findUnique({
       where: { userId: auth.userId },
       select: { xp: true, coins: true, currentStreak: true, longestStreak: true },
-    }),
-    db.level.findMany({
-      orderBy: { level: 'asc' },
-      select: { level: true, minXp: true, title: true, iconKey: true },
     }),
     db.coinTransaction.findMany({
       where: { userId: auth.userId },
@@ -42,7 +37,7 @@ export default defineEventHandler(async (event) => {
   ])
 
   const xp = progress?.xp ?? 0
-  const level = computeLevelProgress(xp, boundaries)
+  const level = await resolveLevelProgress(db, auth.companyId, xp)
 
   // The wallet row is authoritative. `UserProgress.coins` is only a mirror, so
   // if the row is somehow missing we fall back rather than reporting zero.

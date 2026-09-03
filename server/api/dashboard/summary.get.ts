@@ -1,6 +1,5 @@
-import { computeLevelProgress } from '#shared/utils/xp'
-
 import { requireAuth } from '../../utils/auth'
+import { resolveLevelProgress } from '../../utils/levels'
 import { createTenantClient } from '../../utils/tenant'
 
 /**
@@ -15,10 +14,9 @@ export default defineEventHandler(async (event) => {
   const db = createTenantClient(auth)
   const since = new Date(Date.now() - 30 * 86_400_000)
 
-  const [progress, boundaries, taskCounts, leaderboard, recognitions, achievements, challenge]
+  const [progress, taskCounts, leaderboard, recognitions, achievements, challenge]
     = await Promise.all([
       db.userProgress.findUnique({ where: { userId: auth.userId } }),
-      db.level.findMany({ orderBy: { level: 'asc' }, select: { level: true, minXp: true, title: true, iconKey: true } }),
       db.task.groupBy({
         by: ['status'],
         where: { assigneeId: auth.userId },
@@ -50,7 +48,7 @@ export default defineEventHandler(async (event) => {
     ])
 
   const xp = progress?.xp ?? 0
-  const level = computeLevelProgress(xp, boundaries)
+  const level = await resolveLevelProgress(db, auth.companyId, xp)
   const counts = Object.fromEntries(taskCounts.map(row => [row.status, row._count._all]))
 
   const myRankRow = await db.userProgress.count({
