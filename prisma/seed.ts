@@ -15,6 +15,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import 'dotenv/config'
 
 import { DEFAULT_LEVELS } from '../shared/constants'
+import { cycleWindow } from '../shared/utils/recognition'
 
 import { PrismaClient } from './generated/prisma/client.ts'
 
@@ -452,6 +453,121 @@ async function main() {
   for (const notification of notifications) {
     await prisma.notification.create({ data: { companyId: company.id, ...notification } })
   }
+
+  // --- Recognition: categories, titles, cadence and one sealed cycle ---------
+  const RECOGNITION_TITLES = [
+    { name: 'افسانه مسئولیت‌پذیری', description: 'کسی که همیشه می‌توان روی حرفش حساب کرد' },
+    { name: 'قهرمان وقت‌شناسی', description: 'همیشه سر وقت، همیشه قابل اتکا' },
+    { name: 'هم‌تیمی طلایی', description: 'کسی که تیم را جلو می‌برد' },
+    { name: 'خلاق ماه', description: 'ایده‌های تازه و غیرمنتظره' },
+    { name: 'طنزپرداز دفتر', description: 'حال‌خوب‌کن تیم' },
+    { name: 'مهربان‌ترین', description: 'همیشه کنار هم‌تیمی‌ها' },
+    { name: 'پر انرژی‌ترین', description: 'موتور محرک تیم' },
+    { name: 'مغز هفته', description: 'هر بن‌بستی را باز می‌کند' },
+    { name: 'ستاره در حال ظهور', description: 'رشد چشمگیر نسبت به قبل' },
+  ]
+
+  const recognitionTitles = new Map<string, string>()
+  for (const title of RECOGNITION_TITLES) {
+    const created = await prisma.recognitionTitle.create({
+      data: { companyId: company.id, name: title.name, description: title.description, isSystem: true },
+    })
+    recognitionTitles.set(title.name, created.id)
+  }
+
+  const appreciationBadge = await prisma.badge.create({
+    data: {
+      companyId: company.id,
+      name: 'نشان قدردانی همکاران',
+      description: 'برای برنده شدن در قدردانی همکاران',
+      iconKey: 'i-heroicons-hand-thumb-up',
+      tone: 'coin',
+    },
+  })
+
+  const RECOGNITION_CATEGORIES = [
+    { name: 'مسئول‌ترین همکار', description: 'کسی که همیشه می‌توان روی حرفش حساب کرد', iconKey: 'i-heroicons-shield-check', tone: 'primary', xpReward: 120, coinReward: 60, title: 'افسانه مسئولیت‌پذیری', badge: true },
+    { name: 'وقت‌شناس‌ترین', description: 'همیشه سر وقت، همیشه قابل اتکا', iconKey: 'i-heroicons-clock', tone: 'info', xpReward: 80, coinReward: 40, title: 'قهرمان وقت‌شناسی', badge: false },
+    { name: 'بهترین هم‌تیمی', description: 'کسی که تیم را جلو می‌برد', iconKey: 'i-heroicons-user-group', tone: 'success', xpReward: 100, coinReward: 50, title: 'هم‌تیمی طلایی', badge: false },
+    { name: 'خلاق‌ترین', description: 'ایده‌های تازه و غیرمنتظره', iconKey: 'i-heroicons-light-bulb', tone: 'warning', xpReward: 100, coinReward: 50, title: 'خلاق ماه', badge: false },
+    { name: 'طنزپرداز دفتر', description: 'حال‌خوب‌کن تیم', iconKey: 'i-heroicons-face-smile', tone: 'coin', xpReward: 60, coinReward: 30, title: 'طنزپرداز دفتر', badge: false },
+    { name: 'مهربان‌ترین', description: 'همیشه کنار هم‌تیمی‌ها', iconKey: 'i-heroicons-heart', tone: 'info', xpReward: 80, coinReward: 40, title: 'مهربان‌ترین', badge: false },
+    { name: 'پر انرژی‌ترین', description: 'موتور محرک تیم', iconKey: 'i-heroicons-bolt', tone: 'streak', xpReward: 80, coinReward: 40, title: 'پر انرژی‌ترین', badge: false },
+    { name: 'حل‌ّال مسائل', description: 'هر بن‌بستی را باز می‌کند', iconKey: 'i-heroicons-puzzle-piece', tone: 'primary', xpReward: 120, coinReward: 60, title: 'مغز هفته', badge: false },
+    { name: 'بیشترین پیشرفت', description: 'رشد چشمگیر نسبت به قبل', iconKey: 'i-heroicons-arrow-trending-up', tone: 'success', xpReward: 100, coinReward: 50, title: 'ستاره در حال ظهور', badge: false },
+  ] as const
+
+  const recognitionCategories: Record<string, string> = {}
+  for (const [index, category] of RECOGNITION_CATEGORIES.entries()) {
+    const created = await prisma.recognitionCategory.create({
+      data: {
+        companyId: company.id,
+        name: category.name,
+        description: category.description,
+        iconKey: category.iconKey,
+        tone: category.tone,
+        sortOrder: index,
+        xpReward: category.xpReward,
+        coinReward: category.coinReward,
+        titleId: recognitionTitles.get(category.title) ?? null,
+        badgeId: category.badge ? appreciationBadge.id : null,
+      },
+    })
+    recognitionCategories[category.name] = created.id
+  }
+
+  const DAY_MS = 86_400_000
+  const now = new Date()
+
+  // A cycle that ended last week, left ACTIVE with votes so the very first
+  // visit to the board finalizes it through the real engine (winners + rewards).
+  const previousWindow = cycleWindow('WEEKLY', new Date(now.getTime() - 7 * DAY_MS), company.timezone)
+  const previousCycle = await prisma.recognitionCycle.create({
+    data: {
+      companyId: company.id,
+      frequency: 'WEEKLY',
+      status: 'ACTIVE',
+      title: 'هفته گذشته',
+      startsAt: previousWindow.startsAt,
+      endsAt: previousWindow.endsAt,
+    },
+  })
+
+  const previousVotes: Array<{ category: string, voter: string, nominee: string }> = [
+    { category: 'مسئول‌ترین همکار', voter: 'مریم نوروزی', nominee: 'نگار احمدی' },
+    { category: 'مسئول‌ترین همکار', voter: 'پویا محمدی', nominee: 'نگار احمدی' },
+    { category: 'مسئول‌ترین همکار', voter: 'ترانه موسوی', nominee: 'نگار احمدی' },
+    { category: 'مسئول‌ترین همکار', voter: 'سینا فرهادی', nominee: 'نگار احمدی' },
+    { category: 'بهترین هم‌تیمی', voter: 'مریم نوروزی', nominee: 'پویا محمدی' },
+    { category: 'بهترین هم‌تیمی', voter: 'نگار احمدی', nominee: 'پویا محمدی' },
+    { category: 'بهترین هم‌تیمی', voter: 'الناز کریمی', nominee: 'پویا محمدی' },
+    { category: 'طنزپرداز دفتر', voter: 'نگار احمدی', nominee: 'سینا فرهادی' },
+    { category: 'طنزپرداز دفتر', voter: 'الناز کریمی', nominee: 'سینا فرهادی' },
+  ]
+
+  for (const vote of previousVotes) {
+    await prisma.recognitionVote.create({
+      data: {
+        companyId: company.id,
+        cycleId: previousCycle.id,
+        categoryId: recognitionCategories[vote.category]!,
+        voterId: users[vote.voter]!.id,
+        nomineeId: users[vote.nominee]!.id,
+      },
+    })
+  }
+
+  // The cycle employees vote in today.
+  const activeWindow = cycleWindow('WEEKLY', now, company.timezone)
+  await prisma.recognitionCycle.create({
+    data: {
+      companyId: company.id,
+      frequency: 'WEEKLY',
+      status: 'ACTIVE',
+      startsAt: activeWindow.startsAt,
+      endsAt: activeWindow.endsAt,
+    },
+  })
 
   // --- Tenant B (proves isolation: none of the above is visible here) --------
   const other = await prisma.company.create({

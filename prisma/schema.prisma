@@ -169,6 +169,21 @@ enum RecognitionType {
   SYSTEM
 }
 
+/// How often a recognition cycle turns over. The active cycle's window is
+/// derived from this in the company timezone (calendar week / calendar month).
+enum RecognitionFrequency {
+  WEEKLY
+  MONTHLY
+}
+
+/// Lifecycle of a cycle. FINALIZED is terminal: results are sealed and rewards
+/// have been paid, so a finalized cycle can never be edited or re-run.
+enum RecognitionCycleStatus {
+  ACTIVE
+  FINALIZED
+  CANCELLED
+}
+
 enum NotificationType {
   TASK_ASSIGNED
   TASK_SUBMITTED
@@ -228,6 +243,11 @@ model Company {
   badges        Badge[]
   userBadges    UserBadge[]
   recognitions  Recognition[]
+  recognitionCycles      RecognitionCycle[]
+  recognitionCategories  RecognitionCategory[]
+  recognitionVotes       RecognitionVote[]
+  recognitionResults     RecognitionResult[]
+  recognitionTitles      RecognitionTitle[]
   rewards       Reward[]
   redemptions   RewardRedemption[]
   challenges    Challenge[]
@@ -274,6 +294,9 @@ model User {
   wallet          Wallet?
   recognitionsGiven  Recognition[]   @relation("RecognitionFrom")
   recognitionsReceived Recognition[] @relation("RecognitionTo")
+  recognitionVotesCast     RecognitionVote[]   @relation("RecognitionVoter")
+  recognitionVotesReceived RecognitionVote[]   @relation("RecognitionNominee")
+  recognitionWins          RecognitionResult[] @relation("RecognitionWinner")
   redemptions     RewardRedemption[]
   participations  ChallengeParticipant[]
   notifications   Notification[]
@@ -586,7 +609,8 @@ model Badge {
   achievement   Achievement?  @relation(fields: [achievementId], references: [id], onDelete: SetNull)
   createdAt     DateTime      @default(now())
 
-  holders UserBadge[]
+  holders    UserBadge[]
+  categories RecognitionCategory[]
 
   @@index([companyId])
 }
@@ -622,6 +646,130 @@ model Recognition {
   createdAt   DateTime        @default(now())
 
   @@index([companyId, toUserId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Recognition cycles
+// ---------------------------------------------------------------------------
+
+/// The recurring voting period. At most one cycle is ACTIVE at a time; the
+/// window (a calendar week or month in the company timezone) is sealed onto the
+/// row, so history stays truthful even if the cadence changes later.
+model RecognitionCycle {
+  id          String                 @id @default(uuid(7)) @db.Uuid
+  companyId   String                 @db.Uuid
+  company     Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  frequency   RecognitionFrequency
+  status      RecognitionCycleStatus @default(ACTIVE)
+  title       String?
+  startsAt    DateTime
+  endsAt      DateTime
+  finalizedAt DateTime?
+  createdBy   String?                @db.Uuid
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  votes   RecognitionVote[]
+  results RecognitionResult[]
+
+  @@unique([companyId, frequency, startsAt])
+  @@index([companyId, status])
+  @@index([companyId, endsAt])
+}
+
+/// A bucket people vote in — «مسئول‌ترین همکار», «بهترین هم‌تیمی», … It carries
+/// the *reward* the winner earns (XP, coins, optional badge) and the *title*
+/// the winner is given, so an admin configures everything in one place.
+model RecognitionCategory {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  companyId   String    @db.Uuid
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  /// Iconify icon name for the card, e.g. `i-heroicons-shield-check`.
+  iconKey     String?
+  /// Semantic tone: `primary`, `coin`, `streak`, `success`, `info`, `warning`, `neutral`.
+  tone        String?   @default("primary")
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  xpReward    Int       @default(0)
+  coinReward  Int       @default(0)
+  titleId     String?   @db.Uuid
+  title       RecognitionTitle? @relation(fields: [titleId], references: [id], onDelete: SetNull)
+  badgeId     String?   @db.Uuid
+  badge       Badge?    @relation(fields: [badgeId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  votes   RecognitionVote[]
+  results RecognitionResult[]
+
+  @@index([companyId, isActive])
+  @@index([companyId, sortOrder])
+}
+
+/// One employee's choice in one category of one cycle. At most one vote per
+/// (cycle, category, voter) — the unique index is the duplicate-vote guard.
+model RecognitionVote {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  companyId  String   @db.Uuid
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cycleId    String   @db.Uuid
+  cycle      RecognitionCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  categoryId String   @db.Uuid
+  category   RecognitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  voterId    String   @db.Uuid
+  voter      User     @relation("RecognitionVoter", fields: [voterId], references: [id], onDelete: Cascade)
+  nomineeId  String   @db.Uuid
+  nominee    User     @relation("RecognitionNominee", fields: [nomineeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([cycleId, categoryId, voterId])
+  @@index([cycleId, nomineeId])
+  @@index([companyId, voterId, createdAt])
+}
+
+/// The sealed outcome of one category of one cycle: who won, by how much, and
+/// what they were paid. Vote *details* stay in `RecognitionVote` and are never
+/// exposed to the API — results are aggregated by design.
+model RecognitionResult {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  companyId  String    @db.Uuid
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cycleId    String    @db.Uuid
+  cycle      RecognitionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  categoryId String    @db.Uuid
+  category   RecognitionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  winnerId   String    @db.Uuid
+  winner     User      @relation("RecognitionWinner", fields: [winnerId], references: [id], onDelete: Cascade)
+  voteCount  Int       @default(0)
+  /// Title snapshot: denormalised so a later rename never rewrites history.
+  titleId    String?   @db.Uuid
+  title      RecognitionTitle? @relation(fields: [titleId], references: [id], onDelete: SetNull)
+  titleName  String?
+  xpReward   Int       @default(0)
+  coinReward Int       @default(0)
+  rewardedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([cycleId, categoryId])
+  @@index([companyId, winnerId, createdAt])
+}
+
+/// A title a winner is given — system-defined (seeded) or admin-created.
+model RecognitionTitle {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  companyId   String    @db.Uuid
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isSystem    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  categories RecognitionCategory[]
+  results    RecognitionResult[]
+
+  @@index([companyId])
 }
 
 // ---------------------------------------------------------------------------

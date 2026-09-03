@@ -21,6 +21,10 @@ Implemented so far:
   that runs in the approval transaction, a reusable server-side level calculation service,
   a data-driven achievement catalogue, an employee profile and a quiet celebration feed —
   see `docs/gamification.md`.
+- **Phase 6 — employee recognition.** Peer-to-peer recognition with weekly/monthly cycles,
+  one vote per coworker per category (no self-votes, no duplicates, no cross-company votes),
+  private ballots, and an idempotent finalization step that tallies winners, seals results and
+  pays XP/coins through the ledgers — see `docs/recognition.md`.
 
 Still not implemented (see [Remaining work](#11-remaining-work)): the reward **catalogue**
 redemption flow, the challenge engine, and windowed leaderboards — modelled in the database,
@@ -372,14 +376,16 @@ already-public prefix is not enough — add the exact path.
 
 ## 7. Data model
 
-26 tables, grouped by concern:
+35 tables, grouped by concern:
 
 - **Tenancy & auth** — `Company`, `User`, `OtpCode`, `Session`, `OnboardingTicket`
 - **Structure** — `Team`, `TeamMember` (carries `managerId`, the manager-scope edge),
   `Invitation`
 - **Gamification** — `Level`, `UserProgress`, `XpTransaction`, `CoinTransaction`, `Achievement`,
-  `UserAchievement`, `Badge`, `UserBadge`, `Recognition`
-- **Work** — `Task`, `TaskReview`
+  `UserAchievement`, `Badge`, `UserBadge`, `Recognition`, `Wallet`, `RewardRule`
+- **Recognition (peer voting)** — `RecognitionCycle`, `RecognitionCategory`,
+  `RecognitionVote`, `RecognitionResult`, `RecognitionTitle`
+- **Work** — `Task`, `TaskComment`, `TaskAttachment`, `TaskEvent`, `TaskReview`
 - **Rewards & challenges** — `Reward`, `RewardRedemption`, `Challenge`, `ChallengeParticipant`
 - **Messaging & audit** — `Notification`, `AuditLog`
 
