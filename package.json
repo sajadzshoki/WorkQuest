@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "bash scripts/run-integration.sh",
+    "test:integration:local": "bash scripts/run-integration-local.sh",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
@@ -28,6 +29,7 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "db:local": "prisma dev",
+    "db:local:pglite": "node scripts/local-db.mjs",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

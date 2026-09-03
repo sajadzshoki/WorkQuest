@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const auth = requireAuth(event)
   const db = createTenantClient(auth)
 
-  const [rewards, progress, redemptions] = await Promise.all([
+  const [rewards, wallet, progress, redemptions] = await Promise.all([
     db.reward.findMany({
       where: { status: 'ACTIVE' },
       orderBy: { cost: 'asc' },
@@ -19,6 +19,10 @@ export default defineEventHandler(async (event) => {
         stock: true,
         imageUrl: true,
       },
+    }),
+    db.wallet.findUnique({
+      where: { userId: auth.userId },
+      select: { balance: true },
     }),
     db.userProgress.findUnique({ where: { userId: auth.userId }, select: { coins: true } }),
     db.rewardRedemption.findMany({
@@ -37,7 +41,10 @@ export default defineEventHandler(async (event) => {
     }),
   ])
 
-  const coins = progress?.coins ?? 0
+  // The wallet is authoritative for spend decisions (`affordable` below);
+  // `UserProgress.coins` is only the denormalised mirror kept for the
+  // leaderboard, so it is a fallback rather than the source of truth.
+  const coins = wallet?.balance ?? progress?.coins ?? 0
 
   return {
     balance: coins,

@@ -167,7 +167,16 @@ RTL throughout via CSS logical properties; all figures render in Persian digits.
 | `npm run typecheck` | clean |
 | `npm test` | **168 passed** (8 files) |
 | `npm run test:integration` | **176 passed** (4 files) |
+| `npm run test:integration:local` | **176 passed** on PGlite — no Docker, no `DATABASE_URL` |
 | `npm run build` | success — 13.8 MB (3.7 MB gzip) |
+
+The integration suite normally needs a real PostgreSQL. `scripts/run-integration-local.sh`
+(`npm run test:integration:local`) removes that requirement: it boots a local PostgreSQL
+(PGlite over a TCP socket via `scripts/local-db.mjs`), applies the migrations, seeds the demo
+tenants, runs the same suite and tears the database down. PGlite is a single-connection engine
+multiplexed over the socket, so it is the day-to-day convenience path while CI keeps a real
+PostgreSQL — the concurrency-sensitive tests (five simultaneous approvals, `SELECT … FOR UPDATE`
+on the wallet) pass on both.
 
 Coverage of the requested areas: 35 unit cases on reward calculation alone
 (every band boundary, each bonus/penalty in isolation and combined, monotonicity,
