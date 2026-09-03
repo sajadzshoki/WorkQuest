@@ -10,10 +10,25 @@ Implemented so far:
   JWT sessions, and self-service company registration for founders.
 - **Phase 2 — people and teams.** Employee invitation by phone, acceptance through OTP, role and
   scope management, and team CRUD with a one-primary-team rule.
+- **Phase 3 — task management.** The full task lifecycle (`TODO → IN_PROGRESS → SUBMITTED →
+  APPROVED`, with a `NEEDS_REVISION` rework loop), manager/employee dashboards and permissions —
+  see `docs/task-management.md`.
+- **Phase 4 — performance & reward engine.** Scored task review (quality, timeliness, overall
+  score), a centralized, configurable, versioned reward calculation service, permanent XP with
+  level progression, and a transactional coin wallet whose balance is only ever reached through
+  an immutable ledger — see `docs/reward-engine.md`.
+- **Phase 5 — gamification.** A server-side gamification engine (streaks, achievements, badges)
+  that runs in the approval transaction, a reusable server-side level calculation service,
+  a data-driven achievement catalogue, an employee profile and a quiet celebration feed —
+  see `docs/gamification.md`.
+- **Phase 6 — employee recognition.** Peer-to-peer recognition with weekly/monthly cycles,
+  one vote per coworker per category (no self-votes, no duplicates, no cross-company votes),
+  private ballots, and an idempotent finalization step that tallies winners, seals results and
+  pays XP/coins through the ledgers — see `docs/recognition.md`.
 
-Product features (task assignment, review workflows, reward redemption, challenge engine) are
-modelled in the database and stubbed as read-only endpoints, but are **not** implemented yet —
-see [Remaining work](#11-remaining-work).
+Still not implemented (see [Remaining work](#11-remaining-work)): the reward **catalogue**
+redemption flow, the challenge engine, and windowed leaderboards — modelled in the database,
+but not wired to endpoints yet.
 
 ---
 
@@ -86,6 +101,9 @@ Logging in as two different tenants side by side is the fastest way to see the i
 | `npm run db:seed` | Reset demo data |
 | `npm run db:studio` | Prisma Studio |
 | `npm run db:local` | Prisma's bundled local PostgreSQL server (`prisma dev`) |
+| `npm run db:local:pglite` | Local PostgreSQL on a fixed port (PGlite over TCP, no Docker) |
+| `npm run test:integration` | Real server + real PostgreSQL, over HTTP (needs `DATABASE_URL`) |
+| `npm run test:integration:local` | The whole integration suite on PGlite — migrates, seeds, runs, tears down |
 
 ---
 
@@ -358,14 +376,16 @@ already-public prefix is not enough — add the exact path.
 
 ## 7. Data model
 
-26 tables, grouped by concern:
+35 tables, grouped by concern:
 
 - **Tenancy & auth** — `Company`, `User`, `OtpCode`, `Session`, `OnboardingTicket`
 - **Structure** — `Team`, `TeamMember` (carries `managerId`, the manager-scope edge),
   `Invitation`
 - **Gamification** — `Level`, `UserProgress`, `XpTransaction`, `CoinTransaction`, `Achievement`,
-  `UserAchievement`, `Badge`, `UserBadge`, `Recognition`
-- **Work** — `Task`, `TaskReview`
+  `UserAchievement`, `Badge`, `UserBadge`, `Recognition`, `Wallet`, `RewardRule`
+- **Recognition (peer voting)** — `RecognitionCycle`, `RecognitionCategory`,
+  `RecognitionVote`, `RecognitionResult`, `RecognitionTitle`
+- **Work** — `Task`, `TaskComment`, `TaskAttachment`, `TaskEvent`, `TaskReview`
 - **Rewards & challenges** — `Reward`, `RewardRedemption`, `Challenge`, `ChallengeParticipant`
 - **Messaging & audit** — `Notification`, `AuditLog`
 
@@ -437,16 +457,20 @@ NUXT_APP_URL=https://app.example.com
 ### Checks
 
 ```bash
-npm run verify              # lint + typecheck + unit tests + build
-npm test                    # unit tests — no database needed
-npm run test:integration    # real server + real PostgreSQL, over HTTP
+npm run verify                  # lint + typecheck + unit tests + build
+npm test                        # unit tests — no database needed
+npm run test:integration        # real server + real PostgreSQL, over HTTP
+npm run test:integration:local  # same suite, on PGlite — no Docker, no DATABASE_URL
 ```
 
 `npm test` covers the framework-free layers (`shared/**` and `server/utils/crypto`) and needs no
 database — including the whole role × action scope matrix in `test/member-scope.test.ts`.
 `npm run test:integration` boots a real dev server against the configured database and drives the
 API over HTTP: registration, login, invalid/expired/brute-forced codes, unauthorized access,
-cross-company isolation, and the full invitation lifecycle for every role combination.
+cross-company isolation, the full invitation lifecycle, the task lifecycle, the reward
+engine (duplicate approval, duplicate reward prevention, invalid scores, authorization), and
+the gamification engine (achievement unlock, badge award, streak advancement, no duplicate
+rewards).
 
 The integration runner (`scripts/run-integration.sh`) starts its own server on `TEST_PORT`
 (default 3100), so it must not collide with a running `npm run dev`. It boots the server from a
@@ -454,24 +478,38 @@ shell rather than from inside Vitest on purpose: a `npx nuxt dev` child answers 
 stdout does not reliably reach a Node worker here, and the suite reads the OTP codes the `console`
 provider prints from that output.
 
+`npm run test:integration:local` wraps that runner in `scripts/run-integration-local.sh`: it boots
+a local PostgreSQL (PGlite over a TCP socket, `scripts/local-db.mjs`), applies the migrations and
+seed, and runs the same suite before tearing the database down again. PGlite is a single-connection
+engine multiplexed over the socket, so this is the convenient day-to-day path while CI keeps a real
+PostgreSQL. Both runners need `NUXT_SESSION_SECRET` (≥ 32 chars); the local wrapper generates a
+throwaway one, and `npm run test:integration` reads it from `.env` like the server does.
+
 ---
 
 ## 11. Remaining work
 
 **Writes / core loop**
 
-- `POST /api/tasks` and `PATCH /api/tasks/:id` (assign, progress, submit) with validation and
-  audit logging.
-- `POST /api/tasks/:id/review` → score → XP/coin award inside a transaction, level recalculation,
-  achievement evaluation, notification fan-out.
+- ~~Task write endpoints~~ — done in phase 3 (create, edit, assign, progress, submit, comment,
+  attach, dashboard).
+- ~~Task review~~ — done in phase 4: score → XP/coin award inside a transaction, level
+  recalculation and notification fan-out (`POST /api/tasks/:id/transition` with `action:
+  approve`/`request_revision`).
 - Reward redemption (`POST /api/rewards/:id/redeem`) with stock/coin checks and a coin ledger row.
+  The `REWARD_REDEMPTION` ledger type, wallet debit helper and `redemptionKey()` idempotency key
+  already exist and are tested; only the catalogue endpoint and UI remain.
 - Challenge engine: metric collectors that advance `ChallengeParticipant.progress`.
 - Notification read/mark-all-read endpoints (currently read-only).
 
 **Gamification rules**
 
-- Server-side achievement rule evaluation from `Achievement.criteria` (already stored as JSON).
-- Streak calculation bound to the company timezone.
+- ~~Server-side achievement rule evaluation from `Achievement.criteria`~~ — done in phase 5:
+  `server/utils/gamification.ts` evaluates the ACTIVE catalogue against server-computed metrics
+  inside the approval transaction.
+- ~~Streak calculation bound to the company timezone~~ — done in phase 5:
+  `shared/utils/streak.ts` + `advanceUserStreak` (at most once per calendar day).
+- Badges are awarded alongside achievements (linked via `Badge.achievementId`).
 - Windowed leaderboards computed from `XpTransaction` instead of the denormalised counter.
 
 **Administration**

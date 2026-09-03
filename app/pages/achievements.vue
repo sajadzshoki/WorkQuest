@@ -2,6 +2,12 @@
 definePageMeta({ middleware: ['auth'] })
 
 interface AchievementsResponse {
+  streak: {
+    current: number
+    longest: number
+    milestones: Array<{ days: number, reached: boolean }>
+    next: number | null
+  }
   achievements: Array<{
     id: string
     key: string
@@ -13,15 +19,24 @@ interface AchievementsResponse {
     iconKey: string | null
     unlocked: boolean
     unlockedAt: string | null
+    progress: { current: number, target: number } | null
   }>
-  badges: Array<{ id: string, name: string, description: string | null, imageUrl: string | null, awardedAt: string }>
+  badges: Array<{
+    id: string
+    name: string
+    description: string | null
+    iconKey: string | null
+    tone: string | null
+    imageUrl: string | null
+    awardedAt: string
+  }>
   totals: { unlocked: number, available: number, badges: number }
 }
 
 const { t } = useI18n()
 const format = useLocaleFormat()
 
-const { data } = await useFetch<AchievementsResponse>(`/api/achievements`)
+const { data } = await useFetch<AchievementsResponse>('/api/achievements')
 </script>
 
 <template>
@@ -52,102 +67,58 @@ const { data } = await useFetch<AchievementsResponse>(`/api/achievements`)
       />
     </div>
 
-    <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <article
-        v-for="achievement in data?.achievements ?? []"
-        :key="achievement.id"
-        class="wq-panel relative overflow-hidden p-5"
-        :class="achievement.unlocked ? '' : 'opacity-70'"
-      >
-        <div class="flex items-start gap-3">
-          <span
-            class="grid size-12 shrink-0 place-items-center rounded-xl"
-            :class="achievement.unlocked ? 'bg-primary/12 text-primary' : 'bg-elevated text-dimmed'"
-          >
-            <UIcon
-              :name="achievement.iconKey ?? 'i-heroicons-star'"
-              class="size-6"
-            />
-          </span>
+    <div class="mt-4 grid gap-4 lg:grid-cols-3">
+      <GamificationStreakCard
+        class="lg:col-span-1"
+        :current="data?.streak.current ?? 0"
+        :longest="data?.streak.longest ?? 0"
+        :milestones="data?.streak.milestones ?? []"
+        :next="data?.streak.next ?? null"
+      />
 
-          <div class="min-w-0">
-            <h3 class="truncate text-sm font-bold text-highlighted">
-              {{ achievement.title }}
-            </h3>
-            <p class="mt-1 text-xs leading-6 text-muted">
-              {{ achievement.description }}
-            </p>
-          </div>
+      <div class="lg:col-span-2">
+        <CommonEmptyState
+          v-if="!data?.achievements.length"
+          class="wq-panel"
+          icon="i-heroicons-star"
+          :title="t('gamification.noAchievements')"
+        />
+
+        <div
+          v-else
+          class="grid gap-3 sm:grid-cols-2"
+        >
+          <GamificationAchievementCard
+            v-for="achievement in data?.achievements ?? []"
+            :key="achievement.id"
+            :title="achievement.title"
+            :description="achievement.description"
+            :icon-key="achievement.iconKey"
+            :xp-reward="achievement.xpReward"
+            :coin-reward="achievement.coinReward"
+            :unlocked="achievement.unlocked"
+            :unlocked-at="achievement.unlockedAt"
+            :progress="achievement.progress"
+          />
         </div>
-
-        <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-default pt-3 text-[11px]">
-          <UBadge
-            color="primary"
-            variant="subtle"
-            size="sm"
-          >
-            +{{ format.number(achievement.xpReward) }} XP
-          </UBadge>
-          <UBadge
-            color="warning"
-            variant="subtle"
-            size="sm"
-          >
-            +{{ format.number(achievement.coinReward) }}
-          </UBadge>
-
-          <span
-            v-if="achievement.unlocked"
-            class="ms-auto font-bold text-success"
-          >
-            {{ t('gamification.unlockedOn', { date: format.shortDate(achievement.unlockedAt ?? '') }) }}
-          </span>
-          <span
-            v-else
-            class="ms-auto flex items-center gap-1 font-semibold text-dimmed"
-          >
-            <UIcon
-              name="i-heroicons-lock-closed"
-              class="size-3.5"
-            />
-            {{ t('gamification.locked') }}
-          </span>
-        </div>
-      </article>
+      </div>
     </div>
-
-    <CommonEmptyState
-      v-if="!data?.achievements.length"
-      class="wq-panel mt-6"
-      icon="i-heroicons-star"
-      :title="t('gamification.noAchievements')"
-    />
 
     <template v-if="data?.badges.length">
       <h2 class="mt-8 text-lg font-bold text-highlighted">
         {{ t('gamification.badge') }}
       </h2>
-      <div class="mt-3 flex flex-wrap gap-3">
-        <div
+      <div class="mt-3 flex flex-wrap gap-x-6 gap-y-4">
+        <GamificationBadge
           v-for="badge in data.badges"
           :key="badge.id"
-          class="wq-panel flex items-center gap-3 p-3"
-        >
-          <span class="grid size-10 place-items-center rounded-full bg-success/12 text-success">
-            <UIcon
-              name="i-heroicons-shield-check"
-              class="size-5"
-            />
-          </span>
-          <div>
-            <p class="text-sm font-bold text-highlighted">
-              {{ badge.name }}
-            </p>
-            <p class="text-[11px] text-dimmed">
-              {{ t('gamification.unlockedOn', { date: format.shortDate(badge.awardedAt) }) }}
-            </p>
-          </div>
-        </div>
+          :name="badge.name"
+          :icon-key="badge.iconKey"
+          :tone="badge.tone"
+          :description="badge.description"
+          :awarded-at="badge.awardedAt"
+          size="lg"
+        />
       </div>
     </template>
   </div>

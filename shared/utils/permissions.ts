@@ -44,6 +44,8 @@ export const PERMISSIONS = [
   'challenge:read',
   'challenge:manage',
   'recognition:create',
+  /** Configure categories, cadence and titles. OWNER/ADMIN only. */
+  'recognition:manage',
   'leaderboard:read',
   'wallet:adjust',
 ] as const

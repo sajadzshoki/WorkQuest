@@ -303,8 +303,25 @@ const progress = computed(() => member.value?.progress ?? null)
           icon="i-heroicons-star"
           class="lg:col-span-3"
         >
+          <!-- Badge shelf -->
+          <div
+            v-if="member.badges.length"
+            class="mb-4 flex flex-wrap gap-x-6 gap-y-4 rounded-xl bg-elevated/40 p-4"
+          >
+            <GamificationBadge
+              v-for="badge in member.badges"
+              :key="badge.id"
+              :name="badge.name"
+              :icon-key="badge.iconKey"
+              :tone="badge.tone"
+              :description="badge.description"
+              :awarded-at="badge.awardedAt"
+              size="md"
+            />
+          </div>
+
           <CommonEmptyState
-            v-if="!member.achievements.length"
+            v-if="!member.achievements.length && !member.badges.length"
             icon="i-heroicons-star"
             :title="t('members.detail.noAchievements')"
           />

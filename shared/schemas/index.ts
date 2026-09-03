@@ -340,7 +340,14 @@ export const walletTransactionQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   type: z
-    .enum(['TASK_REWARD', 'RECOGNITION_REWARD', 'CHALLENGE_REWARD', 'REWARD_REDEMPTION', 'ADMIN_ADJUSTMENT'])
+    .enum([
+      'TASK_REWARD',
+      'RECOGNITION_REWARD',
+      'ACHIEVEMENT_REWARD',
+      'CHALLENGE_REWARD',
+      'REWARD_REDEMPTION',
+      'ADMIN_ADJUSTMENT',
+    ])
     .optional(),
 })
 export type WalletTransactionQuery = z.infer<typeof walletTransactionQuerySchema>
@@ -384,3 +391,62 @@ export const rewardRulesSchema = z.object({
   highQualityThreshold: z.coerce.number().int().min(1).max(5),
 })
 export type RewardRulesInput = z.infer<typeof rewardRulesSchema>
+
+// ---------------------------------------------------------------------------
+// Recognition
+// ---------------------------------------------------------------------------
+
+/** The rendering tones a category/badge may carry. Mirrors `Badge.tone`. */
+export const recognitionToneSchema = z.enum([
+  'primary',
+  'coin',
+  'streak',
+  'success',
+  'info',
+  'warning',
+  'neutral',
+])
+export type RecognitionTone = z.infer<typeof recognitionToneSchema>
+
+/**
+ * `POST /api/recognition/vote` — one coworker chosen for one category.
+ * No message, no rating: a vote is just a nomination, which is the whole point.
+ */
+export const recognitionVoteSchema = z.object({
+  categoryId: z.string().uuid('دسته انتخاب‌شده معتبر نیست'),
+  nomineeId: z.string().uuid('همکار انتخاب‌شده معتبر نیست'),
+})
+export type RecognitionVoteInput = z.infer<typeof recognitionVoteSchema>
+
+/** `POST /api/recognition/categories` — create a voting bucket. */
+export const recognitionCategorySchema = z.object({
+  name: z.string().trim().min(1, 'نام دسته را وارد کنید').max(80),
+  description: z.string().trim().max(300).optional(),
+  iconKey: z.string().trim().max(120).optional(),
+  tone: recognitionToneSchema.optional(),
+  sortOrder: z.coerce.number().int().min(0).max(10_000).optional(),
+  xpReward: z.coerce.number().int().min(0).max(100_000).optional(),
+  coinReward: z.coerce.number().int().min(0).max(100_000).optional(),
+  titleId: z.string().uuid('عنوان انتخاب‌شده معتبر نیست').nullable().optional(),
+  badgeId: z.string().uuid('نشان انتخاب‌شده معتبر نیست').nullable().optional(),
+})
+export type RecognitionCategoryInput = z.infer<typeof recognitionCategorySchema>
+
+/** `PATCH /api/recognition/categories/:id` — edit, reorder or disable. */
+export const recognitionCategoryUpdateSchema = recognitionCategorySchema
+  .partial()
+  .extend({ isActive: z.boolean().optional() })
+export type RecognitionCategoryUpdateInput = z.infer<typeof recognitionCategoryUpdateSchema>
+
+/** `PUT /api/recognition/cycle` — the cadence the next cycle should run on. */
+export const recognitionCycleConfigSchema = z.object({
+  frequency: z.enum(['WEEKLY', 'MONTHLY']),
+})
+export type RecognitionCycleConfigInput = z.infer<typeof recognitionCycleConfigSchema>
+
+/** `POST /api/recognition/titles` — an admin-created winner title. */
+export const recognitionTitleSchema = z.object({
+  name: z.string().trim().min(1, 'نام عنوان را وارد کنید').max(80),
+  description: z.string().trim().max(300).optional(),
+})
+export type RecognitionTitleInput = z.infer<typeof recognitionTitleSchema>

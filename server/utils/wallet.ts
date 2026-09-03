@@ -59,8 +59,11 @@ export interface LedgerResult {
 /**
  * Postgres unique-violation. Prisma surfaces this as P2002; we also match the
  * raw code because the driver adapter can pass errors through unwrapped.
+ *
+ * Exported so other idempotent writers (achievement grants) reuse the same
+ * definition instead of drifting.
  */
-function isUniqueViolation(error: unknown): boolean {
+export function isUniqueViolation(error: unknown): boolean {
   const code = (error as { code?: string })?.code
   return code === 'P2002' || code === '23505'
 }

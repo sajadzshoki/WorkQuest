@@ -126,6 +126,22 @@
     background-size: 200% 100%;
     animation: wq-shimmer 1.4s ease-in-out infinite;
   }
+
+  /* Gamification micro-animations — subtle by design, all overridden by the
+     reduced-motion rule at the bottom of this file. */
+  .wq-anim-pop {
+    animation: wq-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* The light sweep across an earned badge's face. */
+  .wq-badge-shine {
+    animation: wq-shine 3.2s ease-in-out infinite;
+  }
+
+  /* Expanding halo behind the level-up icon in the celebration feed. */
+  .wq-ring-pulse {
+    animation: wq-ring-pulse 1.4s ease-out infinite;
+  }
 }
 
 @keyframes wq-shimmer {
@@ -135,6 +151,41 @@
 
   to {
     background-position: -200% 0;
+  }
+}
+
+@keyframes wq-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes wq-shine {
+  0% {
+    transform: translateX(-130%) skewX(-12deg);
+  }
+
+  60%,
+  100% {
+    transform: translateX(230%) skewX(-12deg);
+  }
+}
+
+@keyframes wq-ring-pulse {
+  from {
+    opacity: 0.7;
+    transform: scale(0.85);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.9);
   }
 }
 

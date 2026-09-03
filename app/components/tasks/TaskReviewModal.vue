@@ -24,6 +24,7 @@ const open = defineModel<boolean>('open', { default: false })
 const { t } = useI18n()
 const format = useLocaleFormat()
 const toast = useToast()
+const { celebrate } = useCelebration()
 
 const score = ref(85)
 const quality = ref(4)
@@ -33,6 +34,16 @@ const submitting = ref(false)
 
 const preview = ref<(RewardBreakdown & { ruleVersion: number }) | null>(null)
 const previewing = ref(false)
+
+/** Shape of `POST /api/tasks/:id/transition` for the celebration triggers. */
+interface TransitionResult {
+  payout: { applied: boolean, xp: number, coins: number, balance: number, level: number, levelUp: boolean } | null
+  gamification: {
+    streak: { current: number, longest: number, changed: boolean }
+    achievements: Array<{ key: string, title: string }>
+    badges: Array<{ id: string, name: string }>
+  } | null
+}
 
 /** 1-5 pickers render as buttons rather than a select: faster on mobile. */
 const RATINGS = [1, 2, 3, 4, 5] as const
@@ -86,7 +97,7 @@ async function submit(action: 'approve' | 'request_revision'): Promise<void> {
 
   submitting.value = true
   try {
-    await $fetch(`/api/tasks/${props.taskId}/transition`, {
+    const result = await $fetch<TransitionResult>(`/api/tasks/${props.taskId}/transition`, {
       method: 'POST',
       body: {
         action,
@@ -101,6 +112,40 @@ async function submit(action: 'approve' | 'request_revision'): Promise<void> {
       title: action === 'approve' ? t('review.approved') : t('review.revisionRequested'),
       color: 'success',
     })
+
+    // Subtle unlock celebrations — the numbers come straight from the server's
+    // payout + gamification pass, never recomputed here.
+    if (action === 'approve') {
+      const payout = result.payout
+      if (payout && payout.coins > 0) {
+        celebrate({
+          type: 'coins',
+          title: t('celebration.coinsEarned', { amount: format.number(payout.coins) }),
+          detail: props.taskTitle,
+        })
+      }
+      if (payout?.levelUp) {
+        celebrate({
+          type: 'level',
+          title: t('celebration.levelUp', { level: format.number(payout.level) }),
+        })
+      }
+      for (const unlocked of result.gamification?.achievements ?? []) {
+        celebrate({
+          type: 'achievement',
+          title: unlocked.title,
+          detail: t('celebration.achievementUnlocked'),
+        })
+      }
+      for (const badge of result.gamification?.badges ?? []) {
+        celebrate({
+          type: 'badge',
+          title: badge.name,
+          detail: t('celebration.badgeUnlocked'),
+        })
+      }
+    }
+
     open.value = false
     emit('reviewed')
   }

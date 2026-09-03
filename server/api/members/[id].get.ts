@@ -40,7 +40,7 @@ export default defineEventHandler(async (event): Promise<MemberDetailResponse> =
 
   const membership = user.teamMemberships[0] ?? null
 
-  const [progress, achievements, taskCounts, openTasks] = await Promise.all([
+  const [progress, achievements, badges, taskCounts, openTasks] = await Promise.all([
     db.userProgress.findUnique({
       where: { userId: user.id },
       select: {
@@ -60,6 +60,14 @@ export default defineEventHandler(async (event): Promise<MemberDetailResponse> =
       },
       orderBy: { unlockedAt: 'desc' },
       take: 12,
+    }),
+    db.userBadge.findMany({
+      where: { userId: user.id },
+      orderBy: { awardedAt: 'desc' },
+      select: {
+        awardedAt: true,
+        badge: { select: { id: true, name: true, description: true, iconKey: true, tone: true, imageUrl: true } },
+      },
     }),
     db.task.groupBy({
       by: ['status'],
@@ -124,6 +132,15 @@ export default defineEventHandler(async (event): Promise<MemberDetailResponse> =
       description: row.achievement.description,
       iconKey: row.achievement.iconKey,
       unlockedAt: row.unlockedAt.toISOString(),
+    })),
+    badges: badges.map(row => ({
+      id: row.badge.id,
+      name: row.badge.name,
+      description: row.badge.description,
+      iconKey: row.badge.iconKey,
+      tone: row.badge.tone,
+      imageUrl: row.badge.imageUrl,
+      awardedAt: row.awardedAt.toISOString(),
     })),
     performance: {
       // "Assigned" for the profile means open work, i.e. everything not yet
