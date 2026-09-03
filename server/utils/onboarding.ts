@@ -185,4 +185,13 @@ export async function bootstrapCompanyDefaults(
       levelId: firstLevel?.id ?? null,
     },
   })
+
+  // Wallets are created eagerly so every member has one from day one;
+  // `applyCoinDelta` can create them lazily, but an always-present row keeps
+  // read paths simple and avoids a first-payout write amplification.
+  await tx.wallet.create({ data: { companyId, userId: ownerId } })
+
+  // Seed the company's economy at v1 so payouts are governed by an explicit,
+  // auditable rule row rather than by code defaults.
+  await tx.rewardRule.create({ data: { companyId, version: 1, isActive: true } })
 }

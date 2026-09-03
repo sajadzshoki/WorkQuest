@@ -45,6 +45,11 @@ trap cleanup EXIT
 export NUXT_BUILD_DIR="${NUXT_BUILD_DIR:-.nuxt-test}"
 export NUXT_SECURE_COOKIES=false
 export NUXT_OTP_PROVIDER=console
+# The dev database (`prisma dev`) allows ~10 connections in total, and this
+# suite opens its own pool alongside the server's. Leaving the server at its
+# default would exhaust the server mid-run and surface as "server has closed
+# the connection" on whichever endpoint happens to fan out the widest.
+export NUXT_DB_POOL_MAX="${NUXT_DB_POOL_MAX:-5}"
 # Two seconds instead of 90 so the cooldown assertion does not stall the suite.
 export NUXT_OTP_RESEND_COOLDOWN_SECONDS="${NUXT_OTP_RESEND_COOLDOWN_SECONDS:-2}"
 # The per-IP cap is a production abuse guard; in tests every request comes from

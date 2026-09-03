@@ -161,7 +161,28 @@
     "challengeGoal": "هدف: {goal}",
     "endsIn": "تا پایان {days} روز",
     "myRank": "رتبه من",
-    "rankValue": "{rank} از {total}"
+    "rankValue": "{rank} از {total}",
+    "todaysTasks": "تسک‌های امروز",
+    "activeTasks": "تسک‌های فعال",
+    "pendingSubmissions": "در انتظار بازبینی",
+    "completedTasksTitle": "تسک‌های انجام‌شده",
+    "upcomingDeadlines": "سررسیدهای پیش‌رو",
+    "managerView": "نمای مدیریتی",
+    "employeeView": "کارهای من",
+    "pendingReviews": "بازبینی‌های در انتظار",
+    "overdueTasks": "تسک‌های تأخیردار",
+    "teamCompletion": "نرخ تکمیل تیم‌ها",
+    "completionRate": "نرخ تکمیل",
+    "noTasksToday": "برای امروز تسکی ندارید",
+    "noPendingReviews": "بازبینی در انتظاری نیست",
+    "noOverdue": "هیچ تسکی تأخیر ندارد",
+    "noUpcoming": "سررسید نزدیکی ندارید",
+    "noActiveTasks": "تسک فعالی ندارید",
+    "noSubmissions": "تسکی در انتظار بازبینی ندارید",
+    "noCompleted": "هنوز تسکی تأیید نشده است",
+    "noTeams": "هنوز داده‌ای برای تیم‌ها نیست",
+    "reviewNow": "بازبینی",
+    "viewAll": "مشاهدهٔ همه"
   },
   "tasks": {
     "title": "تسک‌ها",
@@ -182,18 +203,104 @@
     "xp": "{value} امتیاز",
     "coins": "{value} سکه",
     "empty": "تسکی با این فیلترها پیدا نشد",
-    "total": "{count} تسک"
+    "total": "{count} تسک",
+    "dueTomorrow": "سررسید فردا",
+    "progress": "پیشرفت",
+    "progressValue": "{value}٪",
+    "estimate": "برآورد زمان",
+    "estimateHours": "{hours} ساعت",
+    "revisionCount": "{count} بار بازگشت برای اصلاح",
+    "comments": "یادداشت‌ها",
+    "attachments": "پیوست‌ها",
+    "history": "تاریخچه",
+    "reviews": "بازبینی‌ها",
+    "noComments": "هنوز یادداشتی ثبت نشده است",
+    "noAttachments": "پیوستی وجود ندارد",
+    "addComment": "ثبت یادداشت",
+    "commentPlaceholder": "یادداشت خود را بنویسید…",
+    "addAttachment": "افزودن پیوست",
+    "fileName": "نام فایل",
+    "fileUrl": "آدرس فایل",
+    "create": "تسک جدید",
+    "createTitle": "ساخت تسک جدید",
+    "edit": "ویرایش تسک",
+    "save": "ذخیره",
+    "created": "تسک ساخته شد",
+    "updated": "تسک به‌روزرسانی شد",
+    "detailTitle": "جزئیات تسک",
+    "backToList": "بازگشت به فهرست",
+    "filters": "فیلترها",
+    "search": "جست‌وجو در تسک‌ها",
+    "sort": "ترتیب",
+    "sortBy": {
+      "dueDate": "سررسید",
+      "priority": "اولویت",
+      "createdAt": "جدیدترین",
+      "status": "وضعیت"
+    },
+    "onlyOverdue": "فقط تأخیردار",
+    "reward": "پاداش",
+    "assignedBy": "محول‌شده توسط {name}",
+    "unassigned": "بدون انجام‌دهنده",
+    "actions": {
+      "start": "شروع تسک",
+      "submit": "ارسال برای بازبینی",
+      "approve": "تأیید تسک",
+      "request_revision": "درخواست اصلاح",
+      "reopen": "بازگرداندن به صف"
+    },
+    "actionDone": {
+      "start": "تسک شروع شد",
+      "submit": "تسک برای بازبینی ارسال شد",
+      "approve": "تسک تأیید شد",
+      "request_revision": "درخواست اصلاح ثبت شد",
+      "reopen": "تسک به صف بازگشت"
+    },
+    "review": {
+      "title": "بازبینی تسک",
+      "score": "امتیاز کیفیت",
+      "feedback": "بازخورد",
+      "feedbackPlaceholder": "توضیح دهید چه چیزی باید اصلاح شود…",
+      "feedbackRequired": "برای درخواست اصلاح، توضیح بنویسید",
+      "approveHint": "با تأیید، پاداش تسک به انجام‌دهنده پرداخت می‌شود",
+      "selfReview": "نمی‌توانید تسک خودتان را بازبینی کنید"
+    },
+    "form": {
+      "title": "عنوان",
+      "titlePlaceholder": "مثلاً: بازطراحی صفحه ورود",
+      "description": "شرح",
+      "descriptionPlaceholder": "خروجی مورد انتظار و معیار پذیرش…",
+      "assignee": "انجام‌دهنده",
+      "selectAssignee": "یک نفر را انتخاب کنید",
+      "team": "تیم",
+      "selectTeam": "انتخاب تیم (اختیاری)",
+      "priority": "اولویت",
+      "dueDate": "سررسید",
+      "estimatedHours": "برآورد زمان (ساعت)",
+      "xpReward": "امتیاز تجربه",
+      "coinReward": "سکه",
+      "attachments": "پیوست‌ها (اختیاری)",
+      "submit": "ساخت تسک"
+    },
+    "events": {
+      "task.created": "تسک ساخته شد",
+      "task.start": "تسک شروع شد",
+      "task.submit": "برای بازبینی ارسال شد",
+      "task.approve": "تأیید شد",
+      "task.request_revision": "درخواست اصلاح شد",
+      "task.reopen": "به صف بازگشت",
+      "task.updated": "ویرایش شد",
+      "task.reassigned": "انجام‌دهنده تغییر کرد",
+      "task.attachment_added": "پیوست اضافه شد"
+    }
   },
   "status": {
     "task": {
-      "DRAFT": "پیش‌نویس",
-      "ASSIGNED": "محول‌شده",
+      "TODO": "در صف انجام",
       "IN_PROGRESS": "در حال انجام",
       "SUBMITTED": "ارسال‌شده",
-      "APPROVED": "تأیید شده",
-      "CHANGES_REQUESTED": "نیازمند اصلاح",
-      "REJECTED": "رد شده",
-      "CANCELLED": "لغو شده"
+      "NEEDS_REVISION": "نیازمند اصلاح",
+      "APPROVED": "تأیید شده"
     },
     "redemption": {
       "REQUESTED": "درخواست شده",
@@ -218,8 +325,7 @@
   "priority": {
     "LOW": "کم",
     "MEDIUM": "متوسط",
-    "HIGH": "زیاد",
-    "URGENT": "فوری"
+    "HIGH": "زیاد"
   },
   "gamification": {
     "xp": "امتیاز تجربه",
@@ -368,7 +474,8 @@
     "serverError": "خطای غیرمنتظره در سرور",
     "networkError": "اتصال برقرار نشد",
     "backHome": "بازگشت به خانه",
-    "statusCode": "کد خطا"
+    "statusCode": "کد خطا",
+    "generic": "خطای غیرمنتظره‌ای رخ داد"
   },
   "landing": {
     "hero": {
@@ -498,5 +605,61 @@
     "joinAsDetail": "نقش شما در این شرکت: {role}",
     "joinedTitle": "خوش آمدید",
     "joinedDetail": "به «{company}» پیوستید."
+  },
+  "wallet": {
+    "title": "کیف پول",
+    "balance": "موجودی سکه",
+    "lifetimeEarned": "مجموع کسب‌شده",
+    "lifetimeSpent": "مجموع خرج‌شده",
+    "recentTransactions": "تراکنش‌های اخیر",
+    "allTransactions": "همه تراکنش‌ها",
+    "noTransactions": "هنوز تراکنشی ثبت نشده است",
+    "balanceAfter": "موجودی پس از تراکنش",
+    "type": {
+      "TASK_REWARD": "پاداش تسک",
+      "RECOGNITION_REWARD": "پاداش قدردانی",
+      "CHALLENGE_REWARD": "پاداش چالش",
+      "REWARD_REDEMPTION": "خرید از فروشگاه",
+      "ADMIN_ADJUSTMENT": "تعدیل مدیریتی"
+    }
+  },
+  "review": {
+    "title": "بازبینی تسک",
+    "quality": "کیفیت کار",
+    "timeliness": "رعایت زمان‌بندی",
+    "overall": "امتیاز کلی",
+    "comment": "توضیح بازبین",
+    "commentPlaceholder": "بازخورد خود را بنویسید…",
+    "approve": "تأیید و پرداخت پاداش",
+    "requestRevision": "درخواست اصلاح",
+    "rewardPreview": "پیش‌نمایش پاداش",
+    "xpEarned": "تجربه کسب‌شده",
+    "coinsEarned": "سکه کسب‌شده",
+    "multiplier": "ضریب نهایی",
+    "scoreRequired": "برای تأیید، امتیاز کلی را مشخص کنید",
+    "revisionNoteRequired": "برای درخواست اصلاح، توضیح بنویسید",
+    "approved": "تسک تأیید شد و پاداش پرداخت گردید",
+    "revisionRequested": "درخواست اصلاح ثبت شد",
+    "band": {
+      "EXCELLENT": "عالی",
+      "GOOD": "خوب",
+      "FAIR": "قابل قبول",
+      "POOR": "نیازمند بهبود"
+    },
+    "factor": {
+      "priority.LOW": "اولویت پایین",
+      "priority.MEDIUM": "اولویت متوسط",
+      "priority.HIGH": "اولویت بالا",
+      "band.EXCELLENT": "امتیاز عالی",
+      "band.GOOD": "امتیاز خوب",
+      "band.FAIR": "امتیاز قابل قبول",
+      "band.POOR": "امتیاز پایین",
+      "bonus.onTime": "تحویل به‌موقع",
+      "bonus.early": "تحویل زودهنگام",
+      "bonus.highQuality": "کیفیت بالا",
+      "penalty.overdue": "تحویل با تأخیر",
+      "penalty.revision": "دفعات اصلاح",
+      "clamp": "محدودسازی سقف"
+    }
   }
 }

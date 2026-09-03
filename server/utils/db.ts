@@ -12,6 +12,19 @@ import { PrismaClient } from '#prisma/client'
  */
 let cachedClient: PrismaClient | undefined
 
+/**
+ * Pool size for this worker, from `NUXT_DB_POOL_MAX`.
+ *
+ * Exposed as config rather than hardcoded because the right value depends on
+ * the deployment: a managed Postgres with 100 connections and four workers can
+ * afford 20 each, while `prisma dev` allows about 10 in *total* — shared with
+ * anything else pointed at the same database.
+ */
+function poolMax(): number {
+  const configured = Number(useRuntimeConfig().dbPoolMax)
+  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : 10
+}
+
 export function databaseUrl(): string | undefined {
   const config = useRuntimeConfig()
   const fromConfig = typeof config.databaseUrl === 'string' ? config.databaseUrl.trim() : ''
@@ -32,7 +45,7 @@ export function usePrisma(): PrismaClient {
   cachedClient = new PrismaClient({
     adapter: new PrismaPg({
       connectionString: url,
-      max: 10,
+      max: poolMax(),
       connectionTimeoutMillis: 5_000,
       idleTimeoutMillis: 30_000,
     }),

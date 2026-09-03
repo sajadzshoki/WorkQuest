@@ -16,15 +16,7 @@ interface DashboardSummary {
     achievementsUnlocked: number
   }
   tasks: {
-    open: Array<{
-      id: string
-      title: string
-      status: string
-      priority: string
-      dueDate: string | null
-      xpReward: number
-      coinReward: number
-    }>
+    /** Per-status counts. The task lists themselves live in `TasksTaskDashboard`. */
     counts: Record<string, number>
   }
   leaderboard: Array<{
@@ -56,13 +48,17 @@ const format = useLocaleFormat()
 
 const { data, status, refresh } = await useFetch<DashboardSummary>(`/api/dashboard/summary`)
 
+// The wallet is its own endpoint so the coin balance and the ledger shown here
+// are the same authoritative rows the wallet page renders.
+const { data: wallet } = await useFetch('/api/wallet')
+
 const stats = computed(() => {
   const counts = data.value?.tasks.counts ?? {}
   return [
     {
       label: t('dashboard.openTasks'),
       value: format.number(
-        (counts.ASSIGNED ?? 0) + (counts.IN_PROGRESS ?? 0) + (counts.SUBMITTED ?? 0),
+        (counts.TODO ?? 0) + (counts.IN_PROGRESS ?? 0) + (counts.NEEDS_REVISION ?? 0) + (counts.SUBMITTED ?? 0),
       ),
       icon: 'i-heroicons-clipboard-document-list',
       tone: 'primary' as const,
@@ -87,18 +83,6 @@ const stats = computed(() => {
     },
   ]
 })
-
-function dueLabel(dueDate: string | null): string {
-  if (!dueDate) return t('tasks.noDueDate')
-  const days = Math.ceil((new Date(dueDate).getTime() - Date.now()) / 86_400_000)
-  if (days === 0) return t('tasks.dueToday')
-  if (days > 0) return t('tasks.dueIn', { days: format.number(days) })
-  return t('tasks.overdue', { days: format.number(Math.abs(days)) })
-}
-
-function isOverdue(dueDate: string | null): boolean {
-  return Boolean(dueDate) && new Date(dueDate as string).getTime() < Date.now()
-}
 
 function daysUntil(date: string): number {
   return Math.max(0, Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000))
@@ -174,67 +158,26 @@ function daysUntil(date: string): number {
           </div>
         </CommonSectionCard>
 
-        <CommonSectionCard
-          :title="t('dashboard.myTasks')"
-          icon="i-heroicons-clipboard-document-list"
-          :to="localePath('/tasks')"
-          :to-label="t('common.viewAll')"
-        >
-          <CommonEmptyState
-            v-if="!data?.tasks.open.length"
-            icon="i-heroicons-check-circle"
-            :title="t('dashboard.noOpenTasks')"
-          />
-
-          <ul
-            v-else
-            class="divide-y divide-default"
-          >
-            <li
-              v-for="task in data.tasks.open"
-              :key="task.id"
-              class="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
-            >
-              <span
-                class="mt-1 grid size-8 shrink-0 place-items-center rounded-lg"
-                :class="isOverdue(task.dueDate) ? 'bg-error/12 text-error' : 'bg-elevated text-muted'"
-              >
-                <UIcon
-                  name="i-heroicons-clipboard-document"
-                  class="size-4"
-                />
-              </span>
-
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-semibold text-highlighted">
-                  {{ task.title }}
-                </p>
-                <div class="mt-1.5 flex flex-wrap items-center gap-2">
-                  <GamificationTaskStatusBadge :status="task.status" />
-                  <GamificationPriorityBadge :priority="task.priority" />
-                  <span
-                    class="text-[11px]"
-                    :class="isOverdue(task.dueDate) ? 'font-bold text-error' : 'text-dimmed'"
-                  >
-                    {{ dueLabel(task.dueDate) }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="hidden shrink-0 flex-col items-end gap-1 text-[11px] text-muted sm:flex">
-                <span class="font-bold text-primary tabular-nums">
-                  +{{ format.number(task.xpReward) }} XP
-                </span>
-                <span class="font-bold text-coin-600 dark:text-coin-300 tabular-nums">
-                  +{{ format.number(task.coinReward) }}
-                </span>
-              </div>
-            </li>
-          </ul>
-        </CommonSectionCard>
+        <!--
+          Real task surfaces. Everything task-related — today's work, active
+          items, pending submissions, upcoming deadlines and, for managers, the
+          review queue and team completion — is owned by this component and its
+          own endpoint, so the gamification summary above stays a summary.
+        -->
+        <TasksTaskDashboard />
       </div>
 
       <div class="space-y-4">
+        <!--
+          Wallet snapshot. The coin balance and the ledger rows behind it come
+          from `/api/wallet`, so this shows the same authoritative numbers as
+          the wallet page rather than a second, drifting copy.
+        -->
+        <GamificationProgressCard
+          :wallet="wallet"
+          compact
+        />
+
         <CommonSectionCard
           v-if="data?.activeChallenge"
           :title="t('dashboard.activeChallenge')"

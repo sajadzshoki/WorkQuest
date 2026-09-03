@@ -1,4 +1,5 @@
 import type { Role } from '../utils/permissions'
+import type { ReviewDecision, TaskPriority, TaskStatus } from '../utils/task'
 
 /** Envelope used by every `/api/**` error response. */
 export interface ApiErrorBody {
@@ -335,4 +336,153 @@ export interface AcceptInvitationResponse {
     role: Role
     team: { id: string, name: string } | null
   }
+}
+
+// ---------------------------------------------------------------------------
+// Tasks
+// ---------------------------------------------------------------------------
+
+/** A person as they appear on a task card. */
+export interface TaskPerson {
+  id: string
+  fullName: string
+  avatarUrl: string | null
+  jobTitle?: string | null
+}
+
+/**
+ * The task shape every endpoint returns.
+ *
+ * `isOverdue` is computed server-side on purpose: the browser's clock is not
+ * trustworthy and the company timezone lives on the server, so letting the UI
+ * decide would make the same task look late on one screen and not on another.
+ */
+export interface TaskSummary {
+  id: string
+  title: string
+  description: string | null
+  status: TaskStatus
+  priority: TaskPriority
+  progress: number
+  estimatedHours: number | null
+  dueDate: string | null
+  isOverdue: boolean
+  xpReward: number
+  coinReward: number
+  revisionCount: number
+  assignedAt: string | null
+  startedAt: string | null
+  submittedAt: string | null
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
+  assignee: TaskPerson | null
+  assigner: TaskPerson | null
+  team: { id: string, name: string, slug: string } | null
+  commentCount: number
+  attachmentCount: number
+}
+
+export interface TaskComment {
+  id: string
+  body: string
+  createdAt: string
+  author: TaskPerson
+}
+
+export interface TaskAttachment {
+  id: string
+  fileName: string
+  url: string
+  mimeType: string | null
+  sizeBytes: number | null
+  createdAt: string
+  uploadedBy: { id: string, fullName: string }
+}
+
+export interface TaskReviewEntry {
+  id: string
+  decision: ReviewDecision
+  score: number | null
+  feedback: string | null
+  xpAwarded: number
+  coinsAwarded: number
+  createdAt: string
+  reviewer: TaskPerson
+}
+
+export interface TaskEventEntry {
+  id: string
+  action: string
+  fromStatus: TaskStatus | null
+  toStatus: TaskStatus | null
+  note: string | null
+  createdAt: string
+  actor: TaskPerson | null
+}
+
+/** `GET /api/tasks` */
+export type TaskListResponse = Paginated<TaskSummary>
+
+/** `GET /api/tasks/:id` */
+export interface TaskDetailResponse {
+  task: TaskSummary
+  comments: TaskComment[]
+  attachments: TaskAttachment[]
+  reviews: TaskReviewEntry[]
+  events: TaskEventEntry[]
+  permissions: {
+    /** The caller may edit / reassign this task. */
+    canManage: boolean
+    isAssignee: boolean
+  }
+}
+
+/** Returned by every task mutation so the client can replace its state. */
+export interface TaskMutationResponse {
+  task: TaskSummary
+}
+
+export interface TeamCompletionRow {
+  teamId: string
+  teamName: string
+  total: number
+  approved: number
+  /** 0-100. */
+  rate: number
+}
+
+/** `GET /api/tasks/dashboard` */
+export interface TaskDashboardResponse {
+  employee: {
+    today: TaskSummary[]
+    active: TaskSummary[]
+    pendingSubmissions: TaskSummary[]
+    completed: TaskSummary[]
+    upcomingDeadlines: TaskSummary[]
+    counts: {
+      today: number
+      active: number
+      pendingSubmissions: number
+      completed: number
+      overdue: number
+      total: number
+      completionRate: number
+    }
+  }
+  /** Null for callers who cannot review — an employee has no manager view. */
+  manager: {
+    active: TaskSummary[]
+    pendingReviews: TaskSummary[]
+    overdue: TaskSummary[]
+    counts: {
+      active: number
+      pendingReviews: number
+      overdue: number
+      total: number
+      approved: number
+      completionRate: number
+    }
+    teamCompletion: TeamCompletionRow[]
+  } | null
 }

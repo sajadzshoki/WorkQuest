@@ -1,11 +1,12 @@
 import type { MemberDetail, MemberDetailResponse } from '#shared/types/api'
 import type { Role } from '#shared/utils/permissions'
 
+import { memberPermissions } from '#shared/utils/member-scope'
 import { can } from '#shared/utils/permissions'
+import { CLOSED_TASK_STATUSES } from '#shared/utils/task'
 
 import { getManagedUserIds, requireAuth } from '../../utils/auth'
 import { errors } from '../../utils/http'
-import { memberPermissions } from '#shared/utils/member-scope'
 import { MEMBER_SELECT } from '../../utils/members'
 import { createTenantClient } from '../../utils/tenant'
 
@@ -69,7 +70,7 @@ export default defineEventHandler(async (event): Promise<MemberDetailResponse> =
       where: {
         assigneeId: user.id,
         dueDate: { lt: new Date() },
-        status: { in: ['ASSIGNED', 'IN_PROGRESS', 'SUBMITTED'] },
+        status: { notIn: [...CLOSED_TASK_STATUSES] },
       },
     }),
   ])
@@ -125,7 +126,9 @@ export default defineEventHandler(async (event): Promise<MemberDetailResponse> =
       unlockedAt: row.unlockedAt.toISOString(),
     })),
     performance: {
-      assigned: countOf('ASSIGNED'),
+      // "Assigned" for the profile means open work, i.e. everything not yet
+      // approved and not yet handed in.
+      assigned: countOf('TODO') + countOf('IN_PROGRESS') + countOf('NEEDS_REVISION'),
       completed: countOf('APPROVED'),
       inReview: countOf('SUBMITTED'),
       overdue: openTasks,

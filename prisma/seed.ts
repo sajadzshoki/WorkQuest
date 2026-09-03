@@ -89,6 +89,29 @@ const REWARDS = [
   { title: 'کمک به خیریه به نام شما', description: 'اهدا به خیریه همکار، به نام شما', type: 'DONATION', cost: 800, stock: null },
 ]
 
+/**
+ * 23:59:59 of the given instant's calendar day in `timeZone`, as a UTC Date.
+ * The offset is read back out of `Intl` so the result is correct across DST.
+ */
+function endOfDay(date: Date, timeZone: string): Date {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date)
+
+  const get = (type: string) => Number(parts.find(part => part.type === type)?.value ?? '0')
+  const wallClock = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second'))
+  const offsetMs = wallClock - Math.floor(date.getTime() / 1000) * 1000
+
+  return new Date(Date.UTC(get('year'), get('month') - 1, get('day')) - offsetMs + 86_400_000 - 1000)
+}
+
 async function main() {
   console.log('› clearing existing data')
   await prisma.otpCode.deleteMany()
@@ -110,6 +133,12 @@ async function main() {
   for (const level of LEVELS) {
     await prisma.level.create({ data: { companyId: company.id, ...level } })
   }
+
+  // Every company starts with an explicit, editable v1 economy rather than
+  // relying on the code defaults.
+  await prisma.rewardRule.create({
+    data: { companyId: company.id, version: 1, isActive: true },
+  })
 
   const achievements = []
   for (const achievement of ACHIEVEMENTS) {
@@ -170,13 +199,23 @@ async function main() {
     }
   }
 
+  /**
+   * Task fixtures covering every point of the lifecycle, so the dashboards,
+   * the review queue and the overdue surfaces all have something real to show
+   * on a fresh database.
+   */
   const tasks = [
-    { title: 'بازطراحی صفحه ورود', assignee: 'نگار احمدی', team: 'product', status: 'IN_PROGRESS', priority: 'HIGH', xp: 120, coins: 60, dueInDays: 3, reviewer: 'مریم نوروزی' },
-    { title: 'پیاده‌سازی سرویس اعلان‌ها', assignee: 'پویا محمدی', team: 'engineering', status: 'SUBMITTED', priority: 'URGENT', xp: 220, coins: 110, dueInDays: 1, reviewer: 'امیر شریفی' },
-    { title: 'تحلیل داده‌های ریزش کاربر', assignee: 'الناز کریمی', team: 'engineering', status: 'APPROVED', priority: 'MEDIUM', xp: 180, coins: 90, dueInDays: -2, reviewer: 'امیر شریفی', score: 92 },
-    { title: 'پروتوتایپ داشبورد مدیران', assignee: 'ترانه موسوی', team: 'product', status: 'APPROVED', priority: 'HIGH', xp: 160, coins: 80, dueInDays: -5, reviewer: 'مریم نوروزی', score: 88 },
-    { title: 'بهینه‌سازی کوئری‌های گزارش‌گیری', assignee: 'سینا فرهادی', team: 'engineering', status: 'ASSIGNED', priority: 'LOW', xp: 90, coins: 45, dueInDays: 7, reviewer: 'امیر شریفی' },
-    { title: 'مستندسازی راهنمای طراحی', assignee: 'نگار احمدی', team: 'product', status: 'CHANGES_REQUESTED', priority: 'MEDIUM', xp: 100, coins: 50, dueInDays: 2, reviewer: 'مریم نوروزی' },
+    { title: 'بازطراحی صفحه ورود', assignee: 'نگار احمدی', team: 'product', status: 'IN_PROGRESS', priority: 'HIGH', xp: 120, coins: 60, dueInDays: 3, hours: 12, progress: 45, reviewer: 'مریم نوروزی' },
+    { title: 'پیاده‌سازی سرویس اعلان‌ها', assignee: 'پویا محمدی', team: 'engineering', status: 'SUBMITTED', priority: 'HIGH', xp: 220, coins: 110, dueInDays: 1, hours: 24, progress: 100, reviewer: 'امیر شریفی' },
+    { title: 'تحلیل داده‌های ریزش کاربر', assignee: 'الناز کریمی', team: 'engineering', status: 'APPROVED', priority: 'MEDIUM', xp: 180, coins: 90, dueInDays: -2, hours: 16, progress: 100, reviewer: 'امیر شریفی', score: 92 },
+    { title: 'پروتوتایپ داشبورد مدیران', assignee: 'ترانه موسوی', team: 'product', status: 'APPROVED', priority: 'HIGH', xp: 160, coins: 80, dueInDays: -5, hours: 20, progress: 100, reviewer: 'مریم نوروزی', score: 88 },
+    { title: 'بهینه‌سازی کوئری‌های گزارش‌گیری', assignee: 'سینا فرهادی', team: 'engineering', status: 'TODO', priority: 'LOW', xp: 90, coins: 45, dueInDays: 7, hours: 8, progress: 0, reviewer: 'امیر شریفی' },
+    { title: 'مستندسازی راهنمای طراحی', assignee: 'نگار احمدی', team: 'product', status: 'NEEDS_REVISION', priority: 'MEDIUM', xp: 100, coins: 50, dueInDays: 2, hours: 6, progress: 70, reviewer: 'مریم نوروزی', revisions: 1 },
+    // Deliberately late and unfinished — the manager dashboard needs an overdue row.
+    { title: 'مهاجرت پایگاه داده به نسخه ۱۷', assignee: 'سینا فرهادی', team: 'engineering', status: 'IN_PROGRESS', priority: 'HIGH', xp: 260, coins: 130, dueInDays: -3, hours: 32, progress: 60, reviewer: 'امیر شریفی' },
+    // Due today, so «تسک‌های امروز» is never empty on a fresh seed.
+    { title: 'آماده‌سازی جلسهٔ بازبینی سبد محصول', assignee: 'ترانه موسوی', team: 'product', status: 'TODO', priority: 'MEDIUM', xp: 70, coins: 35, dueInDays: 0, hours: 3, progress: 0, reviewer: 'مریم نوروزی' },
+    { title: 'بررسی بازخوردهای پشتیبانی', assignee: 'پویا محمدی', team: 'engineering', status: 'SUBMITTED', priority: 'MEDIUM', xp: 110, coins: 55, dueInDays: 4, hours: 5, progress: 100, reviewer: 'امیر شریفی' },
   ] as const
 
   const badges = [
@@ -190,6 +229,15 @@ async function main() {
 
   for (const task of tasks) {
     const assignee = users[task.assignee]!
+    const reviewer = users[task.reviewer]!
+    // End of the target day, in the company's timezone: a deadline is "by the
+    // end of Tuesday", not "by the exact second this seed ran". Without this a
+    // task due today would already read as overdue.
+    const dueDate = endOfDay(new Date(Date.now() + task.dueInDays * 86_400_000), company.timezone)
+    const assignedAt = new Date(Date.now() - 5 * 86_400_000)
+    const started = task.status !== 'TODO'
+    const submitted = ['SUBMITTED', 'APPROVED'].includes(task.status)
+
     const created = await prisma.task.create({
       data: {
         companyId: company.id,
@@ -198,23 +246,53 @@ async function main() {
         status: task.status,
         priority: task.priority,
         assigneeId: assignee.id,
-        assignerId: users[task.reviewer]!.id,
+        assignerId: reviewer.id,
         teamId: (await prisma.team.findFirst({ where: { companyId: company.id, slug: task.team } }))?.id,
         xpReward: task.xp,
         coinReward: task.coins,
-        dueDate: new Date(Date.now() + task.dueInDays * 86_400_000),
-        assignedAt: new Date(Date.now() - 5 * 86_400_000),
-        submittedAt: ['SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED'].includes(task.status) ? new Date(Date.now() - 86_400_000) : null,
+        estimatedHours: task.hours,
+        progress: task.progress,
+        revisionCount: 'revisions' in task ? task.revisions : 0,
+        dueDate,
+        assignedAt,
+        startedAt: started ? new Date(Date.now() - 4 * 86_400_000) : null,
+        submittedAt: submitted || task.status === 'NEEDS_REVISION' ? new Date(Date.now() - 86_400_000) : null,
         completedAt: task.status === 'APPROVED' ? new Date(Date.now() - 86_400_000) : null,
       },
     })
+
+    // Lifecycle trail, so the task page has a truthful history from the start.
+    await prisma.taskEvent.create({
+      data: { companyId: company.id, taskId: created.id, actorId: reviewer.id, action: 'task.created', toStatus: 'TODO' },
+    })
+    if (started) {
+      await prisma.taskEvent.create({
+        data: { companyId: company.id, taskId: created.id, actorId: assignee.id, action: 'task.start', fromStatus: 'TODO', toStatus: 'IN_PROGRESS' },
+      })
+    }
+
+    if (task.status === 'NEEDS_REVISION') {
+      await prisma.taskReview.create({
+        data: {
+          companyId: company.id,
+          taskId: created.id,
+          reviewerId: reviewer.id,
+          decision: 'CHANGES_REQUESTED',
+          score: null,
+          feedback: 'ساختار کلی خوب است، اما بخش نمونه‌کدها و معیارهای دسترس‌پذیری باید کامل شود.',
+        },
+      })
+      await prisma.taskEvent.create({
+        data: { companyId: company.id, taskId: created.id, actorId: reviewer.id, action: 'task.request_revision', fromStatus: 'SUBMITTED', toStatus: 'NEEDS_REVISION' },
+      })
+    }
 
     if ('score' in task && task.status === 'APPROVED') {
       await prisma.taskReview.create({
         data: {
           companyId: company.id,
           taskId: created.id,
-          reviewerId: users[task.reviewer]!.id,
+          reviewerId: reviewer.id,
           decision: 'APPROVED',
           score: task.score,
           feedback: 'کیفیت خروجی عالی بود؛ مستندسازی هم کامل است.',
@@ -222,12 +300,25 @@ async function main() {
           coinsAwarded: task.coins,
         },
       })
+      await prisma.taskEvent.create({
+        data: { companyId: company.id, taskId: created.id, actorId: reviewer.id, action: 'task.approve', fromStatus: 'SUBMITTED', toStatus: 'APPROVED' },
+      })
 
       await prisma.xpTransaction.create({
         data: { companyId: company.id, userId: assignee.id, amount: task.xp, source: 'TASK_REVIEW', reason: task.title, referenceType: 'Task', referenceId: created.id },
       })
       await prisma.coinTransaction.create({
         data: { companyId: company.id, userId: assignee.id, amount: task.coins, source: 'TASK_REVIEW', reason: task.title, referenceType: 'Task', referenceId: created.id },
+      })
+    }
+
+    // A little conversation on the in-flight work.
+    if (task.status === 'IN_PROGRESS' || task.status === 'NEEDS_REVISION') {
+      await prisma.taskComment.create({
+        data: { companyId: company.id, taskId: created.id, authorId: assignee.id, body: 'شروع کردم؛ اگر نکتهٔ خاصی مدنظرتان است بفرمایید.' },
+      })
+      await prisma.taskComment.create({
+        data: { companyId: company.id, taskId: created.id, authorId: reviewer.id, body: 'ممنون. لطفاً معیارهای پذیرش را هم در توضیحات لحاظ کنید.' },
       })
     }
   }
@@ -262,10 +353,39 @@ async function main() {
     })
 
     await prisma.xpTransaction.create({
-      data: { companyId: company.id, userId: user.id, amount: row.xp, source: 'TASK_REVIEW', reason: 'مجموع تسک‌های تأیید شده' },
+      data: {
+        companyId: company.id,
+        userId: user.id,
+        amount: row.xp,
+        source: 'TASK_REVIEW',
+        reason: 'مجموع تسک‌های تأیید شده',
+        idempotencyKey: `seed:xp:${user.id}`,
+      },
     })
+
+    // Wallet first, then the ledger row that explains its balance — the same
+    // order the runtime uses, so seeded data is indistinguishable from earned.
+    const wallet = await prisma.wallet.create({
+      data: {
+        companyId: company.id,
+        userId: user.id,
+        balance: row.coins,
+        lifetimeEarned: row.coins,
+      },
+    })
+
     await prisma.coinTransaction.create({
-      data: { companyId: company.id, userId: user.id, amount: row.coins, source: 'TASK_REVIEW', reason: 'مجموع پاداش تسک‌ها' },
+      data: {
+        companyId: company.id,
+        userId: user.id,
+        walletId: wallet.id,
+        amount: row.coins,
+        type: 'TASK_REWARD',
+        source: 'TASK_REVIEW',
+        reason: 'مجموع پاداش تسک‌ها',
+        balanceAfter: row.coins,
+        idempotencyKey: `seed:coins:${user.id}`,
+      },
     })
 
     for (const index of row.achievements) {
@@ -336,6 +456,10 @@ async function main() {
     await prisma.level.create({ data: { companyId: other.id, ...level } })
   }
 
+  await prisma.rewardRule.create({
+    data: { companyId: other.id, version: 1, isActive: true },
+  })
+
   const otherOwner = await prisma.user.create({
     data: {
       companyId: other.id,
@@ -366,7 +490,7 @@ async function main() {
     data: {
       companyId: other.id,
       title: 'گزارش ماهانه عملکرد',
-      status: 'ASSIGNED',
+      status: 'TODO',
       priority: 'MEDIUM',
       assigneeId: otherOwner.id,
       xpReward: 80,
