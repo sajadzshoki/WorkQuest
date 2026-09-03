@@ -27,14 +27,11 @@ const busy = ref(false)
 const editOpen = ref(false)
 
 // --- review ----------------------------------------------------------------
+// The review modal owns the scores, the reward preview and the decision
+// buttons, so the page only has to open it.
 const reviewOpen = ref(false)
-const reviewAction = ref<'approve' | 'request_revision'>('approve')
-const feedback = ref('')
-const score = ref(85)
 
-function openReview(action: 'approve' | 'request_revision') {
-  reviewAction.value = action
-  feedback.value = ''
+function openReview(_action: 'approve' | 'request_revision') {
   reviewOpen.value = true
 }
 
@@ -82,21 +79,6 @@ async function run(action: TaskAction, payload: Record<string, unknown> = {}) {
   }
   catch (error) { notify(error) }
   finally { busy.value = false }
-}
-
-async function submitReview() {
-  if (reviewAction.value === 'request_revision' && !feedback.value.trim()) {
-    toast.add({
-      title: t('tasks.review.feedbackRequired'),
-      color: 'warning',
-      icon: 'i-heroicons-exclamation-triangle',
-    })
-    return
-  }
-  await run(reviewAction.value, {
-    note: feedback.value.trim() || undefined,
-    ...(reviewAction.value === 'approve' ? { score: score.value } : {}),
-  })
 }
 
 async function saveProgress() {
@@ -552,66 +534,14 @@ const inlineActions = computed(() => actions.value.filter(action => action === '
       </div>
     </div>
 
-    <!-- Review modal -->
-    <UModal
+    <!-- Review modal: scores, live reward preview and the decision. -->
+    <TasksTaskReviewModal
+      v-if="task"
       v-model:open="reviewOpen"
-      :title="t('tasks.review.title')"
-    >
-      <template #body>
-        <div class="grid gap-4">
-          <UFormField
-            v-if="reviewAction === 'approve'"
-            :label="t('tasks.review.score')"
-            :hint="format.number(score)"
-          >
-            <USlider
-              v-model="score"
-              :min="0"
-              :max="100"
-              :step="5"
-            />
-          </UFormField>
-
-          <UFormField
-            :label="t('tasks.review.feedback')"
-            :required="reviewAction === 'request_revision'"
-          >
-            <UTextarea
-              v-model="feedback"
-              :rows="4"
-              :placeholder="t('tasks.review.feedbackPlaceholder')"
-              class="w-full"
-            />
-          </UFormField>
-
-          <p
-            v-if="reviewAction === 'approve'"
-            class="rounded-lg bg-success/10 px-3 py-2 text-xs text-success"
-          >
-            {{ t('tasks.review.approveHint') }}
-          </p>
-        </div>
-      </template>
-
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            @click="reviewOpen = false"
-          >
-            {{ t('common.cancel') }}
-          </UButton>
-          <UButton
-            :color="reviewAction === 'approve' ? 'success' : 'warning'"
-            :loading="busy"
-            @click="submitReview"
-          >
-            {{ t(`tasks.actions.${reviewAction}`) }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
+      :task-id="task.id"
+      :task-title="task.title"
+      @reviewed="refresh"
+    />
 
     <!-- Attachment modal -->
     <UModal

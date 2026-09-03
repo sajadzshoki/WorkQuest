@@ -605,5 +605,61 @@
     "joinAsDetail": "Your role in this company: {role}",
     "joinedTitle": "Welcome",
     "joinedDetail": "You joined “{company}”."
+  },
+  "wallet": {
+    "title": "Wallet",
+    "balance": "Coin balance",
+    "lifetimeEarned": "Lifetime earned",
+    "lifetimeSpent": "Lifetime spent",
+    "recentTransactions": "Recent transactions",
+    "allTransactions": "All transactions",
+    "noTransactions": "No transactions yet",
+    "balanceAfter": "Balance after",
+    "type": {
+      "TASK_REWARD": "Task reward",
+      "RECOGNITION_REWARD": "Recognition reward",
+      "CHALLENGE_REWARD": "Challenge reward",
+      "REWARD_REDEMPTION": "Store redemption",
+      "ADMIN_ADJUSTMENT": "Admin adjustment"
+    }
+  },
+  "review": {
+    "title": "Review task",
+    "quality": "Quality",
+    "timeliness": "Timeliness",
+    "overall": "Overall score",
+    "comment": "Reviewer comment",
+    "commentPlaceholder": "Write your feedback…",
+    "approve": "Approve and pay reward",
+    "requestRevision": "Request revision",
+    "rewardPreview": "Reward preview",
+    "xpEarned": "XP earned",
+    "coinsEarned": "Coins earned",
+    "multiplier": "Final multiplier",
+    "scoreRequired": "Set an overall score before approving",
+    "revisionNoteRequired": "Explain what needs changing",
+    "approved": "Task approved and reward paid",
+    "revisionRequested": "Revision requested",
+    "band": {
+      "EXCELLENT": "Excellent",
+      "GOOD": "Good",
+      "FAIR": "Fair",
+      "POOR": "Needs improvement"
+    },
+    "factor": {
+      "priority.LOW": "Low priority",
+      "priority.MEDIUM": "Medium priority",
+      "priority.HIGH": "High priority",
+      "band.EXCELLENT": "Excellent score",
+      "band.GOOD": "Good score",
+      "band.FAIR": "Fair score",
+      "band.POOR": "Low score",
+      "bonus.onTime": "Delivered on time",
+      "bonus.early": "Delivered early",
+      "bonus.highQuality": "High quality",
+      "penalty.overdue": "Delivered late",
+      "penalty.revision": "Revision rounds",
+      "clamp": "Capped"
+    }
   }
 }

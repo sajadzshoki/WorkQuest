@@ -605,5 +605,61 @@
     "joinAsDetail": "نقش شما در این شرکت: {role}",
     "joinedTitle": "خوش آمدید",
     "joinedDetail": "به «{company}» پیوستید."
+  },
+  "wallet": {
+    "title": "کیف پول",
+    "balance": "موجودی سکه",
+    "lifetimeEarned": "مجموع کسب‌شده",
+    "lifetimeSpent": "مجموع خرج‌شده",
+    "recentTransactions": "تراکنش‌های اخیر",
+    "allTransactions": "همه تراکنش‌ها",
+    "noTransactions": "هنوز تراکنشی ثبت نشده است",
+    "balanceAfter": "موجودی پس از تراکنش",
+    "type": {
+      "TASK_REWARD": "پاداش تسک",
+      "RECOGNITION_REWARD": "پاداش قدردانی",
+      "CHALLENGE_REWARD": "پاداش چالش",
+      "REWARD_REDEMPTION": "خرید از فروشگاه",
+      "ADMIN_ADJUSTMENT": "تعدیل مدیریتی"
+    }
+  },
+  "review": {
+    "title": "بازبینی تسک",
+    "quality": "کیفیت کار",
+    "timeliness": "رعایت زمان‌بندی",
+    "overall": "امتیاز کلی",
+    "comment": "توضیح بازبین",
+    "commentPlaceholder": "بازخورد خود را بنویسید…",
+    "approve": "تأیید و پرداخت پاداش",
+    "requestRevision": "درخواست اصلاح",
+    "rewardPreview": "پیش‌نمایش پاداش",
+    "xpEarned": "تجربه کسب‌شده",
+    "coinsEarned": "سکه کسب‌شده",
+    "multiplier": "ضریب نهایی",
+    "scoreRequired": "برای تأیید، امتیاز کلی را مشخص کنید",
+    "revisionNoteRequired": "برای درخواست اصلاح، توضیح بنویسید",
+    "approved": "تسک تأیید شد و پاداش پرداخت گردید",
+    "revisionRequested": "درخواست اصلاح ثبت شد",
+    "band": {
+      "EXCELLENT": "عالی",
+      "GOOD": "خوب",
+      "FAIR": "قابل قبول",
+      "POOR": "نیازمند بهبود"
+    },
+    "factor": {
+      "priority.LOW": "اولویت پایین",
+      "priority.MEDIUM": "اولویت متوسط",
+      "priority.HIGH": "اولویت بالا",
+      "band.EXCELLENT": "امتیاز عالی",
+      "band.GOOD": "امتیاز خوب",
+      "band.FAIR": "امتیاز قابل قبول",
+      "band.POOR": "امتیاز پایین",
+      "bonus.onTime": "تحویل به‌موقع",
+      "bonus.early": "تحویل زودهنگام",
+      "bonus.highQuality": "کیفیت بالا",
+      "penalty.overdue": "تحویل با تأخیر",
+      "penalty.revision": "دفعات اصلاح",
+      "clamp": "محدودسازی سقف"
+    }
   }
 }

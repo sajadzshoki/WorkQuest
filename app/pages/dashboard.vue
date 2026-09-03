@@ -48,6 +48,10 @@ const format = useLocaleFormat()
 
 const { data, status, refresh } = await useFetch<DashboardSummary>(`/api/dashboard/summary`)
 
+// The wallet is its own endpoint so the coin balance and the ledger shown here
+// are the same authoritative rows the wallet page renders.
+const { data: wallet } = await useFetch('/api/wallet')
+
 const stats = computed(() => {
   const counts = data.value?.tasks.counts ?? {}
   return [
@@ -164,6 +168,16 @@ function daysUntil(date: string): number {
       </div>
 
       <div class="space-y-4">
+        <!--
+          Wallet snapshot. The coin balance and the ledger rows behind it come
+          from `/api/wallet`, so this shows the same authoritative numbers as
+          the wallet page rather than a second, drifting copy.
+        -->
+        <GamificationProgressCard
+          :wallet="wallet"
+          compact
+        />
+
         <CommonSectionCard
           v-if="data?.activeChallenge"
           :title="t('dashboard.activeChallenge')"
