@@ -112,6 +112,10 @@ export default defineEventHandler(async (event): Promise<AcceptInvitationRespons
       },
     })
 
+    await tx.wallet.create({
+      data: { companyId: invitation.companyId, userId: newUser.id },
+    })
+
     if (invitation.teamId) {
       // `managerId` is left null on purpose: the inviter is not automatically
       // the direct manager, and inventing that edge would silently widen what

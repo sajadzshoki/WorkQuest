@@ -134,6 +134,12 @@ async function main() {
     await prisma.level.create({ data: { companyId: company.id, ...level } })
   }
 
+  // Every company starts with an explicit, editable v1 economy rather than
+  // relying on the code defaults.
+  await prisma.rewardRule.create({
+    data: { companyId: company.id, version: 1, isActive: true },
+  })
+
   const achievements = []
   for (const achievement of ACHIEVEMENTS) {
     achievements.push(await prisma.achievement.create({ data: { companyId: company.id, ...achievement } }))
@@ -347,10 +353,39 @@ async function main() {
     })
 
     await prisma.xpTransaction.create({
-      data: { companyId: company.id, userId: user.id, amount: row.xp, source: 'TASK_REVIEW', reason: 'مجموع تسک‌های تأیید شده' },
+      data: {
+        companyId: company.id,
+        userId: user.id,
+        amount: row.xp,
+        source: 'TASK_REVIEW',
+        reason: 'مجموع تسک‌های تأیید شده',
+        idempotencyKey: `seed:xp:${user.id}`,
+      },
     })
+
+    // Wallet first, then the ledger row that explains its balance — the same
+    // order the runtime uses, so seeded data is indistinguishable from earned.
+    const wallet = await prisma.wallet.create({
+      data: {
+        companyId: company.id,
+        userId: user.id,
+        balance: row.coins,
+        lifetimeEarned: row.coins,
+      },
+    })
+
     await prisma.coinTransaction.create({
-      data: { companyId: company.id, userId: user.id, amount: row.coins, source: 'TASK_REVIEW', reason: 'مجموع پاداش تسک‌ها' },
+      data: {
+        companyId: company.id,
+        userId: user.id,
+        walletId: wallet.id,
+        amount: row.coins,
+        type: 'TASK_REWARD',
+        source: 'TASK_REVIEW',
+        reason: 'مجموع پاداش تسک‌ها',
+        balanceAfter: row.coins,
+        idempotencyKey: `seed:coins:${user.id}`,
+      },
     })
 
     for (const index of row.achievements) {
@@ -420,6 +455,10 @@ async function main() {
   for (const level of LEVELS) {
     await prisma.level.create({ data: { companyId: other.id, ...level } })
   }
+
+  await prisma.rewardRule.create({
+    data: { companyId: other.id, version: 1, isActive: true },
+  })
 
   const otherOwner = await prisma.user.create({
     data: {
