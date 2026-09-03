@@ -103,6 +103,18 @@ enum LedgerSource {
   MANUAL_ADJUSTMENT
 }
 
+/// Why a coin transaction exists. Distinct from `LedgerSource` (which the XP
+/// ledger uses) because coins are a *currency* with spend semantics, while XP
+/// is a permanent progression counter. Keeping the taxonomies separate stops
+/// one system's vocabulary leaking into the other.
+enum CoinTransactionType {
+  TASK_REWARD
+  RECOGNITION_REWARD
+  CHALLENGE_REWARD
+  REWARD_REDEMPTION
+  ADMIN_ADJUSTMENT
+}
+
 enum AchievementType {
   MILESTONE
   STREAK
@@ -203,6 +215,8 @@ model Company {
   userProgress  UserProgress[]
   xpLedger      XpTransaction[]
   coinLedger    CoinTransaction[]
+  wallets       Wallet[]
+  rewardRules   RewardRule[]
   tasks         Task[]
   taskReviews   TaskReview[]
   taskComments  TaskComment[]
@@ -256,6 +270,7 @@ model User {
   badges          UserBadge[]
   xpLedger        XpTransaction[]
   coinLedger      CoinTransaction[]
+  wallet          Wallet?
   recognitionsGiven  Recognition[]   @relation("RecognitionFrom")
   recognitionsReceived Recognition[] @relation("RecognitionTo")
   redemptions     RewardRedemption[]
@@ -474,28 +489,44 @@ model XpTransaction {
   reason        String?
   referenceType String?
   referenceId   String?      @db.Uuid
+  /// See `CoinTransaction.idempotencyKey`.
+  idempotencyKey String?     @db.VarChar(200)
   createdAt     DateTime     @default(now())
 
+  @@unique([companyId, idempotencyKey])
   @@index([companyId, userId, createdAt])
   @@index([companyId, source])
 }
 
-/// Immutable coin ledger.
+/// Immutable coin ledger. Append-only: corrections are new rows, never edits.
 model CoinTransaction {
-  id            String       @id @default(uuid(7)) @db.Uuid
-  companyId     String       @db.Uuid
-  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  userId        String       @db.Uuid
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String              @id @default(uuid(7)) @db.Uuid
+  companyId     String              @db.Uuid
+  company       Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId        String              @db.Uuid
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletId      String?             @db.Uuid
+  wallet        Wallet?             @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  /// Signed: positive credits, negative debits.
   amount        Int
+  type          CoinTransactionType @default(ADMIN_ADJUSTMENT)
   source        LedgerSource
   reason        String?
   referenceType String?
-  referenceId   String?      @db.Uuid
-  createdAt     DateTime     @default(now())
+  referenceId   String?             @db.Uuid
+  /// Wallet balance immediately after this row was applied, so a statement can
+  /// be rendered without re-summing the whole ledger.
+  balanceAfter  Int?
+  /// Natural key for at-most-once processing, e.g. `task:<id>:reward`. The
+  /// unique index — not application logic — is what makes payouts idempotent.
+  idempotencyKey String?            @db.VarChar(200)
+  createdAt     DateTime            @default(now())
 
+  @@unique([companyId, idempotencyKey])
   @@index([companyId, userId, createdAt])
   @@index([companyId, source])
+  @@index([companyId, type, createdAt])
+  @@index([walletId, createdAt])
 }
 
 model Achievement {
@@ -590,6 +621,88 @@ model Recognition {
 // ---------------------------------------------------------------------------
 // Work
 // ---------------------------------------------------------------------------
+
+/// A user's coin balance.
+///
+/// The balance is a **cache of the ledger**, never an independent truth: every
+/// write goes through `applyCoinDelta`, which appends a `CoinTransaction` and
+/// moves `balance` in the same transaction. `lifetimeEarned`/`lifetimeSpent`
+/// are kept alongside so "you have earned 4,200 coins in total" does not need
+/// a full ledger scan on every page load.
+model Wallet {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  companyId      String   @db.Uuid
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId         String   @unique @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance        Int      @default(0)
+  lifetimeEarned Int      @default(0)
+  lifetimeSpent  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  transactions CoinTransaction[]
+
+  @@index([companyId, balance])
+}
+
+/// Per-company, versioned reward economy.
+///
+/// The whole point of this table is that the economy is *data*, not code: an
+/// admin can retune payouts without a deploy, and — because rules are
+/// versioned rather than mutated — a payout made last month can still be
+/// explained by the rule set that produced it. Exactly one row per company is
+/// `isActive`.
+model RewardRule {
+  id        String  @id @default(uuid(7)) @db.Uuid
+  companyId String  @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  version   Int
+  isActive  Boolean @default(false)
+
+  /// Baseline payout for a task with no priority weighting, before multipliers.
+  baseXp    Int @default(100)
+  baseCoins Int @default(50)
+
+  /// Priority multipliers, in basis points (10000 = 1.0x).
+  lowPriorityBp    Int @default(8000)
+  mediumPriorityBp Int @default(10000)
+  highPriorityBp   Int @default(13000)
+
+  /// Score-band multipliers, in basis points. Bands are 90-100 / 80-89 /
+  /// 70-79 / below 70.
+  excellentBp Int @default(10000)
+  goodBp      Int @default(8000)
+  fairBp      Int @default(6000)
+  poorBp      Int @default(3000)
+
+  /// Additive bonuses, in basis points of the post-band amount.
+  onTimeBonusBp     Int @default(1000)
+  earlyBonusBp      Int @default(2000)
+  highQualityBonusBp Int @default(1500)
+
+  /// Additive penalties, in basis points. `revisionPenaltyBp` is charged per
+  /// revision round, capped by `maxRevisionPenaltyBp`.
+  overduePenaltyBp     Int @default(2500)
+  revisionPenaltyBp    Int @default(1000)
+  maxRevisionPenaltyBp Int @default(5000)
+
+  /// Floor/ceiling on the final multiplier so no combination of rules can pay
+  /// a negative amount or an unbounded jackpot.
+  minMultiplierBp Int @default(0)
+  maxMultiplierBp Int @default(20000)
+
+  /// How many days before the due date counts as "early".
+  earlyDays Int @default(1)
+  /// Quality (1-5) at or above which the high-quality bonus applies.
+  highQualityThreshold Int @default(5)
+
+  createdAt DateTime @default(now())
+  createdBy String?  @db.Uuid
+
+  @@unique([companyId, version])
+  @@index([companyId, isActive])
+}
 
 /// A unit of work. The lifecycle is `TODO → IN_PROGRESS → SUBMITTED →
 /// APPROVED`, with `SUBMITTED → NEEDS_REVISION → IN_PROGRESS` as the rework
@@ -709,12 +822,21 @@ model TaskReview {
   reviewerId    String         @db.Uuid
   reviewer      User           @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
   decision      ReviewDecision
-  /// 0-100 quality score driving XP/coin awards. Null when the reviewer sent
+  /// 0-100 overall score driving XP/coin awards. Null when the reviewer sent
   /// the task back without grading it.
   score         Int?
+  /// Reviewer's 1-5 sub-scores. Quality feeds the high-quality bonus;
+  /// timeliness is recorded for reporting but on-time payout math uses the
+  /// actual timestamps, not the reviewer's opinion of them.
+  qualityScore     Int?
+  timelinessScore  Int?
   feedback      String?
   xpAwarded     Int            @default(0)
   coinsAwarded  Int            @default(0)
+  /// Frozen `RewardBreakdown` (inputs, multipliers and rule version) as it was
+  /// at payout time. Rules are versioned, but storing the computation makes a
+  /// past payout explainable without replaying anything.
+  rewardBreakdown Json?
   createdAt     DateTime       @default(now())
 
   @@index([companyId, taskId])

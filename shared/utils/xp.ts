@@ -14,11 +14,52 @@ export interface LevelBoundary {
 }
 
 /**
- * Default curve used when a company has no explicit ladder yet:
- * level 1 starts at 0 XP and every level after that is 500 XP wide.
+ * XP required to *reach* a given level on the default curve.
+ *
+ * The curve is quadratic-ish rather than linear so that early levels arrive
+ * quickly (a new employee sees progress in their first week) while later ones
+ * demand sustained output. Concretely:
+ *
+ *   L1 → 0, L2 → 500, L3 → 1200, L4 → 2100, L5 → 3200 …
+ *
+ * i.e. each level costs 200 XP more than the previous one, starting at 500:
+ * `minXp(n) = 500·(n-1) + 100·(n-1)·(n-2)`.
+ *
+ * This is the single definition of the ladder. Companies may override it with
+ * explicit `Level` rows; when they do, those rows win and this is unused.
+ * Changing the shape of the economy therefore means editing one function.
  */
 export function defaultMinXp(level: number): number {
-  return Math.max(0, level - 1) * 500
+  const n = Math.max(1, Math.floor(level)) - 1
+  return LEVEL_STEP_XP * n + LEVEL_GROWTH_XP * n * (n - 1)
+}
+
+/** XP width of the first level step. */
+export const LEVEL_STEP_XP = 500
+/** How much wider each subsequent level is than the last, halved (see formula). */
+export const LEVEL_GROWTH_XP = 100
+
+/**
+ * Invert `defaultMinXp`: the level a raw XP total reaches on the default curve.
+ * Used when a company has defined no ladder of its own.
+ */
+export function defaultLevelForXp(xp: number): number {
+  if (xp <= 0) return 1
+  let level = 1
+  while (defaultMinXp(level + 1) <= xp && level < 1000) level += 1
+  return level
+}
+
+/**
+ * Generate the first `count` rungs of the default ladder — used to seed a new
+ * company so every tenant starts with an explicit, editable ladder rather than
+ * an implicit one.
+ */
+export function defaultLadder(count: number): LevelBoundary[] {
+  return Array.from({ length: Math.max(0, count) }, (_, index) => ({
+    level: index + 1,
+    minXp: defaultMinXp(index + 1),
+  }))
 }
 
 /**
@@ -26,7 +67,7 @@ export function defaultMinXp(level: number): number {
  * `boundaries` must be sorted ascending by `minXp`.
  */
 export function resolveLevel(xp: number, boundaries: readonly LevelBoundary[]): number {
-  if (boundaries.length === 0) return Math.floor(xp / 500) + 1
+  if (boundaries.length === 0) return defaultLevelForXp(xp)
   let current = boundaries[0]
   for (const boundary of boundaries) {
     if (xp >= boundary.minXp) current = boundary
@@ -58,7 +99,7 @@ export function computeLevelProgress(
   const next = sorted.find(b => b.level === level + 1)
 
   const floor = current?.minXp ?? defaultMinXp(level)
-  const ceiling = next?.minXp ?? floor + 500
+  const ceiling = next?.minXp ?? defaultMinXp(level + 1)
   const span = Math.max(1, ceiling - floor)
   const into = Math.max(0, xp - floor)
 
