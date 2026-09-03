@@ -417,14 +417,19 @@ describe('approving a task', () => {
       `SELECT xp, coins FROM "UserProgress" WHERE "userId" = $1`,
       [ids.employeeUser],
     )
-    expect(after[0]!.xp).toBe(startXp + 150)
-    expect(after[0]!.coins).toBe(startCoins + 70)
+    // The task's xp/coinReward are the *base*; the engine then applies the
+    // score band and the HIGH-priority weight (createTask defaults to HIGH),
+    // so the credited amounts are 1.3× the base at a 90+ score.
+    const expectedXp = Math.round(150 * 1.3)
+    const expectedCoins = Math.round(70 * 1.3)
+    expect(after[0]!.xp).toBe(startXp + expectedXp)
+    expect(after[0]!.coins).toBe(startCoins + expectedCoins)
 
     // The ledger is the source of truth; the counters above are its cache.
     const ledger = await query<{ n: number }>(
       `SELECT count(*)::int AS n FROM "XpTransaction"
-       WHERE "referenceId" = $1 AND source = 'TASK_REVIEW' AND amount = 150`,
-      [task.id],
+       WHERE "referenceId" = $1 AND source = 'TASK_REVIEW' AND amount = $2`,
+      [task.id, expectedXp],
     )
     expect(ledger[0]!.n).toBe(1)
   })
@@ -447,7 +452,7 @@ describe('approving a task', () => {
     await advanceTo(task.id, 'SUBMITTED')
     await manager.request(`/api/tasks/${task.id}/transition`, {
       method: 'POST',
-      body: { action: 'approve' },
+      body: { action: 'approve', score: 90 },
     })
 
     const result = await employee.request(`/api/tasks/${task.id}/transition`, {
@@ -619,8 +624,9 @@ describe('overdue calculation', () => {
     await advanceTo(task.id, 'SUBMITTED')
     const approved = await manager.request<TaskMutationResponse>(
       `/api/tasks/${task.id}/transition`,
-      { method: 'POST', body: { action: 'approve' } },
+      { method: 'POST', body: { action: 'approve', score: 90 } },
     )
+    expect(approved.status, JSON.stringify(approved.body)).toBe(200)
     expect(approved.body.task.status).toBe('APPROVED')
     expect(approved.body.task.isOverdue).toBe(false)
   })

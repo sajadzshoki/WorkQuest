@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
   const task = await loadVisibleTask(auth, input.taskId)
 
   // Only someone who could actually approve the task may see its payout.
-  if (!canManageTask(auth, task)) {
+  if (!await canManageTask(auth, task)) {
     throw errors.forbidden('اجازهٔ بازبینی این تسک را ندارید')
   }
 
