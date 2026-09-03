@@ -1,5 +1,5 @@
 import type { AuthContext } from '#shared/types/api'
-import type { TaskAction, TaskStatus, TransitionCheck } from '#shared/utils/task'
+import type { TaskAction, TaskPriority, TaskStatus, TransitionCheck } from '#shared/utils/task'
 
 import { can } from '#shared/utils/permissions'
 import { checkTransition, isOverdue } from '#shared/utils/task'
@@ -63,7 +63,7 @@ export interface TaskRow {
   title: string
   description: string | null
   status: TaskStatus
-  priority: string
+  priority: TaskPriority
   progress: number
   estimatedHours: unknown
   dueDate: Date | null

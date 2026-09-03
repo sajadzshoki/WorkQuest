@@ -3,11 +3,13 @@ import type { TaskAction, TaskStatus } from '#shared/utils/task'
 import type { TenantTx } from '../../../utils/tasks'
 
 import { taskTransitionSchema } from '#shared/schemas'
+import { calculateReward, taskRewardKey } from '#shared/utils/rewards'
 import { nextStatus } from '#shared/utils/task'
 
 import { requireAuth } from '../../../utils/auth'
 import { errors, readValidated } from '../../../utils/http'
 import { createTenantClient } from '../../../utils/tenant'
+import { applyCoinDelta, applyXpDelta, loadRewardRules, syncLevel } from '../../../utils/wallet'
 import {
   TASK_SELECT,
   assertTransitionAllowed,
@@ -29,9 +31,10 @@ import {
  * `reopen`), never a target status, so an unknown or skipped state is rejected
  * by Zod before any row is read.
  *
- * Approving also awards the task's XP and coins, writes the ledger rows and
- * bumps `UserProgress` — all inside the same transaction as the status change,
- * because a task that is approved but unpaid is a support ticket.
+ * Approving also prices the work through the reward engine and pays it out —
+ * inside the same transaction as the status change, because a task that is
+ * approved but unpaid is a support ticket. The payout is keyed on the task id,
+ * so approving twice pays once.
  */
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event)
@@ -53,9 +56,35 @@ export default defineEventHandler(async (event) => {
     throw errors.badRequest('REVISION_NOTE_REQUIRED', 'برای درخواست اصلاح، توضیح بنویسید')
   }
 
+  // An approval without a score has no defensible payout, so it is refused
+  // rather than silently paying zero (or paying full).
+  if (input.action === 'approve' && input.score === undefined) {
+    throw errors.badRequest('SCORE_REQUIRED', 'برای تأیید تسک، امتیاز را ثبت کنید')
+  }
+
   const db = createTenantClient(auth)
   const now = new Date()
   const assigneeId = task.assignee?.id ?? null
+
+  // Price the work up front so the review row, the ledger rows and the
+  // response all quote exactly the same numbers.
+  const rules = await loadRewardRules(db, auth.companyId)
+  const breakdown = input.action === 'approve'
+    ? calculateReward({
+        score: input.score ?? 0,
+        qualityScore: input.qualityScore ?? null,
+        priority: task.priority,
+        dueDate: task.dueDate,
+        // Approving a task that was never formally submitted (a manager
+        // closing out their own work) is timed as of now.
+        submittedAt: task.submittedAt ?? now,
+        revisionCount: task.revisionCount,
+        baseXp: task.xpReward > 0 ? task.xpReward : null,
+        baseCoins: task.coinReward > 0 ? task.coinReward : null,
+      }, rules)
+    : null
+
+  let payout: TaskPayout | null = null
 
   const updated = await db.$transaction(async (tx) => {
     await tx.task.update({
@@ -82,9 +111,17 @@ export default defineEventHandler(async (event) => {
           reviewerId: auth.userId,
           decision: input.action === 'approve' ? 'APPROVED' : 'CHANGES_REQUESTED',
           score: input.score ?? null,
+          qualityScore: input.qualityScore ?? null,
+          timelinessScore: input.timelinessScore ?? null,
           feedback: note,
-          xpAwarded: input.action === 'approve' ? task.xpReward : 0,
-          coinsAwarded: input.action === 'approve' ? task.coinReward : 0,
+          xpAwarded: breakdown?.xp ?? 0,
+          coinsAwarded: breakdown?.coins ?? 0,
+          // `RewardBreakdown` is a plain JSON-safe object; the cast is only to
+          // satisfy Prisma's structural `InputJsonValue`, which cannot see
+          // that an interface has no non-serialisable members.
+          rewardBreakdown: breakdown
+            ? ({ ...breakdown, ruleVersion: rules.version } as unknown as Prisma.InputJsonValue)
+            : undefined,
         },
       })
 
@@ -99,14 +136,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (input.action === 'approve' && assigneeId) {
-      await awardTaskRewards(tx, {
+    if (input.action === 'approve' && assigneeId && breakdown) {
+      payout = await awardTaskRewards(tx, {
         companyId: auth.companyId,
         userId: assigneeId,
         taskId,
         title: task.title,
-        xp: task.xpReward,
-        coins: task.coinReward,
+        xp: breakdown.xp,
+        coins: breakdown.coins,
       })
     }
 
@@ -137,8 +174,22 @@ export default defineEventHandler(async (event) => {
     return tx.task.findUniqueOrThrow({ where: { id: taskId }, select: TASK_SELECT })
   })
 
-  return { task: toTaskSummary(updated as never, now) }
+  return {
+    task: toTaskSummary(updated as never, now),
+    reward: breakdown ? { ...breakdown, ruleVersion: rules.version } : null,
+    payout,
+  }
 })
+
+interface TaskPayout {
+  /** False when this task had already been paid — see `taskRewardKey`. */
+  applied: boolean
+  xp: number
+  coins: number
+  balance: number
+  level: number
+  levelUp: boolean
+}
 
 /**
  * The column writes that accompany each move.
@@ -187,47 +238,48 @@ function buildData(
 /**
  * Pay out an approved task.
  *
- * Two immutable ledger rows plus an upsert on the counters — the ledger is the
- * source of truth and `UserProgress` is a cache of it, which is why both are
- * written together or not at all.
+ * Both ledgers are keyed on the *task*, not the review, so a duplicate
+ * approval — a double-clicked button, a retried request, a second reviewer
+ * racing the first — collides on the unique index and pays nothing further.
+ * `applied: false` is a normal outcome, not an error.
  */
 async function awardTaskRewards(
   tx: TenantTx,
   input: { companyId: string, userId: string, taskId: string, title: string, xp: number, coins: number },
-): Promise<void> {
-  if (input.xp <= 0 && input.coins <= 0) return
+): Promise<TaskPayout> {
+  const key = taskRewardKey(input.taskId)
 
-  if (input.xp > 0) {
-    await tx.xpTransaction.create({
-      data: {
-        companyId: input.companyId,
-        userId: input.userId,
-        amount: input.xp,
-        source: 'TASK_REVIEW',
-        reason: input.title,
-        referenceType: 'Task',
-        referenceId: input.taskId,
-      },
-    })
-  }
-
-  if (input.coins > 0) {
-    await tx.coinTransaction.create({
-      data: {
-        companyId: input.companyId,
-        userId: input.userId,
-        amount: input.coins,
-        source: 'TASK_REVIEW',
-        reason: input.title,
-        referenceType: 'Task',
-        referenceId: input.taskId,
-      },
-    })
-  }
-
-  await tx.userProgress.upsert({
-    where: { userId: input.userId },
-    create: { companyId: input.companyId, userId: input.userId, xp: input.xp, coins: input.coins },
-    update: { xp: { increment: input.xp }, coins: { increment: input.coins } },
+  const xpResult = await applyXpDelta(tx, {
+    companyId: input.companyId,
+    userId: input.userId,
+    amount: input.xp,
+    source: 'TASK_REVIEW',
+    reason: input.title,
+    referenceType: 'Task',
+    referenceId: input.taskId,
+    idempotencyKey: key,
   })
+
+  const coinResult = await applyCoinDelta(tx, {
+    companyId: input.companyId,
+    userId: input.userId,
+    amount: input.coins,
+    type: 'TASK_REWARD',
+    source: 'TASK_REVIEW',
+    reason: input.title,
+    referenceType: 'Task',
+    referenceId: input.taskId,
+    idempotencyKey: key,
+  })
+
+  const { level, levelUp } = await syncLevel(tx, input.companyId, input.userId, xpResult.xp)
+
+  return {
+    applied: xpResult.applied || coinResult.applied,
+    xp: xpResult.applied ? input.xp : 0,
+    coins: coinResult.applied ? input.coins : 0,
+    balance: coinResult.balance,
+    level,
+    levelUp,
+  }
 }

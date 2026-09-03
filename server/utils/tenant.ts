@@ -27,6 +27,8 @@ export const TENANT_MODELS = [
   'UserProgress',
   'XpTransaction',
   'CoinTransaction',
+  'Wallet',
+  'RewardRule',
   'Task',
   'TaskReview',
   'TaskComment',

@@ -29,6 +29,7 @@ import { DEFAULT_REWARD_RULES, type RewardRules } from '#shared/utils/rewards'
 
 import { errors } from './http'
 import type { TenantTx } from './tasks'
+import type { TenantClient } from './tenant'
 
 /** Ledger write request. `amount` is signed: positive credits, negative debits. */
 export interface CoinDelta {
@@ -82,7 +83,9 @@ async function lockWallet(tx: TenantTx, companyId: string, userId: string) {
     SELECT "id", "balance" FROM "Wallet" WHERE "userId" = ${userId}::uuid FOR UPDATE
   `
   const wallet = rows[0]
-  if (!wallet) throw errors.internal('کیف پول کاربر پیدا نشد')
+  // The upsert above guarantees the row exists; this is a type narrowing guard,
+  // not an expected runtime branch.
+  if (!wallet) throw errors.conflict('کیف پول کاربر پیدا نشد')
   return wallet
 }
 
@@ -253,13 +256,13 @@ export async function syncLevel(
  * publish a new version at any time and the next payout must use it.
  */
 export async function loadRewardRules(
-  db: { rewardRule: { findFirst: (args: unknown) => Promise<unknown> } },
+  db: Pick<TenantClient, 'rewardRule'>,
   companyId: string,
 ): Promise<RewardRules & { version: number }> {
-  const row = (await db.rewardRule.findFirst({
+  const row = await db.rewardRule.findFirst({
     where: { companyId, isActive: true },
     orderBy: { version: 'desc' },
-  })) as (RewardRules & { version: number }) | null
+  })
 
   if (!row) return { ...DEFAULT_REWARD_RULES, version: 0 }
   return row

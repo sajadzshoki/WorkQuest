@@ -289,8 +289,12 @@ export type UpdateTaskInput = z.infer<typeof updateTaskSchema>
 export const taskTransitionSchema = z.object({
   action: z.enum(TASK_ACTIONS),
   note: z.string().trim().max(2000).optional().or(z.literal('')),
-  /** 0-100 quality score, reviewers only. */
+  /** 0-100 overall score, reviewers only. Out-of-range values are rejected
+   *  here rather than clamped, so a typo cannot quietly change a payout. */
   score: z.coerce.number().int().min(0).max(100).optional(),
+  /** Reviewer's 1-5 sub-scores, approvals only. */
+  qualityScore: z.coerce.number().int().min(1).max(5).optional(),
+  timelinessScore: z.coerce.number().int().min(1).max(5).optional(),
   /** Self-reported completion the employee submits alongside the transition. */
   progress: z.coerce.number().int().min(0).max(100).optional(),
 })
@@ -311,3 +315,72 @@ export type CreateTaskCommentInput = z.infer<typeof createTaskCommentSchema>
 /** `POST /api/tasks/:id/attachments` */
 export const createTaskAttachmentSchema = taskAttachmentSchema
 export type CreateTaskAttachmentInput = z.infer<typeof createTaskAttachmentSchema>
+
+// ---------------------------------------------------------------------------
+// Reward engine
+// ---------------------------------------------------------------------------
+
+/**
+ * `POST /api/rewards/preview` — what would this review pay out?
+ *
+ * The manager's review form calls this so the number shown before approving is
+ * produced by the same server-side engine that will actually pay, rather than
+ * by arithmetic duplicated in a component.
+ */
+export const rewardPreviewSchema = z.object({
+  taskId: z.string().uuid('تسک انتخاب‌شده معتبر نیست'),
+  score: z.coerce.number().int().min(0).max(100),
+  qualityScore: z.coerce.number().int().min(1).max(5).optional(),
+  timelinessScore: z.coerce.number().int().min(1).max(5).optional(),
+})
+export type RewardPreviewInput = z.infer<typeof rewardPreviewSchema>
+
+/** Query for `GET /api/wallet/transactions`. */
+export const walletTransactionQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  type: z
+    .enum(['TASK_REWARD', 'RECOGNITION_REWARD', 'CHALLENGE_REWARD', 'REWARD_REDEMPTION', 'ADMIN_ADJUSTMENT'])
+    .optional(),
+})
+export type WalletTransactionQuery = z.infer<typeof walletTransactionQuerySchema>
+
+/**
+ * `POST /api/wallet/adjust` — the only manual lever on a balance, and
+ * deliberately a narrow one.
+ *
+ * Owners/admins only, a reason is mandatory, and the amount is bounded so a
+ * fat-fingered adjustment cannot mint a fortune. It still goes through the
+ * ledger like every other movement.
+ */
+export const walletAdjustSchema = z.object({
+  userId: z.string().uuid('کاربر انتخاب‌شده معتبر نیست'),
+  amount: z.coerce.number().int().refine(value => value !== 0, 'مقدار نمی‌تواند صفر باشد')
+    .refine(value => Math.abs(value) <= 10_000, 'حداکثر ۱۰٬۰۰۰ سکه در هر تراکنش'),
+  reason: z.string().trim().min(3).max(500),
+})
+export type WalletAdjustInput = z.infer<typeof walletAdjustSchema>
+
+/** `PUT /api/rewards/rules` — publish a new economy version. */
+export const rewardRulesSchema = z.object({
+  baseXp: z.coerce.number().int().min(0).max(100_000),
+  baseCoins: z.coerce.number().int().min(0).max(100_000),
+  lowPriorityBp: z.coerce.number().int().min(0).max(100_000),
+  mediumPriorityBp: z.coerce.number().int().min(0).max(100_000),
+  highPriorityBp: z.coerce.number().int().min(0).max(100_000),
+  excellentBp: z.coerce.number().int().min(0).max(100_000),
+  goodBp: z.coerce.number().int().min(0).max(100_000),
+  fairBp: z.coerce.number().int().min(0).max(100_000),
+  poorBp: z.coerce.number().int().min(0).max(100_000),
+  onTimeBonusBp: z.coerce.number().int().min(0).max(100_000),
+  earlyBonusBp: z.coerce.number().int().min(0).max(100_000),
+  highQualityBonusBp: z.coerce.number().int().min(0).max(100_000),
+  overduePenaltyBp: z.coerce.number().int().min(0).max(100_000),
+  revisionPenaltyBp: z.coerce.number().int().min(0).max(100_000),
+  maxRevisionPenaltyBp: z.coerce.number().int().min(0).max(100_000),
+  minMultiplierBp: z.coerce.number().int().min(0).max(100_000),
+  maxMultiplierBp: z.coerce.number().int().min(0).max(100_000),
+  earlyDays: z.coerce.number().int().min(0).max(365),
+  highQualityThreshold: z.coerce.number().int().min(1).max(5),
+})
+export type RewardRulesInput = z.infer<typeof rewardRulesSchema>
