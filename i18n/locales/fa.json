@@ -62,7 +62,8 @@
     "collapse": "بستن منو",
     "expand": "باز کردن منو",
     "members": "کارکنان",
-    "invitations": "دعوت‌نامه‌ها"
+    "invitations": "دعوت‌نامه‌ها",
+    "challenges": "چالش‌ها"
   },
   "auth": {
     "loginTitle": "ورود به ورک‌کوئست",
@@ -186,7 +187,8 @@
     "reviewNow": "بازبینی",
     "viewAll": "مشاهدهٔ همه",
     "noRank": "هنوز روی جدول این هفته نیستید",
-    "toNextRank": "{points} امتیاز تا رتبهٔ بالاتر"
+    "toNextRank": "{points} امتیاز تا رتبهٔ بالاتر",
+    "viewChallenge": "مشاهدهٔ چالش‌ها"
   },
   "tasks": {
     "title": "تسک‌ها",
@@ -910,7 +912,8 @@
       "penalty.overdue": "تحویل با تأخیر",
       "penalty.revision": "دفعات اصلاح",
       "clamp": "محدودسازی سقف"
-    }
+    },
+    "challengeCompleted": "تسک تأییدشده، چالش «{title}» را کامل کرد و پاداشش پرداخت شد"
   },
   "profile": {
     "title": "پروفایل من",
@@ -1005,6 +1008,131 @@
       "titleDescription": "توضیح",
       "system": "سیستمی",
       "custom": "سفارشی"
+    }
+  },
+  "challenges": {
+    "title": "چالش‌ها",
+    "subtitle": "مسیرهای گروهی و فردی با پیشرفت واقعی و پاداش مشخص",
+    "createTitle": "چالش جدید",
+    "editTitle": "ویرایش چالش",
+    "created": "چالش ایجاد شد",
+    "updated": "چالش به‌روزرسانی شد",
+    "cancelled": "چالش لغو شد",
+    "history": "چالش‌های گذشته",
+    "empty": "هنوز چالشی تعریف نشده است",
+    "emptyHint": "وقتی مدیران چالش تعریف کنند، اینجا می‌بینیدشان",
+    "emptyManageHint": "اولین چالش شرکت را همین حالا تعریف کنید",
+    "filterEmpty": "چالشی با این وضعیت وجود ندارد",
+    "myProgress": "پیشرفت من",
+    "teamProgress": "پیشرفت تیم",
+    "progressCount": "{value} از {goal} تسک",
+    "progressPercent": "{value}٪ (هدف {goal}٪)",
+    "participantsCount": "{count} شرکت‌کننده",
+    "completersCount": "{count} نفر کامل کردند",
+    "endsIn": "{days} روز مانده",
+    "startsIn": "شروع در {days} روز آینده",
+    "lastDay": "امروز آخرین روز است",
+    "finished": "پایان‌یافته",
+    "won": "کامل کردید",
+    "noReward": "بدون پاداش",
+    "viewParticipants": "مشاهدهٔ شرکت‌کننده‌ها",
+    "edit": "ویرایش",
+    "cancel": "لغو چالش",
+    "cancelTitle": "لغو چالش",
+    "cancelConfirm": "چالش «{title}» لغو شود؟",
+    "cancelNote": "چالش پس از شروع فقط قابل لغو است، نه ویرایش؛ پاداشی هم پرداخت نمی‌شود.",
+    "cancelConfirmAction": "بله، لغو شود",
+    "participantsTitle": "شرکت‌کننده‌ها",
+    "noParticipants": "هنوز شرکت‌کننده‌ای ندارد",
+    "noParticipantsHint": "با شروع چالش، اعضای شرکت به‌صورت خودکار ثبت می‌شوند",
+    "filter": {
+      "all": "همه"
+    },
+    "type": {
+      "INDIVIDUAL": "فردی",
+      "TEAM": "تیمی"
+    },
+    "status": {
+      "DRAFT": "پیش از شروع",
+      "ACTIVE": "در جریان",
+      "COMPLETED": "کامل‌شده",
+      "ENDED": "پایان‌یافته",
+      "CANCELLED": "لغوشده"
+    },
+    "participant": {
+      "NOT_STARTED": "شروع‌نشده",
+      "IN_PROGRESS": "در جریان",
+      "COMPLETED": "کامل‌شده",
+      "CLAIMED": "پاداش گرفته"
+    },
+    "goal": {
+      "tasks_completed": "{value} تسک تأییدشده",
+      "on_time_rate": "تحویل به‌موقع {value}٪",
+      "team_completion_rate": "تکمیل {value}٪ تیم"
+    },
+    "goalOption": {
+      "tasks_completed": "تعداد تسک تأییدشده",
+      "on_time_rate": "درصد تحویل به‌موقع",
+      "team_completion_rate": "درصد تکمیل کارهای تیم"
+    },
+    "unit": {
+      "percent": "درصد",
+      "tasks": "تسک"
+    },
+    "presets": {
+      "sprint10": {
+        "title": "۱۰ تسک قبل از موعد",
+        "description": "هر کس تا پایان مهلت ۱۰ تسک تأییدشده داشته باشد."
+      },
+      "sprint20": {
+        "title": "۲۰ تسک",
+        "description": "دورهٔ بلندتر: ۲۰ تسک تأییدشده برای هر نفر."
+      },
+      "onTime90": {
+        "title": "وقت‌شناس ۹۰٪",
+        "description": "۹۰ درصد تسک‌ها را موعد خودش تحویل دهید."
+      },
+      "team100": {
+        "title": "۱۰۰ تسک تیمی",
+        "description": "تیم تا پایان مهلت جمعاً ۱۰۰ تسک تأییدشده تحویل می‌دهد."
+      },
+      "teamCompletion90": {
+        "title": "۹۰٪ تکمیل تیم",
+        "description": "۹۰ درصد کارهای در دسترس تیم در این دوره کامل شود."
+      },
+      "milestone": {
+        "title": "میل‌استون پروژه",
+        "description": "تا پایان مهلت، همهٔ کارهای این دورهٔ تیم تمام شود."
+      }
+    },
+    "form": {
+      "presets": "قالب‌های آماده",
+      "title": "عنوان",
+      "titlePlaceholder": "مثلاً ده تسک بی‌نقص",
+      "titleRequired": "عنوان چالش را کامل بنویسید",
+      "description": "توضیح",
+      "descriptionPlaceholder": "این چالش چه چیزی را می‌خواهد؟",
+      "type": "نوع چالش",
+      "team": "تیم",
+      "selectTeam": "انتخاب تیم…",
+      "wholeCompany": "همهٔ شرکت",
+      "teamRequired": "برای چالش تیمی، یک تیم انتخاب کنید",
+      "teamScopeHint": "خالی بگذارید تا همهٔ شرکت شرکت کنند",
+      "goal": "هدف",
+      "goalValue": "مقدار هدف",
+      "goalMismatch": "این هدف با نوع چالش سازگار نیست",
+      "startsAt": "شروع",
+      "endsAt": "پایان",
+      "windowRequired": "زمان شروع و پایان را مشخص کنید",
+      "windowOrder": "پایان باید بعد از شروع باشد",
+      "windowPast": "پایان چالش باید در آینده باشد",
+      "xpReward": "پاداش امتیاز (XP)",
+      "coinReward": "پاداش سکه",
+      "progressNote": "پیشرفت به‌صورت خودکار از داده‌های واقعی — تسک‌های تأییدشده، تحویل به‌موقع و تکمیل تیم — محاسبه می‌شود؛ هیچ عددی دستی وارد نمی‌شود.",
+      "save": "ذخیره",
+      "create": "ایجاد چالش",
+      "error": "ذخیرهٔ چالش ناموفق بود",
+      "goalValueInvalid": "مقدار هدف معتبر نیست"
     }
   }
 }

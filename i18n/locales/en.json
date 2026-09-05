@@ -62,7 +62,8 @@
     "collapse": "Collapse menu",
     "expand": "Expand menu",
     "members": "Employees",
-    "invitations": "Invitations"
+    "invitations": "Invitations",
+    "challenges": "Challenges"
   },
   "auth": {
     "loginTitle": "Sign in to WorkQuest",
@@ -186,7 +187,8 @@
     "reviewNow": "Review",
     "viewAll": "View all",
     "noRank": "Not on this week's board yet",
-    "toNextRank": "{points} points to the next rank"
+    "toNextRank": "{points} points to the next rank",
+    "viewChallenge": "View challenges"
   },
   "tasks": {
     "title": "Tasks",
@@ -910,7 +912,8 @@
       "penalty.overdue": "Delivered late",
       "penalty.revision": "Revision rounds",
       "clamp": "Capped"
-    }
+    },
+    "challengeCompleted": "This approval completed the “{title}” challenge — the reward has been paid"
   },
   "profile": {
     "title": "My profile",
@@ -1005,6 +1008,131 @@
       "titleDescription": "Description",
       "system": "System",
       "custom": "Custom"
+    }
+  },
+  "challenges": {
+    "title": "Challenges",
+    "subtitle": "Individual races and team pushes, with real progress and a clear prize",
+    "createTitle": "New challenge",
+    "editTitle": "Edit challenge",
+    "created": "Challenge created",
+    "updated": "Challenge updated",
+    "cancelled": "Challenge cancelled",
+    "history": "Past challenges",
+    "empty": "No challenges yet",
+    "emptyHint": "When your managers publish challenges, they will appear here",
+    "emptyManageHint": "Define your company's first challenge right now",
+    "filterEmpty": "Nothing in this state",
+    "myProgress": "My progress",
+    "teamProgress": "Team progress",
+    "progressCount": "{value} of {goal} tasks",
+    "progressPercent": "{value}% (goal {goal}%)",
+    "participantsCount": "{count} participants",
+    "completersCount": "{count} finished",
+    "endsIn": "{days} days left",
+    "startsIn": "starts in {days} days",
+    "lastDay": "last day",
+    "finished": "Finished",
+    "won": "Completed",
+    "noReward": "No reward",
+    "viewParticipants": "View participants",
+    "edit": "Edit",
+    "cancel": "Cancel challenge",
+    "cancelTitle": "Cancel challenge",
+    "cancelConfirm": "Cancel “{title}”?",
+    "cancelNote": "Once a challenge has started it can only be cancelled, not edited — and no reward is paid.",
+    "cancelConfirmAction": "Yes, cancel it",
+    "participantsTitle": "Participants",
+    "noParticipants": "No participants yet",
+    "noParticipantsHint": "Members are enrolled automatically when the challenge starts",
+    "filter": {
+      "all": "All"
+    },
+    "type": {
+      "INDIVIDUAL": "Individual",
+      "TEAM": "Team"
+    },
+    "status": {
+      "DRAFT": "Upcoming",
+      "ACTIVE": "Running",
+      "COMPLETED": "Completed",
+      "ENDED": "Ended",
+      "CANCELLED": "Cancelled"
+    },
+    "participant": {
+      "NOT_STARTED": "Not started",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CLAIMED": "Rewarded"
+    },
+    "goal": {
+      "tasks_completed": "{value} approved tasks",
+      "on_time_rate": "{value}% on-time delivery",
+      "team_completion_rate": "{value}% team completion"
+    },
+    "goalOption": {
+      "tasks_completed": "Approved task count",
+      "on_time_rate": "On-time delivery rate",
+      "team_completion_rate": "Team completion rate"
+    },
+    "unit": {
+      "percent": "percent",
+      "tasks": "tasks"
+    },
+    "presets": {
+      "sprint10": {
+        "title": "10 tasks before the deadline",
+        "description": "Hold 10 approved tasks by the deadline."
+      },
+      "sprint20": {
+        "title": "20 tasks",
+        "description": "The longer race: 20 approved tasks per person."
+      },
+      "onTime90": {
+        "title": "90% on time",
+        "description": "Deliver 90% of your tasks by their due date."
+      },
+      "team100": {
+        "title": "100 team tasks",
+        "description": "The team delivers 100 approved tasks collectively."
+      },
+      "teamCompletion90": {
+        "title": "90% team completion",
+        "description": "90% of the team's work this period gets done."
+      },
+      "milestone": {
+        "title": "Project milestone",
+        "description": "Everything on the team's period board, done by the deadline."
+      }
+    },
+    "form": {
+      "presets": "Templates",
+      "title": "Title",
+      "titlePlaceholder": "e.g. Ten flawless tasks",
+      "titleRequired": "Write the challenge title in full",
+      "description": "Description",
+      "descriptionPlaceholder": "What is this challenge after?",
+      "type": "Challenge type",
+      "team": "Team",
+      "selectTeam": "Pick a team…",
+      "wholeCompany": "Whole company",
+      "teamRequired": "A team challenge needs a team",
+      "teamScopeHint": "Leave empty to include the whole company",
+      "goal": "Goal",
+      "goalValue": "Target value",
+      "goalMismatch": "This goal does not fit the challenge type",
+      "goalValueInvalid": "The target value is not valid",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "windowRequired": "Set both the start and the end",
+      "windowOrder": "The end must come after the start",
+      "windowPast": "The deadline has to be in the future",
+      "xpReward": "XP reward",
+      "coinReward": "Coin reward",
+      "progressNote": "Progress is computed automatically from real data — approved tasks, on-time delivery, team completion. No number is entered by hand.",
+      "save": "Save",
+      "create": "Create challenge",
+      "error": "Saving the challenge failed"
     }
   }
 }

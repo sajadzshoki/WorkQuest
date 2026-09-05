@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { challengePercent } from '#shared/utils/challenges'
+
 definePageMeta({ middleware: ['auth'] })
 
 interface DashboardSummary {
@@ -46,10 +48,15 @@ interface DashboardSummary {
   activeChallenge: null | {
     id: string
     title: string
+    type: 'INDIVIDUAL' | 'TEAM'
+    goalKey: string
     goalValue: number
+    /** The caller's own number for an individual race, the team's shared one for a team push. */
+    progress: number
     xpReward: number
     coinReward: number
     endsAt: string
+    participantsCount: number
   }
 }
 
@@ -216,8 +223,10 @@ function daysUntil(date: string): number {
           <p class="mt-1 text-xs text-muted">
             {{ t('dashboard.challengeGoal', { goal: format.number(data.activeChallenge.goalValue) }) }}
           </p>
+          <!-- The caller's own bar for an individual race, the shared one for a
+               team push — both computed by the engine from real data. -->
           <UProgress
-            :model-value="30"
+            :model-value="challengePercent(data.activeChallenge.progress, data.activeChallenge.goalValue)"
             color="primary"
             size="sm"
             class="mt-3"
@@ -228,6 +237,15 @@ function daysUntil(date: string): number {
               +{{ format.number(data.activeChallenge.xpReward) }} XP
             </span>
           </div>
+          <UButton
+            :to="localePath('/challenges')"
+            size="xs"
+            color="neutral"
+            variant="soft"
+            class="mt-3"
+            :label="t('dashboard.viewChallenge')"
+            icon="i-heroicons-flag"
+          />
         </CommonSectionCard>
 
         <CommonSectionCard

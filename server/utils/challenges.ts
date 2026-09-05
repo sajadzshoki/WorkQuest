@@ -813,9 +813,6 @@ export async function manageableTeamIds(auth: AuthContext): Promise<string[] | n
 // Response shaping
 // ---------------------------------------------------------------------------
 
-/** Statuses an employee may see — a DRAFT challenge is an unannounced plan. */
-export const PUBLIC_CHALLENGE_STATUSES: readonly ChallengeStatus[] = ['ACTIVE', 'COMPLETED', 'ENDED']
-
 /** Bucket order for the list: what is live first, history last. */
 const STATUS_ORDER: Record<ChallengeStatus, number> = {
   ACTIVE: 0,
@@ -915,8 +912,16 @@ export async function challengeSummaryFor(
   })
 }
 
-/** True when the caller may see this challenge at all. */
+/**
+ * True when the caller may see this challenge at all.
+ *
+ * A DRAFT is an unannounced plan (managers in scope only); a CANCELLED
+ * challenge is history only when it ran — cancelling a DRAFT is "delete" for
+ * something nobody saw, and it must not surface afterwards.
+ */
 export function canSeeChallenge(summary: ChallengeSummary, auth: AuthContext): boolean {
-  if (summary.status !== 'DRAFT') return true
-  return can(auth.role, 'challenge:manage') && summary.canManage
+  if (can(auth.role, 'challenge:manage') && summary.canManage) return true
+  if (summary.status === 'DRAFT') return false
+  if (summary.status === 'CANCELLED') return summary.participantsCount > 0
+  return true
 }

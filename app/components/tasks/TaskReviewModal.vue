@@ -43,6 +43,8 @@ interface TransitionResult {
     achievements: Array<{ key: string, title: string }>
     badges: Array<{ id: string, name: string }>
   } | null
+  /** Challenges this approval pushed over the line (paid to the assignee). */
+  challengeCompletions: Array<{ challengeId: string, title: string, xp: number, coins: number }> | null
 }
 
 /** 1-5 pickers render as buttons rather than a select: faster on mobile. */
@@ -142,6 +144,16 @@ async function submit(action: 'approve' | 'request_revision'): Promise<void> {
           type: 'badge',
           title: badge.name,
           detail: t('celebration.badgeUnlocked'),
+        })
+      }
+
+      // A goal this approval pushed over the line is already paid — say so,
+      // in the reviewer's own language, without claiming whose bar it was.
+      for (const completion of result.challengeCompletions ?? []) {
+        toast.add({
+          title: t('review.challengeCompleted', { title: completion.title }),
+          color: 'success',
+          icon: 'i-heroicons-flag',
         })
       }
     }
