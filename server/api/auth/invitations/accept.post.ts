@@ -6,6 +6,7 @@ import { getAuth, issueSession, startSession, toCompanySummary, toUserSummary } 
 import { usePrisma } from '../../../utils/db'
 import { errors, readValidated } from '../../../utils/http'
 import { clearInvitationCookie, consumeInvitationTicket, requireInvitationTicket } from '../../../utils/invitation'
+import { notify } from '../../../utils/notifications'
 
 /**
  * Accept an invitation and join the company.
@@ -130,17 +131,16 @@ export default defineEventHandler(async (event): Promise<AcceptInvitationRespons
     }
 
     // Tell the inviter their invite landed.
-    await tx.notification.create({
-      data: {
-        companyId: invitation.companyId,
-        userId: invitation.invitedById,
-        type: 'INVITATION',
-        title: `${invitation.fullName} به شرکت پیوست`,
-        body: invitation.jobTitle
-          ? `دعوت‌نامه پذیرفته شد و ${invitation.fullName} با عنوان «${invitation.jobTitle}» عضو شد.`
-          : `دعوت‌نامه پذیرفته شد و ${invitation.fullName} عضو شرکت شد.`,
-        data: { invitationId: invitation.id, userId: newUser.id },
-      },
+    await notify(tx, {
+      companyId: invitation.companyId,
+      userId: invitation.invitedById,
+      actorId: newUser.id,
+      type: 'INVITATION',
+      title: `${invitation.fullName} به شرکت پیوست`,
+      message: invitation.jobTitle
+        ? `دعوت‌نامه پذیرفته شد و ${invitation.fullName} با عنوان «${invitation.jobTitle}» عضو شد.`
+        : `دعوت‌نامه پذیرفته شد و ${invitation.fullName} عضو شرکت شد.`,
+      metadata: { invitationId: invitation.id, userId: newUser.id },
     })
 
     await tx.invitation.update({

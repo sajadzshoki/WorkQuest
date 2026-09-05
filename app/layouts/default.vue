@@ -21,5 +21,8 @@ const { t } = useI18n()
     </div>
 
     <LayoutAppMobileNav />
+
+    <!-- The single confirmation dialog every destructive action shares. -->
+    <CommonConfirmDialog />
   </div>
 </template>

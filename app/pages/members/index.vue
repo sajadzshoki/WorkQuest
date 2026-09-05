@@ -8,6 +8,7 @@ const localePath = useLocalePath()
 const format = useLocaleFormat()
 const { can } = useCan()
 const { user } = useSession()
+const confirm = useConfirm()
 
 /**
  * `scope` is what the *client* asks for; the server may answer with a narrower
@@ -79,7 +80,7 @@ const grouped = computed(() => {
 })
 
 async function removeMember(id: string, fullName: string) {
-  if (!window.confirm(t('members.removeConfirm', { name: fullName }))) return
+  if (!(await confirm({ title: t('members.removeTitle'), description: t('members.removeConfirm', { name: fullName }), tone: 'error' }))) return
 
   try {
     await $fetch(`/api/members/${id}`, { method: 'DELETE' })

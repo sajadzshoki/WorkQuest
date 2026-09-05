@@ -62,7 +62,95 @@
     "collapse": "Collapse menu",
     "expand": "Expand menu",
     "members": "Employees",
-    "invitations": "Invitations"
+    "invitations": "Invitations",
+    "challenges": "Challenges",
+    "analytics": "Analytics"
+  },
+  "analytics": {
+    "title": "Organization analytics",
+    "subtitle": "A picture of company performance, computed from real task and ledger data",
+    "subtitleTeam": "Performance of your reports and the teams you lead",
+    "scopeCompany": "Company-wide view",
+    "scopeTeam": "Team view",
+    "rangeLabel": "{from} — {to}",
+    "noData": "No data to show yet",
+    "kpis": {
+      "totalEmployees": "Total employees",
+      "activeEmployees": "Active employees",
+      "tasks": "All tasks",
+      "completedTasks": "Completed tasks",
+      "pendingReviews": "Pending reviews",
+      "overdueTasks": "Overdue",
+      "averageScore": "Average score",
+      "onTimeRate": "On-time rate",
+      "totalXp": "Total XP generated",
+      "totalCoinsEarned": "Coins earned",
+      "coinsRedeemed": "Coins redeemed"
+    },
+    "charts": {
+      "tasksCompleted": "Tasks completed over time",
+      "averageScore": "Average score over time",
+      "xpEarned": "XP earned over time",
+      "coins": "Coins: earned vs redeemed",
+      "coinsEarned": "Earned",
+      "coinsRedeemed": "Redeemed"
+    },
+    "employees": {
+      "title": "Employee performance",
+      "description": "Every number is computed straight from tasks, XP and coin ledgers, and recognitions",
+      "employee": "Employee",
+      "team": "Team",
+      "completed": "Completed",
+      "avgScore": "Avg score",
+      "onTime": "On time",
+      "xp": "XP",
+      "level": "Level",
+      "coinsEarned": "Coins earned",
+      "coinsSpent": "Coins spent",
+      "achievements": "Achievements",
+      "recognition": "Recognition",
+      "streak": "Day streak",
+      "empty": "Nobody to show in this scope yet"
+    },
+    "teams": {
+      "title": "Team performance",
+      "members": "members",
+      "completionRate": "Completion rate",
+      "avgScore": "Avg score",
+      "onTime": "On time",
+      "activeTasks": "Active tasks",
+      "overdue": "Overdue",
+      "empty": "No teams to show yet"
+    },
+    "hub": {
+      "title": "Manage the organization",
+      "description": "Shortcuts to the admin pages",
+      "settings": "Company profile",
+      "settingsDesc": "Company name and basics",
+      "team": "Teams",
+      "teamDesc": "Team structure and members",
+      "members": "Employees",
+      "membersDesc": "People, roles and status",
+      "recognition": "Recognition",
+      "recognitionDesc": "Categories and cycles",
+      "rewards": "Rewards & rules",
+      "rewardsDesc": "Reward shop and gamification rules",
+      "challenges": "Challenges",
+      "challengesDesc": "Company challenges and progress"
+    },
+    "profile": {
+      "title": "Performance profile",
+      "avgScore": "Average score",
+      "onTimeRate": "On-time rate",
+      "coinsEarned": "Coins earned",
+      "coinsSpent": "Coins spent",
+      "achievements": "Achievements",
+      "recognition": "Recognition received",
+      "scoreTrend": "Score trend (last 30 days)",
+      "recentTasks": "Recent approved tasks",
+      "noRecentTasks": "No approved tasks to show yet"
+    },
+    "accessDenied": "You do not have access to organization analytics"
   },
   "auth": {
     "loginTitle": "Sign in to WorkQuest",
@@ -186,7 +274,8 @@
     "reviewNow": "Review",
     "viewAll": "View all",
     "noRank": "Not on this week's board yet",
-    "toNextRank": "{points} points to the next rank"
+    "toNextRank": "{points} points to the next rank",
+    "viewChallenge": "View challenges"
   },
   "tasks": {
     "title": "Tasks",
@@ -397,7 +486,9 @@
     "errors": {
       "generic": "That did not work"
     },
-    "leadNeedsManager": "promote them to Team manager first"
+    "leadNeedsManager": "promote them to Team manager first",
+    "removeMemberTitle": "Remove from team",
+    "deleteTitle": "Delete team"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -671,24 +762,76 @@
         "filterStatus": "Status",
         "filterReward": "Reward",
         "allRewards": "All rewards"
+      },
+      "rules": {
+        "title": "Gamification rules",
+        "description": "Active version: {version}",
+        "edit": "Edit rules",
+        "versioningHint": "Every save publishes a new version; past payouts stay explained by the version that produced them",
+        "activeSummary": "Base: {xp} XP and {coins} coins per task",
+        "saved": "A new rules version was published",
+        "saveError": "Could not save the rules",
+        "invalid": "Some values are not valid",
+        "groups": {
+          "base": "Base payout",
+          "priority": "Priority multipliers",
+          "quality": "Quality multipliers",
+          "bonus": "Bonuses",
+          "penalty": "Penalties",
+          "limits": "Multiplier caps"
+        },
+        "fields": {
+          "baseXp": "Base XP",
+          "baseCoins": "Base coins",
+          "lowPriorityBp": "Low priority (bp)",
+          "mediumPriorityBp": "Medium priority (bp)",
+          "highPriorityBp": "High priority (bp)",
+          "excellentBp": "Excellent (bp)",
+          "goodBp": "Good (bp)",
+          "fairBp": "Fair (bp)",
+          "poorBp": "Poor (bp)",
+          "onTimeBonusBp": "On-time bonus (bp)",
+          "earlyBonusBp": "Early delivery bonus (bp)",
+          "earlyDays": "Early days for bonus",
+          "highQualityBonusBp": "High-quality bonus (bp)",
+          "highQualityThreshold": "High-quality threshold (1–5)",
+          "overduePenaltyBp": "Overdue penalty (bp)",
+          "revisionPenaltyBp": "Per-revision penalty (bp)",
+          "maxRevisionPenaltyBp": "Revision penalty cap (bp)",
+          "minMultiplierBp": "Minimum final multiplier (bp)",
+          "maxMultiplierBp": "Maximum final multiplier (bp)"
+        }
       }
     }
   },
   "notifications": {
     "title": "Notifications",
-    "subtitle": "Things worth your attention",
+    "subtitle": "The events that concern you",
+    "recent": "Latest notifications",
     "unreadCount": "{count} unread",
-    "markAllRead": "Mark all read",
-    "empty": "You are all caught up",
+    "markRead": "Mark read",
+    "markAllRead": "Mark all as read",
+    "allReadDone": "{count} notifications marked as read",
+    "viewAll": "View all notifications",
+    "empty": "You have no notifications",
+    "emptyHint": "Whatever happens — tasks, challenges, rewards or recognition — you will hear about it here.",
+    "total": "{count} notifications in total",
     "type": {
-      "TASK_ASSIGNED": "New task",
-      "TASK_REVIEWED": "Task reviewed",
-      "ACHIEVEMENT_UNLOCKED": "Achievement",
+      "TASK_ASSIGNED": "Task assigned",
+      "TASK_SUBMITTED": "Submitted for review",
+      "TASK_APPROVED": "Task approved",
+      "TASK_NEEDS_REVISION": "Needs revision",
+      "COINS_EARNED": "Coins earned",
+      "ACHIEVEMENT_UNLOCKED": "Achievement unlocked",
       "LEVEL_UP": "Level up",
-      "REWARD_AVAILABLE": "New reward",
-      "REDEMPTION_UPDATE": "Request update",
-      "RECOGNITION_RECEIVED": "Recognition",
-      "CHALLENGE_UPDATE": "Challenge",
+      "RECOGNITION_RECEIVED": "Recognition received",
+      "RECOGNITION_WINNER": "Recognition winner",
+      "CHALLENGE_STARTED": "Challenge started",
+      "CHALLENGE_COMPLETED": "Challenge completed",
+      "REWARD_REDEEMED": "Reward requested",
+      "REWARD_APPROVED": "Reward approved",
+      "REWARD_REJECTED": "Reward rejected",
+      "INVITATION": "Invitation",
       "SYSTEM": "System"
     }
   },
@@ -707,7 +850,12 @@
     "themeLabel": "Theme",
     "saved": "Changes saved",
     "companyInfo": "Company details",
-    "timezone": "Timezone"
+    "timezone": "Timezone",
+    "companyNameLabel": "Company name",
+    "companyNamePlaceholder": "Enter the company name",
+    "companySaved": "Company name updated",
+    "companySaveError": "Could not save the company name",
+    "companyNameHint": "Display name only — the address (slug), timezone and language are fixed when the company is created"
   },
   "roles": {
     "OWNER": "Owner",
@@ -826,7 +974,8 @@
       "errors": {
         "generic": "Could not save the changes"
       }
-    }
+    },
+    "removeTitle": "Remove employee"
   },
   "invitations": {
     "title": "Invitations",
@@ -853,7 +1002,8 @@
     "joinAs": "Join as {name}",
     "joinAsDetail": "Your role in this company: {role}",
     "joinedTitle": "Welcome",
-    "joinedDetail": "You joined “{company}”."
+    "joinedDetail": "You joined “{company}”.",
+    "confirmTitle": "Revoke invitation"
   },
   "wallet": {
     "title": "Wallet",
@@ -910,7 +1060,8 @@
       "penalty.overdue": "Delivered late",
       "penalty.revision": "Revision rounds",
       "clamp": "Capped"
-    }
+    },
+    "challengeCompleted": "This approval completed the “{title}” challenge — the reward has been paid"
   },
   "profile": {
     "title": "My profile",
@@ -1005,6 +1156,131 @@
       "titleDescription": "Description",
       "system": "System",
       "custom": "Custom"
+    }
+  },
+  "challenges": {
+    "title": "Challenges",
+    "subtitle": "Individual races and team pushes, with real progress and a clear prize",
+    "createTitle": "New challenge",
+    "editTitle": "Edit challenge",
+    "created": "Challenge created",
+    "updated": "Challenge updated",
+    "cancelled": "Challenge cancelled",
+    "history": "Past challenges",
+    "empty": "No challenges yet",
+    "emptyHint": "When your managers publish challenges, they will appear here",
+    "emptyManageHint": "Define your company's first challenge right now",
+    "filterEmpty": "Nothing in this state",
+    "myProgress": "My progress",
+    "teamProgress": "Team progress",
+    "progressCount": "{value} of {goal} tasks",
+    "progressPercent": "{value}% (goal {goal}%)",
+    "participantsCount": "{count} participants",
+    "completersCount": "{count} finished",
+    "endsIn": "{days} days left",
+    "startsIn": "starts in {days} days",
+    "lastDay": "last day",
+    "finished": "Finished",
+    "won": "Completed",
+    "noReward": "No reward",
+    "viewParticipants": "View participants",
+    "edit": "Edit",
+    "cancel": "Cancel challenge",
+    "cancelTitle": "Cancel challenge",
+    "cancelConfirm": "Cancel “{title}”?",
+    "cancelNote": "Once a challenge has started it can only be cancelled, not edited — and no reward is paid.",
+    "cancelConfirmAction": "Yes, cancel it",
+    "participantsTitle": "Participants",
+    "noParticipants": "No participants yet",
+    "noParticipantsHint": "Members are enrolled automatically when the challenge starts",
+    "filter": {
+      "all": "All"
+    },
+    "type": {
+      "INDIVIDUAL": "Individual",
+      "TEAM": "Team"
+    },
+    "status": {
+      "DRAFT": "Upcoming",
+      "ACTIVE": "Running",
+      "COMPLETED": "Completed",
+      "ENDED": "Ended",
+      "CANCELLED": "Cancelled"
+    },
+    "participant": {
+      "NOT_STARTED": "Not started",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CLAIMED": "Rewarded"
+    },
+    "goal": {
+      "tasks_completed": "{value} approved tasks",
+      "on_time_rate": "{value}% on-time delivery",
+      "team_completion_rate": "{value}% team completion"
+    },
+    "goalOption": {
+      "tasks_completed": "Approved task count",
+      "on_time_rate": "On-time delivery rate",
+      "team_completion_rate": "Team completion rate"
+    },
+    "unit": {
+      "percent": "percent",
+      "tasks": "tasks"
+    },
+    "presets": {
+      "sprint10": {
+        "title": "10 tasks before the deadline",
+        "description": "Hold 10 approved tasks by the deadline."
+      },
+      "sprint20": {
+        "title": "20 tasks",
+        "description": "The longer race: 20 approved tasks per person."
+      },
+      "onTime90": {
+        "title": "90% on time",
+        "description": "Deliver 90% of your tasks by their due date."
+      },
+      "team100": {
+        "title": "100 team tasks",
+        "description": "The team delivers 100 approved tasks collectively."
+      },
+      "teamCompletion90": {
+        "title": "90% team completion",
+        "description": "90% of the team's work this period gets done."
+      },
+      "milestone": {
+        "title": "Project milestone",
+        "description": "Everything on the team's period board, done by the deadline."
+      }
+    },
+    "form": {
+      "presets": "Templates",
+      "title": "Title",
+      "titlePlaceholder": "e.g. Ten flawless tasks",
+      "titleRequired": "Write the challenge title in full",
+      "description": "Description",
+      "descriptionPlaceholder": "What is this challenge after?",
+      "type": "Challenge type",
+      "team": "Team",
+      "selectTeam": "Pick a team…",
+      "wholeCompany": "Whole company",
+      "teamRequired": "A team challenge needs a team",
+      "teamScopeHint": "Leave empty to include the whole company",
+      "goal": "Goal",
+      "goalValue": "Target value",
+      "goalMismatch": "This goal does not fit the challenge type",
+      "goalValueInvalid": "The target value is not valid",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "windowRequired": "Set both the start and the end",
+      "windowOrder": "The end must come after the start",
+      "windowPast": "The deadline has to be in the future",
+      "xpReward": "XP reward",
+      "coinReward": "Coin reward",
+      "progressNote": "Progress is computed automatically from real data — approved tasks, on-time delivery, team completion. No number is entered by hand.",
+      "save": "Save",
+      "create": "Create challenge",
+      "error": "Saving the challenge failed"
     }
   }
 }

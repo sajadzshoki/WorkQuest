@@ -3,6 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { PERMISSIONS, ROLES, can, isRole, roleAtLeast } from '#shared/utils/permissions'
 
 describe('permission matrix', () => {
+  it('lets managers read analytics while employees cannot', () => {
+    expect(can('OWNER', 'analytics:read')).toBe(true)
+    expect(can('ADMIN', 'analytics:read')).toBe(true)
+    expect(can('MANAGER', 'analytics:read')).toBe(true)
+    expect(can('EMPLOYEE', 'analytics:read')).toBe(false)
+  })
+
   it('grants owners and admins everything', () => {
     for (const permission of PERMISSIONS) {
       expect(can('OWNER', permission)).toBe(true)
@@ -25,6 +32,14 @@ describe('permission matrix', () => {
     expect(can('MANAGER', 'task:read:all')).toBe(false)
     expect(can('MANAGER', 'member:manage')).toBe(false)
     expect(can('MANAGER', 'company:update')).toBe(false)
+  })
+
+  it('lets managers run challenges; employees can only watch them', () => {
+    expect(can('MANAGER', 'challenge:read')).toBe(true)
+    // The team scope itself is enforced in the handlers, not in the matrix.
+    expect(can('MANAGER', 'challenge:manage')).toBe(true)
+    expect(can('EMPLOYEE', 'challenge:read')).toBe(true)
+    expect(can('EMPLOYEE', 'challenge:manage')).toBe(false)
   })
 
   it('denies everything for an unknown or missing role', () => {

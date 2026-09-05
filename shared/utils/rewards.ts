@@ -333,3 +333,16 @@ export function redemptionRefundKey(redemptionId: string): string {
 export function recognitionKey(recognitionId: string): string {
   return `recognition:${recognitionId}:reward`
 }
+
+/**
+ * Idempotency key for a challenge reward.
+ *
+ * Keyed on the *user*, not the participant row: a participant row could be
+ * deleted and re-created (a member re-enrolled), but a person may be paid for
+ * a challenge exactly once regardless of how their roster row fared. XP and
+ * coins stay separate keys — they are different ledgers, and either may be
+ * zero while the other pays.
+ */
+export function challengeRewardKey(challengeId: string, userId: string, ledger: 'xp' | 'coins'): string {
+  return `challenge:${challengeId}:user:${userId}:${ledger}`
+}

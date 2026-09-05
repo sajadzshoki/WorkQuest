@@ -110,6 +110,17 @@ export default defineNuxtConfig({
     errorHandler: fileURLToPath(new URL('./server/utils/error-handler.ts', import.meta.url)),
     experimental: { asyncContext: true },
     routeRules: {
+      // Baseline browser hardening for every route: the app is a dashboard,
+      // never framing material, and it does not need cross-origin embedded
+      // capabilities. API routes add no-store on top (below).
+      '/**': {
+        headers: {
+          'x-frame-options': 'DENY',
+          'x-content-type-options': 'nosniff',
+          'referrer-policy': 'strict-origin-when-cross-origin',
+          'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+        },
+      },
       '/api/**': {
         cors: false,
         headers: {

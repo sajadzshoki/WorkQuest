@@ -62,7 +62,95 @@
     "collapse": "بستن منو",
     "expand": "باز کردن منو",
     "members": "کارکنان",
-    "invitations": "دعوت‌نامه‌ها"
+    "invitations": "دعوت‌نامه‌ها",
+    "challenges": "چالش‌ها",
+    "analytics": "تحلیل سازمان"
+  },
+  "analytics": {
+    "title": "تحلیل سازمان",
+    "subtitle": "تصویری از عملکرد سازمان، بر اساس داده‌های واقعی تسک‌ها و دفترهای امتیاز",
+    "subtitleTeam": "عملکرد اعضای زیرمجموعه و تیم‌های تحت مدیریت شما",
+    "scopeCompany": "نمای کل سازمان",
+    "scopeTeam": "نمای تیمی",
+    "rangeLabel": "بازه {from} تا {to}",
+    "noData": "داده‌ای برای نمایش نیست",
+    "kpis": {
+      "totalEmployees": "کل کارکنان",
+      "activeEmployees": "کارکنان فعال",
+      "tasks": "کل تسک‌ها",
+      "completedTasks": "تسک‌های تکمیل‌شده",
+      "pendingReviews": "در انتظار بررسی",
+      "overdueTasks": "عقب‌افتاده",
+      "averageScore": "میانگین عملکرد",
+      "onTimeRate": "نرخ تحویل به‌موقع",
+      "totalXp": "مجموع XP تولیدی",
+      "totalCoinsEarned": "سکه‌های کسب‌شده",
+      "coinsRedeemed": "سکه‌های خرج‌شده"
+    },
+    "charts": {
+      "tasksCompleted": "تسک‌های تکمیل‌شده در طول زمان",
+      "averageScore": "روند میانگین عملکرد",
+      "xpEarned": "XP کسب‌شده در طول زمان",
+      "coins": "سکه‌ها: کسب در برابر خرج",
+      "coinsEarned": "کسب‌شده",
+      "coinsRedeemed": "خرج‌شده"
+    },
+    "employees": {
+      "title": "عملکرد کارکنان",
+      "description": "هر عدد مستقیماً از تسک‌ها، دفترهای XP و سکه و قدردانی‌ها محاسبه می‌شود",
+      "employee": "کارمند",
+      "team": "تیم",
+      "completed": "تکمیل‌شده",
+      "avgScore": "میانگین نمره",
+      "onTime": "به‌موقع",
+      "xp": "XP",
+      "level": "سطح",
+      "coinsEarned": "سکه کسب‌شده",
+      "coinsSpent": "سکه خرج‌شده",
+      "achievements": "دستاورد",
+      "recognition": "قدردانی",
+      "streak": "روز پیوسته",
+      "empty": "کارمندی در این بازه برای نمایش نیست"
+    },
+    "teams": {
+      "title": "عملکرد تیم‌ها",
+      "members": "عضو",
+      "completionRate": "نرخ تکمیل",
+      "avgScore": "میانگین نمره",
+      "onTime": "به‌موقع",
+      "activeTasks": "تسک فعال",
+      "overdue": "عقب‌افتاده",
+      "empty": "تیمی برای نمایش نیست"
+    },
+    "hub": {
+      "title": "مدیریت سازمان",
+      "description": "میان‌بر به صفحات مدیریتی",
+      "settings": "پروفایل شرکت",
+      "settingsDesc": "نام شرکت و اطلاعات پایه",
+      "team": "تیم‌ها",
+      "teamDesc": "ساختار تیم‌ها و اعضا",
+      "members": "کارکنان",
+      "membersDesc": "مدیریت افراد، نقش‌ها و وضعیت",
+      "recognition": "قدردانی‌ها",
+      "recognitionDesc": "دسته‌ها و دوره‌های قدردانی",
+      "rewards": "پاداش‌ها و قوانین",
+      "rewardsDesc": "غرفه پاداش و قوانین گیمیفیکیشن",
+      "challenges": "چالش‌ها",
+      "challengesDesc": "چالش‌های سازمان و پیشرفت آن‌ها"
+    },
+    "profile": {
+      "title": "پروفایل عملکرد",
+      "avgScore": "میانگین نمره",
+      "onTimeRate": "نرخ تحویل به‌موقع",
+      "coinsEarned": "سکه کسب‌شده",
+      "coinsSpent": "سکه خرج‌شده",
+      "achievements": "دستاورد",
+      "recognition": "قدردانی دریافتی",
+      "scoreTrend": "روند نمره (۳۰ روز گذشته)",
+      "recentTasks": "آخرین تسک‌های تأییدشده",
+      "noRecentTasks": "تسک تأییدشده‌ای برای نمایش نیست"
+    },
+    "accessDenied": "دسترسی به تحلیل سازمان ندارید"
   },
   "auth": {
     "loginTitle": "ورود به ورک‌کوئست",
@@ -186,7 +274,8 @@
     "reviewNow": "بازبینی",
     "viewAll": "مشاهدهٔ همه",
     "noRank": "هنوز روی جدول این هفته نیستید",
-    "toNextRank": "{points} امتیاز تا رتبهٔ بالاتر"
+    "toNextRank": "{points} امتیاز تا رتبهٔ بالاتر",
+    "viewChallenge": "مشاهدهٔ چالش‌ها"
   },
   "tasks": {
     "title": "تسک‌ها",
@@ -397,7 +486,9 @@
     "errors": {
       "generic": "انجام این کار ناموفق بود"
     },
-    "leadNeedsManager": "ابتدا نقش او را به «مدیر تیم» ارتقا دهید"
+    "leadNeedsManager": "ابتدا نقش او را به «مدیر تیم» ارتقا دهید",
+    "removeMemberTitle": "حذف از تیم",
+    "deleteTitle": "حذف تیم"
   },
   "leaderboard": {
     "title": "جدول امتیازها",
@@ -671,24 +762,76 @@
         "filterStatus": "وضعیت",
         "filterReward": "پاداش",
         "allRewards": "همهٔ پاداش‌ها"
+      },
+      "rules": {
+        "title": "قوانین گیمیفیکیشن",
+        "description": "نسخهٔ فعال: {version}",
+        "edit": "ویرایش قوانین",
+        "versioningHint": "هر ذخیره یک نسخهٔ جدید منتشر می‌کند؛ پرداخت‌های قبلی با نسخهٔ خودشان توضیح داده می‌شوند",
+        "activeSummary": "پایه: {xp} XP و {coins} سکه برای هر تسک",
+        "saved": "نسخهٔ جدید قوانین منتشر شد",
+        "saveError": "ذخیرهٔ قوانین ناموفق بود",
+        "invalid": "مقادیر واردشده معتبر نیست",
+        "groups": {
+          "base": "مقدار پایه",
+          "priority": "ضریب اولویت",
+          "quality": "ضریب کیفیت",
+          "bonus": "پاداش‌ها",
+          "penalty": "جریمه‌ها",
+          "limits": "سقف ضریب"
+        },
+        "fields": {
+          "baseXp": "XP پایه",
+          "baseCoins": "سکه پایه",
+          "lowPriorityBp": "اولویت کم (واحد در هزار)",
+          "mediumPriorityBp": "اولویت متوسط (واحد در هزار)",
+          "highPriorityBp": "اولویت بالا (واحد در هزار)",
+          "excellentBp": "عالی (واحد در هزار)",
+          "goodBp": "خوب (واحد در هزار)",
+          "fairBp": "متوسط (واحد در هزار)",
+          "poorBp": "ضعیف (واحد در هزار)",
+          "onTimeBonusBp": "پاداش تحویل به‌موقع (واحد در هزار)",
+          "earlyBonusBp": "پاداش تحویل زودتر (واحد در هزار)",
+          "earlyDays": "روز زودتر برای پاداش",
+          "highQualityBonusBp": "پاداش کیفیت بالا (واحد در هزار)",
+          "highQualityThreshold": "آستانهٔ کیفیت بالا (۱ تا ۵)",
+          "overduePenaltyBp": "جریمهٔ تأخیر (واحد در هزار)",
+          "revisionPenaltyBp": "جریمهٔ هر بازگشت (واحد در هزار)",
+          "maxRevisionPenaltyBp": "سقف جریمهٔ بازگشت (واحد در هزار)",
+          "minMultiplierBp": "حداقل ضریب نهایی (واحد در هزار)",
+          "maxMultiplierBp": "حداکثر ضریب نهایی (واحد در هزار)"
+        }
       }
     }
   },
   "notifications": {
     "title": "اعلان‌ها",
     "subtitle": "رویدادهای مهم مربوط به شما",
+    "recent": "تازه‌ترین اعلان‌ها",
     "unreadCount": "{count} خوانده‌نشده",
+    "markRead": "خواندم",
     "markAllRead": "خواندن همه",
+    "allReadDone": "{count} اعلان خوانده‌شده علامت خورد",
+    "viewAll": "مشاهدهٔ همهٔ اعلان‌ها",
     "empty": "اعلان جدیدی ندارید",
+    "emptyHint": "هرچه رخ دهد — تسک، چالش، پاداش یا قدردانی — همین‌جا به شما گفته می‌شود.",
+    "total": "در مجموع {count} اعلان",
     "type": {
       "TASK_ASSIGNED": "تسک جدید",
-      "TASK_REVIEWED": "بازبینی تسک",
+      "TASK_SUBMITTED": "ارسال برای بازبینی",
+      "TASK_APPROVED": "تسک تأییدشده",
+      "TASK_NEEDS_REVISION": "نیاز به اصلاح",
+      "COINS_EARNED": "کسب سکه",
       "ACHIEVEMENT_UNLOCKED": "دستاورد تازه",
       "LEVEL_UP": "ارتقای سطح",
-      "REWARD_AVAILABLE": "پاداش تازه",
-      "REDEMPTION_UPDATE": "وضعیت درخواست",
-      "RECOGNITION_RECEIVED": "تقدیر",
-      "CHALLENGE_UPDATE": "چالش",
+      "RECOGNITION_RECEIVED": "قدردانی همکاران",
+      "RECOGNITION_WINNER": "برندهٔ قدردانی",
+      "CHALLENGE_STARTED": "شروع چالش",
+      "CHALLENGE_COMPLETED": "چالش کامل‌شده",
+      "REWARD_REDEEMED": "درخواست پاداش",
+      "REWARD_APPROVED": "پاداش تأییدشده",
+      "REWARD_REJECTED": "پاداش ردشده",
+      "INVITATION": "دعوت‌نامه",
       "SYSTEM": "سیستم"
     }
   },
@@ -707,7 +850,12 @@
     "themeLabel": "پوسته",
     "saved": "تغییرات ذخیره شد",
     "companyInfo": "اطلاعات سازمان",
-    "timezone": "منطقه زمانی"
+    "timezone": "منطقه زمانی",
+    "companyNameLabel": "نام سازمان",
+    "companyNamePlaceholder": "نام سازمان را وارد کنید",
+    "companySaved": "نام سازمان به‌روزرسانی شد",
+    "companySaveError": "ذخیرهٔ نام سازمان ناموفق بود",
+    "companyNameHint": "نام نمایشی سازمان؛ تغییر آدرس (slug)، منطقه زمانی و زبان فقط هنگام ساخت سازمان تعیین می‌شود"
   },
   "roles": {
     "OWNER": "مالک",
@@ -826,7 +974,8 @@
       "errors": {
         "generic": "ذخیره تغییرات ناموفق بود"
       }
-    }
+    },
+    "removeTitle": "حذف کارمند"
   },
   "invitations": {
     "title": "دعوت‌نامه‌ها",
@@ -853,7 +1002,8 @@
     "joinAs": "پیوستن به‌عنوان {name}",
     "joinAsDetail": "نقش شما در این شرکت: {role}",
     "joinedTitle": "خوش آمدید",
-    "joinedDetail": "به «{company}» پیوستید."
+    "joinedDetail": "به «{company}» پیوستید.",
+    "confirmTitle": "لغو دعوت‌نامه"
   },
   "wallet": {
     "title": "کیف پول",
@@ -910,7 +1060,8 @@
       "penalty.overdue": "تحویل با تأخیر",
       "penalty.revision": "دفعات اصلاح",
       "clamp": "محدودسازی سقف"
-    }
+    },
+    "challengeCompleted": "تسک تأییدشده، چالش «{title}» را کامل کرد و پاداشش پرداخت شد"
   },
   "profile": {
     "title": "پروفایل من",
@@ -1005,6 +1156,131 @@
       "titleDescription": "توضیح",
       "system": "سیستمی",
       "custom": "سفارشی"
+    }
+  },
+  "challenges": {
+    "title": "چالش‌ها",
+    "subtitle": "مسیرهای گروهی و فردی با پیشرفت واقعی و پاداش مشخص",
+    "createTitle": "چالش جدید",
+    "editTitle": "ویرایش چالش",
+    "created": "چالش ایجاد شد",
+    "updated": "چالش به‌روزرسانی شد",
+    "cancelled": "چالش لغو شد",
+    "history": "چالش‌های گذشته",
+    "empty": "هنوز چالشی تعریف نشده است",
+    "emptyHint": "وقتی مدیران چالش تعریف کنند، اینجا می‌بینیدشان",
+    "emptyManageHint": "اولین چالش شرکت را همین حالا تعریف کنید",
+    "filterEmpty": "چالشی با این وضعیت وجود ندارد",
+    "myProgress": "پیشرفت من",
+    "teamProgress": "پیشرفت تیم",
+    "progressCount": "{value} از {goal} تسک",
+    "progressPercent": "{value}٪ (هدف {goal}٪)",
+    "participantsCount": "{count} شرکت‌کننده",
+    "completersCount": "{count} نفر کامل کردند",
+    "endsIn": "{days} روز مانده",
+    "startsIn": "شروع در {days} روز آینده",
+    "lastDay": "امروز آخرین روز است",
+    "finished": "پایان‌یافته",
+    "won": "کامل کردید",
+    "noReward": "بدون پاداش",
+    "viewParticipants": "مشاهدهٔ شرکت‌کننده‌ها",
+    "edit": "ویرایش",
+    "cancel": "لغو چالش",
+    "cancelTitle": "لغو چالش",
+    "cancelConfirm": "چالش «{title}» لغو شود؟",
+    "cancelNote": "چالش پس از شروع فقط قابل لغو است، نه ویرایش؛ پاداشی هم پرداخت نمی‌شود.",
+    "cancelConfirmAction": "بله، لغو شود",
+    "participantsTitle": "شرکت‌کننده‌ها",
+    "noParticipants": "هنوز شرکت‌کننده‌ای ندارد",
+    "noParticipantsHint": "با شروع چالش، اعضای شرکت به‌صورت خودکار ثبت می‌شوند",
+    "filter": {
+      "all": "همه"
+    },
+    "type": {
+      "INDIVIDUAL": "فردی",
+      "TEAM": "تیمی"
+    },
+    "status": {
+      "DRAFT": "پیش از شروع",
+      "ACTIVE": "در جریان",
+      "COMPLETED": "کامل‌شده",
+      "ENDED": "پایان‌یافته",
+      "CANCELLED": "لغوشده"
+    },
+    "participant": {
+      "NOT_STARTED": "شروع‌نشده",
+      "IN_PROGRESS": "در جریان",
+      "COMPLETED": "کامل‌شده",
+      "CLAIMED": "پاداش گرفته"
+    },
+    "goal": {
+      "tasks_completed": "{value} تسک تأییدشده",
+      "on_time_rate": "تحویل به‌موقع {value}٪",
+      "team_completion_rate": "تکمیل {value}٪ تیم"
+    },
+    "goalOption": {
+      "tasks_completed": "تعداد تسک تأییدشده",
+      "on_time_rate": "درصد تحویل به‌موقع",
+      "team_completion_rate": "درصد تکمیل کارهای تیم"
+    },
+    "unit": {
+      "percent": "درصد",
+      "tasks": "تسک"
+    },
+    "presets": {
+      "sprint10": {
+        "title": "۱۰ تسک قبل از موعد",
+        "description": "هر کس تا پایان مهلت ۱۰ تسک تأییدشده داشته باشد."
+      },
+      "sprint20": {
+        "title": "۲۰ تسک",
+        "description": "دورهٔ بلندتر: ۲۰ تسک تأییدشده برای هر نفر."
+      },
+      "onTime90": {
+        "title": "وقت‌شناس ۹۰٪",
+        "description": "۹۰ درصد تسک‌ها را موعد خودش تحویل دهید."
+      },
+      "team100": {
+        "title": "۱۰۰ تسک تیمی",
+        "description": "تیم تا پایان مهلت جمعاً ۱۰۰ تسک تأییدشده تحویل می‌دهد."
+      },
+      "teamCompletion90": {
+        "title": "۹۰٪ تکمیل تیم",
+        "description": "۹۰ درصد کارهای در دسترس تیم در این دوره کامل شود."
+      },
+      "milestone": {
+        "title": "میل‌استون پروژه",
+        "description": "تا پایان مهلت، همهٔ کارهای این دورهٔ تیم تمام شود."
+      }
+    },
+    "form": {
+      "presets": "قالب‌های آماده",
+      "title": "عنوان",
+      "titlePlaceholder": "مثلاً ده تسک بی‌نقص",
+      "titleRequired": "عنوان چالش را کامل بنویسید",
+      "description": "توضیح",
+      "descriptionPlaceholder": "این چالش چه چیزی را می‌خواهد؟",
+      "type": "نوع چالش",
+      "team": "تیم",
+      "selectTeam": "انتخاب تیم…",
+      "wholeCompany": "همهٔ شرکت",
+      "teamRequired": "برای چالش تیمی، یک تیم انتخاب کنید",
+      "teamScopeHint": "خالی بگذارید تا همهٔ شرکت شرکت کنند",
+      "goal": "هدف",
+      "goalValue": "مقدار هدف",
+      "goalMismatch": "این هدف با نوع چالش سازگار نیست",
+      "startsAt": "شروع",
+      "endsAt": "پایان",
+      "windowRequired": "زمان شروع و پایان را مشخص کنید",
+      "windowOrder": "پایان باید بعد از شروع باشد",
+      "windowPast": "پایان چالش باید در آینده باشد",
+      "xpReward": "پاداش امتیاز (XP)",
+      "coinReward": "پاداش سکه",
+      "progressNote": "پیشرفت به‌صورت خودکار از داده‌های واقعی — تسک‌های تأییدشده، تحویل به‌موقع و تکمیل تیم — محاسبه می‌شود؛ هیچ عددی دستی وارد نمی‌شود.",
+      "save": "ذخیره",
+      "create": "ایجاد چالش",
+      "error": "ذخیرهٔ چالش ناموفق بود",
+      "goalValueInvalid": "مقدار هدف معتبر نیست"
     }
   }
 }

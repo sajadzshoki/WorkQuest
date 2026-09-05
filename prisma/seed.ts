@@ -310,6 +310,7 @@ async function main() {
     { name: 'مهندسی', slug: 'engineering', lead: users['امیر شریفی']!.id, members: ['پویا محمدی', 'سینا فرهادی', 'الناز کریمی'] },
   ]
 
+  const teamIds = new Map<string, string>()
   for (const team of teams) {
     const created = await prisma.team.create({
       data: {
@@ -320,6 +321,7 @@ async function main() {
         description: `تیم ${team.name} شرکت نواندیشان پایا`,
       },
     })
+    teamIds.set(team.slug, created.id)
 
     await prisma.teamMember.create({
       data: { companyId: company.id, teamId: created.id, userId: team.lead, role: 'LEAD', managerId: users['ساینا رستمی']!.id },
@@ -589,24 +591,105 @@ async function main() {
     })
   }
 
-  const challenge = await prisma.challenge.create({
+  // --- Challenges ------------------------------------------------------------
+  //
+  // Seeded as DRAFT rows whose window is mostly already open: the challenge
+  // engine activates them on the first surface anybody loads, enrols today's
+  // members, and computes progress from the seeded tasks above. No number is
+  // faked here — there is no `progress` and no participant row in this seed,
+  // because both belong to the engine, not to fixtures.
+
+  const challengeBadge = await prisma.badge.create({
     data: {
       companyId: company.id,
-      title: 'چالش هفته بدون تأخیر',
-      description: 'هر تسکی که قبل از سررسید تحویل شود یک امتیاز می‌گیرد.',
-      goalKey: 'tasks_on_time',
-      goalValue: 5,
-      xpReward: 400,
-      coinReward: 200,
-      startsAt: new Date(Date.now() - 2 * 86_400_000),
-      endsAt: new Date(Date.now() + 5 * 86_400_000),
-      status: 'ACTIVE',
+      name: 'نشان چالش‌باز',
+      description: 'برای کامل کردن چالش شرکت',
+      iconKey: 'i-heroicons-flag',
+      tone: 'warning',
     },
   })
 
-  for (const name of ['الناز کریمی', 'پویا محمدی', 'نگار احمدی']) {
-    await prisma.challengeParticipant.create({
-      data: { companyId: company.id, challengeId: challenge.id, userId: users[name]!.id, progress: 2, status: 'IN_PROGRESS' },
+  const CHALLENGES = [
+    {
+      title: 'ده تسک بی‌نقص',
+      description: 'تا پایان مهلت، ۱۰ تسک تأییدشده داشته باشید.',
+      type: 'INDIVIDUAL',
+      teamSlug: null,
+      goalKey: 'tasks_completed',
+      goalValue: 10,
+      xpReward: 300,
+      coinReward: 150,
+      startsInDays: -7,
+      endsInDays: 7,
+    },
+    {
+      title: 'وقت‌شناس طلایی',
+      description: '۹۰ درصد تسک‌های این دوره را موعد خودش تحویل دهید.',
+      type: 'INDIVIDUAL',
+      teamSlug: null,
+      goalKey: 'on_time_rate',
+      goalValue: 90,
+      xpReward: 250,
+      coinReward: 120,
+      startsInDays: -7,
+      endsInDays: 14,
+    },
+    {
+      title: 'میل‌استون محصول',
+      description: 'تیم محصول تا پایان مهلت همهٔ کارهای این دوره را کامل می‌کند.',
+      type: 'TEAM',
+      teamSlug: 'product',
+      goalKey: 'team_completion_rate',
+      goalValue: 100,
+      xpReward: 200,
+      coinReward: 100,
+      startsInDays: -7,
+      endsInDays: 10,
+    },
+    {
+      title: 'هجوم مهندسی',
+      description: 'تیم مهندسی تا پایان مهلت ۶ تسک تأییدشده تحویل می‌دهد.',
+      type: 'TEAM',
+      teamSlug: 'engineering',
+      goalKey: 'tasks_completed',
+      goalValue: 6,
+      xpReward: 180,
+      coinReward: 90,
+      startsInDays: -3,
+      endsInDays: 12,
+    },
+    {
+      // A scheduled one, to show the "starting soon" state honestly.
+      title: 'بیست‌تایی فصل آینده',
+      description: 'چالش فصل آینده: ۲۰ تسک تأییدشده برای هر نفر.',
+      type: 'INDIVIDUAL',
+      teamSlug: null,
+      goalKey: 'tasks_completed',
+      goalValue: 20,
+      xpReward: 500,
+      coinReward: 250,
+      startsInDays: 5,
+      endsInDays: 35,
+    },
+  ]
+
+  for (const challenge of CHALLENGES) {
+    await prisma.challenge.create({
+      data: {
+        companyId: company.id,
+        title: challenge.title,
+        description: challenge.description,
+        type: challenge.type,
+        teamId: challenge.teamSlug ? teamIds.get(challenge.teamSlug)! : null,
+        goalKey: challenge.goalKey,
+        goalValue: challenge.goalValue,
+        xpReward: challenge.xpReward,
+        coinReward: challenge.coinReward,
+        badgeId: challengeBadge.id,
+        startsAt: new Date(Date.now() + challenge.startsInDays * 86_400_000),
+        endsAt: new Date(Date.now() + challenge.endsInDays * 86_400_000),
+        status: 'DRAFT',
+      },
     })
   }
 
@@ -622,11 +705,12 @@ async function main() {
   })
 
   const notifications = [
-    { userId: users['نگار احمدی']!.id, type: 'TASK_ASSIGNED', title: 'تسک جدید به شما محول شد', body: 'بازطراحی صفحه ورود — سررسید ۳ روز دیگر' },
-    { userId: users['الناز کریمی']!.id, type: 'ACHIEVEMENT_UNLOCKED', title: 'دستاورد تازه باز شد', body: '«هفت روز پیاپی» را کسب کردید' },
-    { userId: users['پویا محمدی']!.id, type: 'TASK_REVIEWED', title: 'بازبینی تسک شما انجام شد', body: 'تسک «پیاده‌سازی سرویس اعلان‌ها» در انتظار بررسی نهایی است' },
-    { userId: users['الناز کریمی']!.id, type: 'LEVEL_UP', title: 'به سطح ۳ رسیدید', body: 'سطح تازه: سازنده' },
-  ] as const
+    { userId: users['نگار احمدی']!.id, type: 'TASK_ASSIGNED', title: 'تسک جدید به شما محول شد', message: 'بازطراحی صفحه ورود — سررسید ۳ روز دیگر', metadata: { } },
+    { userId: users['الناز کریمی']!.id, type: 'ACHIEVEMENT_UNLOCKED', title: 'دستاورد تازه باز شد', message: '«هفت روز پیاپی» را کسب کردید', metadata: { achievementKey: 'streak_7' } },
+    { userId: users['پویا محمدی']!.id, type: 'TASK_APPROVED', title: 'تسک شما تأیید شد', message: 'بررسی بازخوردهای پشتیبانی — پاداش آن به کیف پول شما اضافه شد', metadata: { } },
+    { userId: users['الناز کریمی']!.id, type: 'LEVEL_UP', title: 'به سطح ۳ رسیدید', message: 'کارهای تأییدشده شما شما را به سطح تازه‌ای رساند', metadata: { level: 3 } },
+    { userId: users['ترانه موسوی']!.id, type: 'RECOGNITION_RECEIVED', title: 'همکاری شما را قدردانی کرد', message: 'مریم نوروزی شما را در دستهٔ «همکار فداکار» نامزد کرد', metadata: { } },
+  ]
 
   for (const notification of notifications) {
     await prisma.notification.create({ data: { companyId: company.id, ...notification } })

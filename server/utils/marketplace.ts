@@ -66,6 +66,7 @@ import { redemptionKey, redemptionRefundKey } from '#shared/utils/rewards'
 
 import { apiError, errors } from './http'
 import { resolveLevelProgress } from './levels'
+import { notify, notifyRoles } from './notifications'
 import type { TenantTx } from './tasks'
 import type { TenantClient } from './tenant'
 import { applyCoinDelta, isUniqueViolation } from './wallet'
@@ -566,15 +567,28 @@ export async function redeemReward(
       }
 
       if (status === 'APPROVED') {
-        await tx.notification.create({
-          data: {
-            companyId: auth.companyId,
-            userId: auth.userId,
-            type: 'REDEMPTION_UPDATE',
-            title: 'درخواست پاداش شما تأیید شد',
-            body: `«${reward.title}» به‌طور خودکار تأیید شد.`,
-            data: { redemptionId: redemption.id, rewardId: reward.id, status },
-          },
+        await notify(tx, {
+          companyId: auth.companyId,
+          userId: auth.userId,
+          type: 'REWARD_APPROVED',
+          title: 'درخواست پاداش شما تأیید شد',
+          message: `«${reward.title}» به‌طور خودکار تأیید شد.`,
+          metadata: { redemptionId: redemption.id, rewardId: reward.id, status },
+        })
+      }
+      else {
+        // A pending redemption is a request on somebody's desk: tell the
+        // people who can decide on it. The redeemer pressed the button
+        // themselves — `actorId` keeps their own bell quiet.
+        await notifyRoles(tx, {
+          companyId: auth.companyId,
+          roles: ['OWNER', 'ADMIN'],
+          type: 'REWARD_REDEEMED',
+          title: 'درخواست پاداش تازه',
+          message: `«${reward.title}» — ${auth.fullName} درخواست خرید داد`,
+          metadata: { redemptionId: redemption.id, rewardId: reward.id },
+          actorId: auth.userId,
+          dedupeKey: `redemption:${redemption.id}:requested`,
         })
       }
 
@@ -781,23 +795,22 @@ export async function decideRedemption(
       balance = ledger.balance
     }
 
-    // Nobody needs a bell for a button they just pressed themselves.
-    if (row.userId !== auth.userId) {
-      const reward = await tx.reward.findUnique({
-        where: { id: row.rewardId },
-        select: { title: true },
-      })
-      await tx.notification.create({
-        data: {
-          companyId: auth.companyId,
-          userId: row.userId,
-          type: 'REDEMPTION_UPDATE',
-          title: DECISION_TITLES[input.action],
-          body: [reward?.title ? `«${reward.title}»` : null, note].filter(Boolean).join(' — ') || null,
-          data: { redemptionId: row.id, rewardId: row.rewardId, status: transition.to, refunded },
-        },
-      })
-    }
+    // The decision is news to the person who asked for the reward — told as
+    // one of the two outcome types, never a generic "update".
+    const decidedReward = await tx.reward.findUnique({
+      where: { id: row.rewardId },
+      select: { title: true },
+    })
+    await notify(tx, {
+      companyId: auth.companyId,
+      userId: row.userId,
+      actorId: auth.userId,
+      type: transition.to === 'APPROVED' ? 'REWARD_APPROVED' : 'REWARD_REJECTED',
+      title: DECISION_TITLES[input.action],
+      message: [decidedReward?.title ? `«${decidedReward.title}»` : null, note].filter(Boolean).join(' — ') || null,
+      metadata: { redemptionId: row.id, rewardId: row.rewardId, status: transition.to, refunded },
+      dedupeKey: `redemption:${row.id}:decision`,
+    })
 
     await tx.auditLog.create({
       data: {

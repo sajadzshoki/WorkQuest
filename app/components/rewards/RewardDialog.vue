@@ -170,6 +170,8 @@ const BLOCK_CODES: Record<RedeemBlockCode, true> = {
               :src="props.reward.imageUrl"
               :alt="props.reward.title"
               class="size-full object-cover"
+              loading="lazy"
+              decoding="async"
             >
             <UIcon
               v-else

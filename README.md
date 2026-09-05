@@ -25,10 +25,42 @@ Implemented so far:
   one vote per coworker per category (no self-votes, no duplicates, no cross-company votes),
   private ballots, and an idempotent finalization step that tallies winners, seals results and
   pays XP/coins through the ledgers — see `docs/recognition.md`.
+- **Phase 7 — reward marketplace & windowed leaderboards.** Employees spend earned coins on
+  company-defined rewards (stock, level and per-user caps checked before money moves; auto- or
+  admin-approved requests with refunds on rejection), and weekly/monthly/team leaderboards
+  ranked on windowed XP — see `docs/reward-marketplace.md` and `docs/leaderboards.md`.
+- **Phase 8 — challenges.** Individual and team challenges with goals computed from real data
+  (approved-task counts, on-time rate, team completion), an engine that resolves windows and
+  pays rewards at-most-once through the ledgers, and a Persian-first challenge board —
+  see `docs/challenges.md`.
+- **Phase 9 — in-app notifications.** A persistent per-user feed with a fourteen-event
+  catalogue, one service every event flows through (self-suppression, at-most-once delivery),
+  a bell with a live unread badge and dropdown, mark-read / mark-all-read, and a channel seam
+  ready for email, SMS and push — see `docs/notifications.md`.
+- **Phase 10 — company analytics & administration dashboard.** Role-scoped KPIs (people,
+  tasks, reviews, performance, economy), four simple hand-rolled SVG charts on company-local
+  days, employee and team performance tables, a per-employee performance profile on the
+  member page, company-name editing and the first UI over the versioned gamification
+  rules — every number computed live from tasks, review scores and the XP/coin ledgers —
+  see `docs/analytics.md`.
 
-Still not implemented (see [Remaining work](#11-remaining-work)): the reward **catalogue**
-redemption flow, the challenge engine, and windowed leaderboards — modelled in the database,
-but not wired to endpoints yet.
+### Documentation index
+
+| Document | Contents |
+| --- | --- |
+| `docs/architecture.md` | layers, tenancy, authorization, ledger rules, testing strategy |
+| `docs/database.md` | model map, cascades, indexes, money invariants, migrations |
+| `docs/api.md` | HTTP reference — every endpoint, permission and convention |
+| `docs/task-management.md` | task lifecycle, review flow, dashboards (phase 3) |
+| `docs/reward-engine.md` | scored review → XP/coin payout, versioned rules (phase 4) |
+| `docs/gamification.md` | streaks, achievements, badges, levels (phase 5) |
+| `docs/recognition.md` | peer voting, cycles, finalization (phase 6) |
+| `docs/reward-marketplace.md` | shelf, redemption queue, refunds (phase 7) |
+| `docs/leaderboards.md` | windowed boards, team boards, privacy cap (phase 7) |
+| `docs/challenges.md` | goals from real data, windows, payouts (phase 8) |
+| `docs/notifications.md` | event catalogue, at-most-once delivery, channels (phase 9) |
+| `docs/analytics.md` | KPIs, charts, scopes, performance profiles (phase 10) |
+| `docs/qa-report.md` | the final production-readiness QA report |
 
 ---
 
@@ -496,11 +528,13 @@ throwaway one, and `npm run test:integration` reads it from `.env` like the serv
 - ~~Task review~~ — done in phase 4: score → XP/coin award inside a transaction, level
   recalculation and notification fan-out (`POST /api/tasks/:id/transition` with `action:
   approve`/`request_revision`).
-- Reward redemption (`POST /api/rewards/:id/redeem`) with stock/coin checks and a coin ledger row.
-  The `REWARD_REDEMPTION` ledger type, wallet debit helper and `redemptionKey()` idempotency key
-  already exist and are tested; only the catalogue endpoint and UI remain.
-- Challenge engine: metric collectors that advance `ChallengeParticipant.progress`.
-- Notification read/mark-all-read endpoints (currently read-only).
+- ~~Reward redemption~~ — done in phase 7: `POST /api/rewards/:id/redeem` with stock, level and
+  per-user checks, coin ledger rows keyed by `redemptionKey()`, auto-approval, admin decisions
+  and refunds on rejection.
+- ~~Challenge engine~~ — done in phase 8: goal collectors advance
+  `ChallengeParticipant.progress` from real application data; windows resolve on read.
+- ~~Notification read/mark-all-read endpoints~~ — done in phase 9, alongside the bell, the
+  dropdown and the feed page.
 
 **Gamification rules**
 
@@ -510,27 +544,100 @@ throwaway one, and `npm run test:integration` reads it from `.env` like the serv
 - ~~Streak calculation bound to the company timezone~~ — done in phase 5:
   `shared/utils/streak.ts` + `advanceUserStreak` (at most once per calendar day).
 - Badges are awarded alongside achievements (linked via `Badge.achievementId`).
-- Windowed leaderboards computed from `XpTransaction` instead of the denormalised counter.
+- ~~Windowed leaderboards computed from `XpTransaction`~~ — done in phase 7.
 
 **Administration**
 
 - ~~Member management~~ — done in phase 2 (invite by phone, role changes, suspend, remove,
   team CRUD, invitation lifecycle).
+- ~~Company analytics dashboard~~ — done in phase 10: KPIs, charts, employee/team
+  performance and per-employee performance profiles, scoped by role
+  (`docs/analytics.md`).
+- ~~Company profile editing (name)~~ — done in phase 10: `PATCH /api/companies` behind
+  `company:update`, editable from settings. Logo upload and timezone/locale changes remain
+  deliberate gaps (see below).
+- ~~Gamification rules editor~~ — done in phase 10: the rewards admin page edits the
+  versioned economy over the existing `GET/PUT /api/rewards/rules`.
+- ~~Reward catalogue management~~ — done in phase 7 (`/rewards/admin`: shelf CRUD,
+  stock and the redemption queue).
 - Transferring company ownership. Deliberately absent: nobody can change an `OWNER` role today,
   so a tenant cannot be left ownerless by accident either.
 - Assigning a member's **direct manager** from the UI. The field and its validation exist
   (`TeamMember.managerId`, `MANAGER_NOT_IN_TEAM`); only the owner/manager-facing control is
   missing, so manager scope currently comes from the seed data.
-- Company settings: level ladder editor, reward catalogue, achievement catalogue.
+- Company settings: level ladder editor, achievement catalogue editor.
 - Cross-company identity (`Membership` join model) if a person must belong to several tenants.
   Today `User` is per-company and `TeamMember` is unique per company, so one person per tenant.
 
 **Platform**
 
-- Company profile editing (name, logo upload, timezone) — the onboarding form only creates them.
+- Company profile editing beyond the name (logo upload, timezone) — the name is editable
+  since phase 10; the slug, timezone and locale stay as onboarding set them, on purpose
+  (see `updateCompanySchema`).
 - Avatar upload for members; the profile shows initials until then.
 - Browser tests (Playwright) for the wizard and the people screens; the HTTP-level flows are
   already covered.
 - Structured logging, request IDs and error reporting.
 - CI pipeline: `npm run verify` + migration dry-run.
 - Persian/English parity pass on `en.json` once the UI settles.
+
+---
+
+## 12. Production deployment
+
+The app is a stateless SSR Node server — everything that survives a request
+lives in PostgreSQL.
+
+### Build & run
+
+```bash
+npm ci
+npx prisma generate            # client is also committed under prisma/generated/
+npm run build                  # nuxt build → .output/
+node .output/server/index.mjs  # honours PORT, HOST and the NUXT_* env vars
+```
+
+Behind a reverse proxy, terminate TLS and forward `X-Forwarded-*`; set
+`NUXT_SECURE_COOKIES=true` (default) so the session cookie never travels
+unflagged, and `NUXT_APP_URL` to the public origin.
+
+### Environment checklist
+
+- `DATABASE_URL` — a real PostgreSQL (PGlite / `scripts/local-db.mjs` is a
+  **development** engine with a small connection cap; do not ship it).
+- `NUXT_SESSION_SECRET` — ≥ 32 random chars (`openssl rand -base64 48`). The
+  server refuses to boot without one.
+- `NUXT_OTP_PROVIDER=http` + `NUXT_OTP_HTTP_URL` (+ `NUXT_OTP_HTTP_API_KEY`)
+  — the `console` provider **refuses to run outside development** on purpose;
+  logins cannot silently degrade to printed codes in production.
+- Optional out-of-app notification channels:
+  `NUXT_NOTIFICATION_{EMAIL,SMS,PUSH}_DSN` (unset = dormant, never called).
+- `NUXT_DB_POOL_MAX` — size against the server's `max_connections` ÷ workers.
+
+### Database
+
+```bash
+npx prisma migrate deploy      # apply committed migrations only, idempotent
+npx prisma migrate status      # drift check before every release
+```
+
+The seed (`prisma/seed.ts`) is demo data — never run it against production.
+Backups are ordinary PostgreSQL backups; tenant deletion is a single cascade,
+and the ledgers are append-only, which makes point-in-time recovery boring in
+the good way.
+
+### Release gates
+
+Run locally (or in CI) before shipping:
+
+```bash
+npm run verify                 # lint + typecheck + unit tests + build
+npm run test:integration       # full HTTP suite against a real PostgreSQL
+```
+
+### Health & observability
+
+- `GET /api/health` — liveness + database ping, for the load balancer.
+- Admin mutations write `AuditLog` rows (actor, action, target, payload).
+- Known gaps, deliberate: no structured logging/request IDs, no error
+  reporting integration, no CI pipeline yet — see `docs/qa-report.md`.

@@ -1,9 +1,16 @@
 import type {
+  ChallengeGoalKey,
+  ChallengeStatus,
+  ChallengeType,
+  ParticipantStatus,
+} from '../utils/challenges'
+import type {
   LeaderboardPeriod,
   LeaderboardScope,
   SeriesBucket as LeaderboardSeriesBucket,
 } from '../utils/leaderboard'
 import type { CatalogStatus, RewardStanding, RewardType } from '../utils/marketplace'
+import type { NotificationType } from '../utils/notifications'
 import type { Role } from '../utils/permissions'
 import type { ReviewDecision, TaskPriority, TaskStatus } from '../utils/task'
 
@@ -89,6 +96,9 @@ export interface CompanySummary {
   locale: string
   timezone: string
 }
+
+/** `PATCH /api/companies` — the profile after the update. */
+export type CompanyUpdateResponse = CompanySummary
 
 /** User summary returned to the client. */
 export interface UserSummary {
@@ -248,6 +258,26 @@ export interface MemberDetail extends MemberSummary {
     completed: number
     inReview: number
     overdue: number
+  }
+  /**
+   * The deep performance profile — every number a review conversation needs,
+   * derived the same way the company dashboard derives its own.
+   */
+  performanceProfile: {
+    tasksCompleted: number
+    /** Average score of approved tasks; null when nothing is scored yet. */
+    averageScore: number | null
+    /** On-time percentage over approved tasks with a due date; null when none. */
+    onTimeRate: number | null
+    coinsEarned: number
+    coinsSpent: number
+    achievements: number
+    /** Peer recognitions received. */
+    recognition: number
+    /** Average approved-task score per day, last 30 days (null = no data). */
+    scoreTrend: Array<{ day: string, value: number | null }>
+    /** The latest approved tasks, newest first — the shape of the work. */
+    recentTasks: Array<{ id: string, title: string, score: number | null, completedAt: string }>
   }
   /** Only present for managers/admins who may act on this member. */
   permissions: { canEdit: boolean, canChangeRole: boolean, canRemove: boolean }
@@ -841,4 +871,198 @@ export interface RewardAdminResponse {
 /** `POST /api/rewards` and `PATCH /api/rewards/:id`. */
 export interface RewardMutationResponse {
   reward: { id: string }
+}
+
+// ---------------------------------------------------------------------------
+// Challenges
+// ---------------------------------------------------------------------------
+
+/** One enrolled member's standing in a challenge, as managers see it. */
+export interface ChallengeParticipantSummary {
+  id: string
+  user: { id: string, fullName: string, avatarUrl: string | null, jobTitle: string | null }
+  progress: number
+  status: ParticipantStatus
+  completedAt: string | null
+  rewardedAt: string | null
+}
+
+export interface ChallengeSummary {
+  id: string
+  title: string
+  description: string | null
+  type: ChallengeType
+  status: ChallengeStatus
+  goalKey: ChallengeGoalKey
+  goalValue: number
+  /**
+   * Live progress, computed by the engine from real application data. For a
+   * TEAM challenge it is the team's aggregate; for an INDIVIDUAL challenge
+   * the average of its participants. The caller's own number — the one their
+   * bar shows — is `myParticipation.progress`.
+   */
+  progress: number
+  startsAt: string
+  endsAt: string
+  xpReward: number
+  coinReward: number
+  badgeId: string | null
+  team: { id: string, name: string, slug: string } | null
+  participantsCount: number
+  /** Participants who reached the goal (completed or already rewarded). */
+  completersCount: number
+  /** The caller's own row, when they are enrolled. */
+  myParticipation: {
+    progress: number
+    status: ParticipantStatus
+    completedAt: string | null
+    rewardedAt: string | null
+  } | null
+  /** Editable while the challenge has not started; computed server-side. */
+  editable: boolean
+  cancellable: boolean
+  /** The caller holds `challenge:manage` over this challenge's scope. */
+  canManage: boolean
+}
+
+export interface ChallengeListResponse {
+  items: ChallengeSummary[]
+  /** Row counts per status, for the filter chips. */
+  counts: Partial<Record<ChallengeStatus, number>>
+}
+
+export interface ChallengeDetailResponse {
+  challenge: ChallengeSummary
+  /**
+   * The full roster with per-person progress. Only callers holding
+   * `challenge:manage` (in scope) receive it; an employee gets an empty list
+   * plus their own numbers in `challenge.myParticipation`.
+   */
+  participants: ChallengeParticipantSummary[]
+}
+
+export interface ChallengeMutationResponse {
+  challenge: ChallengeSummary
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+/** One row of the feed, as the UI renders it. */
+export interface NotificationItem {
+  id: string
+  type: NotificationType
+  title: string
+  message: string | null
+  /** Event payload, e.g. `{ taskId }` or `{ challengeId, xp, coins }`. */
+  metadata: Record<string, unknown>
+  /** Null means unread — the single read state. */
+  readAt: string | null
+  createdAt: string
+}
+
+export interface NotificationListResponse {
+  items: NotificationItem[]
+  total: number
+  unread: number
+  page: number
+  pageSize: number
+}
+
+/** The bell's cheap poll. */
+export interface NotificationSummaryResponse {
+  unread: number
+}
+
+export interface NotificationReadResponse {
+  id: string
+  readAt: string
+}
+
+export interface NotificationReadAllResponse {
+  updated: number
+}
+
+// ---------------------------------------------------------------------------
+// Company analytics
+// ---------------------------------------------------------------------------
+
+/** One KPI tile on the administration dashboard. */
+export interface AnalyticsKpis {
+  totalEmployees: number
+  activeEmployees: number
+  /** Every task in scope, whatever its status. */
+  tasks: number
+  completedTasks: number
+  pendingReviews: number
+  overdueTasks: number
+  /** Average score over approved tasks in scope; null when nothing is scored. */
+  averageScore: number | null
+  /** On-time percentage over approved tasks with a due date; null when none. */
+  onTimeRate: number | null
+  /** Net XP the scoped population has generated. */
+  totalXp: number
+  /** Coin credits the scoped population has earned. */
+  totalCoinsEarned: number
+  /** Coins spent on reward redemptions. */
+  coinsRedeemed: number
+}
+
+/** One row of the employee performance table. */
+export interface AnalyticsEmployeeRow {
+  id: string
+  fullName: string
+  avatarUrl: string | null
+  jobTitle: string | null
+  role: Role
+  teamName: string | null
+  tasksCompleted: number
+  averageScore: number | null
+  onTimeRate: number | null
+  xp: number
+  level: number | null
+  levelTitle: string | null
+  coinsEarned: number
+  coinsSpent: number
+  achievements: number
+  recognition: number
+  currentStreak: number
+}
+
+/** One row of the team performance table. */
+export interface AnalyticsTeamRow {
+  id: string
+  name: string
+  memberCount: number
+  /** Approved / all tasks on the team's tagged board. */
+  completionRate: number
+  averageScore: number | null
+  onTimeRate: number | null
+  activeTasks: number
+  overdueTasks: number
+}
+
+/** Daily series, one point per day, zero-filled where nothing happened. */
+export interface AnalyticsDayPoint {
+  /** `YYYY-MM-DD`, company-local. */
+  day: string
+  value: number
+}
+
+export interface AnalyticsOverviewResponse {
+  /** `company` for OWNER/ADMIN, `team` for a MANAGER (scoped to subordinates). */
+  scope: 'company' | 'team'
+  /** The window the series cover. */
+  range: { days: number, from: string, to: string }
+  kpis: AnalyticsKpis
+  teams: AnalyticsTeamRow[]
+  employees: AnalyticsEmployeeRow[]
+  series: {
+    tasksCompleted: AnalyticsDayPoint[]
+    /** Null on days with no scored approvals — a gap, not a zero. */
+    averageScore: Array<{ day: string, value: number | null }>
+    xpEarned: AnalyticsDayPoint[]
+    coins: Array<{ day: string, earned: number, redeemed: number }>
+  }
 }

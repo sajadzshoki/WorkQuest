@@ -140,6 +140,8 @@ async function submit(action: RedemptionAction) {
             :src="item.user.avatarUrl"
             :alt="item.user.fullName"
             class="size-full object-cover"
+            loading="lazy"
+            decoding="async"
           >
           <UIcon
             v-else

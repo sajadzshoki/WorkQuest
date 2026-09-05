@@ -167,6 +167,13 @@ enum ChallengeStatus {
   CANCELLED
 }
 
+/// Who races towards the goal. `INDIVIDUAL` gives every participant their own
+/// progress bar; `TEAM` fills one shared bar from the team's collective work.
+enum ChallengeType {
+  INDIVIDUAL
+  TEAM
+}
+
 enum ParticipantStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -196,25 +203,29 @@ enum RecognitionCycleStatus {
   CANCELLED
 }
 
+/// The notification catalogue.
+///
+/// The first fourteen values are the product vocabulary — one per event the
+/// spec names. `INVITATION` and `SYSTEM` are internal catch-alls (an accepted
+/// invitation, a comment on a task, administrative messages) that exist
+/// outside that catalogue but still show up in the feed.
 enum NotificationType {
   TASK_ASSIGNED
   TASK_SUBMITTED
-  TASK_REVIEWED
+  TASK_APPROVED
+  TASK_NEEDS_REVISION
+  COINS_EARNED
   ACHIEVEMENT_UNLOCKED
   LEVEL_UP
-  REWARD_AVAILABLE
-  REDEMPTION_UPDATE
   RECOGNITION_RECEIVED
-  CHALLENGE_UPDATE
+  RECOGNITION_WINNER
+  CHALLENGE_STARTED
+  CHALLENGE_COMPLETED
+  REWARD_REDEEMED
+  REWARD_APPROVED
+  REWARD_REJECTED
   INVITATION
-  TEAM_UPDATE
   SYSTEM
-}
-
-enum NotificationStatus {
-  UNREAD
-  READ
-  ARCHIVED
 }
 
 // ---------------------------------------------------------------------------
@@ -403,6 +414,7 @@ model Team {
   members     TeamMember[]
   tasks       Task[]
   invitations Invitation[]
+  challenges  Challenge[]
 
   @@unique([companyId, slug])
   @@index([companyId])
@@ -1110,9 +1122,23 @@ model Challenge {
   company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   title       String
   description String?
-  /// Machine key of the tracked metric, e.g. `tasks_approved`.
+  /// INDIVIDUAL: every enrolled member races their own bar. TEAM: one shared
+  /// bar filled by the team's collective work.
+  type        ChallengeType   @default(INDIVIDUAL)
+  /// The team a TEAM challenge measures. May also scope an INDIVIDUAL
+  /// challenge to one team's members instead of the whole company; `null`
+  /// on an INDIVIDUAL challenge means everybody.
+  teamId      String?         @db.Uuid
+  team        Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  /// Machine key of the tracked metric, e.g. `tasks_completed`.
   goalKey     String
   goalValue   Int             @default(1)
+  /// Denormalised live progress, recomputed by the challenge engine from real
+  /// application data — never set by hand. For a TEAM challenge it is the
+  /// team's aggregate; for an INDIVIDUAL challenge the average of its
+  /// participants. The authoritative per-person values live on the
+  /// `ChallengeParticipant` rows.
+  progress    Int             @default(0)
   xpReward    Int             @default(0)
   coinReward  Int             @default(0)
   startsAt    DateTime
@@ -1125,6 +1151,10 @@ model Challenge {
   participants ChallengeParticipant[]
 
   @@index([companyId, status])
+  /// The engine's due-diligence scan: every non-terminal challenge whose
+  /// deadline has passed, in one index read.
+  @@index([companyId, status, endsAt])
+  @@index([companyId, teamId])
 }
 
 model ChallengeParticipant {
@@ -1138,6 +1168,10 @@ model ChallengeParticipant {
   progress    Int               @default(0)
   status      ParticipantStatus @default(NOT_STARTED)
   completedAt DateTime?
+  /// When the challenge reward was paid — the row-level counterpart of the
+  /// `CLAIMED` status. Together with the ledger's idempotency keys this makes
+  /// a reward at-most-once even across concurrent engine runs.
+  rewardedAt  DateTime?
   joinedAt    DateTime          @default(now())
 
   @@unique([challengeId, userId])
@@ -1149,20 +1183,23 @@ model ChallengeParticipant {
 // ---------------------------------------------------------------------------
 
 model Notification {
-  id        String             @id @default(uuid(7)) @db.Uuid
-  companyId String             @db.Uuid
-  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  userId    String             @db.Uuid
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String           @id @default(uuid(7)) @db.Uuid
+  companyId String           @db.Uuid
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String           @db.Uuid
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      NotificationType
   title     String
-  body      String?
-  data      Json               @default("{}")
-  status    NotificationStatus @default(UNREAD)
+  message   String?
+  metadata  Json             @default("{}")
+  /// Natural key for at-most-once delivery, e.g. `challenge:<id>:reward`.
+  /// Null for events that are legitimately repeatable.
+  dedupeKey String?          @db.VarChar(200)
   readAt    DateTime?
-  createdAt DateTime           @default(now())
+  createdAt DateTime         @default(now())
 
-  @@index([companyId, userId, status])
+  @@unique([companyId, userId, dedupeKey])
+  @@index([companyId, userId, readAt])
   @@index([companyId, userId, createdAt])
 }
 
