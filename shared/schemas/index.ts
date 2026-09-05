@@ -1,6 +1,20 @@
 import { z } from 'zod'
 
 import { SUPPORTED_LOCALES, SUPPORTED_TIMEZONES } from '../constants'
+import {
+  LEADERBOARD_PERIODS,
+  LEADERBOARD_SCOPES,
+  MAX_LEADERBOARD_ENTRIES,
+  PODIUM_SIZE,
+  PROGRESS_MONTH_HISTORY,
+  PROGRESS_WEEK_HISTORY,
+} from '../utils/leaderboard'
+import {
+  CATALOG_STATUSES,
+  REDEMPTION_ACTIONS,
+  REDEMPTION_STATUSES,
+  REWARD_TYPES,
+} from '../utils/marketplace'
 import { TASK_ACTIONS, TASK_PRIORITIES, TASK_STATUSES } from '../utils/task'
 
 /**
@@ -106,11 +120,39 @@ export const taskFilterSchema = paginationSchema.extend({
 })
 export type TaskFilterInput = z.infer<typeof taskFilterSchema>
 
-export const leaderboardRangeSchema = z.object({
-  range: z.enum(['week', 'month', 'all']).default('month'),
-  limit: z.coerce.number().int().min(1).max(50).default(10),
+// ---------------------------------------------------------------------------
+// Leaderboards
+// ---------------------------------------------------------------------------
+
+/**
+ * `GET /api/leaderboard`.
+ *
+ * There is no `'all'` period on purpose: the product has no permanent
+ * all-time board, so a client cannot ask for one and the server cannot serve
+ * one by accident. `limit` is capped at the privacy ceiling rather than at a
+ * pagination size — a board is the top few rows plus your own, never a list of
+ * everybody.
+ */
+export const leaderboardQuerySchema = z.object({
+  period: z.enum(LEADERBOARD_PERIODS).default('week'),
+  scope: z.enum(LEADERBOARD_SCOPES).default('company'),
+  /** Required-in-effect for `scope=team`; defaults to the caller's own team. */
+  teamId: z.string().uuid('تیم انتخاب‌شده معتبر نیست').optional(),
+  limit: z.coerce.number().int().min(PODIUM_SIZE).max(MAX_LEADERBOARD_ENTRIES).default(MAX_LEADERBOARD_ENTRIES),
 })
-export type LeaderboardRangeInput = z.infer<typeof leaderboardRangeSchema>
+export type LeaderboardQueryInput = z.infer<typeof leaderboardQuerySchema>
+
+/**
+ * `GET /api/leaderboard/progress` — the caller's own trajectory.
+ *
+ * No subject parameter exists: this endpoint only ever answers about the
+ * authenticated user, so there is nothing to authorise beyond being signed in.
+ */
+export const leaderboardProgressQuerySchema = z.object({
+  weeks: z.coerce.number().int().min(2).max(PROGRESS_WEEK_HISTORY).default(PROGRESS_WEEK_HISTORY),
+  months: z.coerce.number().int().min(2).max(PROGRESS_MONTH_HISTORY).default(PROGRESS_MONTH_HISTORY),
+})
+export type LeaderboardProgressQueryInput = z.infer<typeof leaderboardProgressQuerySchema>
 
 // ---------------------------------------------------------------------------
 // People & teams
@@ -391,6 +433,156 @@ export const rewardRulesSchema = z.object({
   highQualityThreshold: z.coerce.number().int().min(1).max(5),
 })
 export type RewardRulesInput = z.infer<typeof rewardRulesSchema>
+
+// ---------------------------------------------------------------------------
+// Reward marketplace
+// ---------------------------------------------------------------------------
+
+/**
+ * A field a form may leave empty to mean "no limit" / "no date".
+ *
+ * `null` is tried first: `z.coerce.number()` would happily turn `null` into `0`,
+ * and "unlimited stock" and "sold out" are very different shelves.
+ */
+const emptyIsNull = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(value => (value === '' || value === undefined ? null : value), z.union([z.null(), schema]))
+
+const optionalInt = (min: number, max: number, message: string) =>
+  emptyIsNull(z.coerce.number().int(message).min(min, message).max(max, message))
+
+const optionalDate = (message: string) =>
+  emptyIsNull(z.coerce.date({ error: message }))
+
+/** Checkboxes reach the server as booleans from JSON, but tolerate `'true'`. */
+const booleanish = z.preprocess(
+  value => (value === 'true' ? true : value === 'false' ? false : value),
+  z.boolean(),
+)
+
+/** An image link. Same protocol allow-list as task attachments: no `javascript:`. */
+const imageUrlSchema = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine(value => /^https?:\/\//i.test(value), 'آدرس تصویر باید با http یا https شروع شود')
+
+/**
+ * The rules a company attaches to one reward.
+ *
+ * Deliberately optional in every field: a reward with no rules is "anybody with
+ * enough coins, as often as they like, while stock lasts". Pricing and limits
+ * are the company's to set — nothing here has a product-wide default price.
+ */
+/**
+ * Every rule is optional and **carries no default of its own**.
+ *
+ * A default inside the object would be indistinguishable from an explicit value
+ * once parsed, so `PATCH { rules: { maxPerUser: 1 } }` would silently switch
+ * `autoApprove` off. Defaults are applied once, on create, by the server — and a
+ * partial update only ever carries the keys the admin actually sent. `null` stays
+ * meaningful: it is "no cap" / "no date", not "unchanged".
+ */
+export const rewardPolicySchema = z.object({
+  /** Simple or digital rewards skip the approval queue. */
+  autoApprove: booleanish.optional(),
+  /** How many live redemptions one employee may hold; `null` is no cap. */
+  maxPerUser: optionalInt(1, 1000, 'سقف درخواست برای هر نفر معتبر نیست').optional(),
+  /** Minimum level; `null` is everybody. */
+  minLevel: optionalInt(1, 200, 'حداقل سطح معتبر نیست').optional(),
+  /** The employee has to say which day, which charity, which size. */
+  requiresNote: booleanish.optional(),
+  availableFrom: optionalDate('تاریخ شروع معتبر نیست').optional(),
+  availableUntil: optionalDate('تاریخ پایان معتبر نیست').optional(),
+})
+export type RewardPolicyInput = z.infer<typeof rewardPolicySchema>
+
+/**
+ * `POST /api/rewards` — put something on the shelf. OWNER/ADMIN only.
+ *
+ * `coinCost` has a floor of 1: a free reward is not a reward, it is a giveaway,
+ * and it would let anybody drain stock without earning anything.
+ */
+export const createRewardSchema = z.object({
+  title: z.string().trim().min(2, 'عنوان پاداش را کامل بنویسید').max(80),
+  description: z.string().trim().max(600).optional().or(z.literal('')),
+  type: z.enum(REWARD_TYPES).default('CUSTOM'),
+  coinCost: z.coerce.number().int('قیمت باید عدد صحیح باشد').min(1, 'قیمت نمی‌تواند صفر باشد').max(1_000_000, 'قیمت بیش از حد بزرگ است'),
+  stock: optionalInt(0, 1_000_000, 'موجودی معتبر نیست').optional(),
+  imageUrl: imageUrlSchema.optional().or(z.literal('')),
+  status: z.enum(CATALOG_STATUSES).default('ACTIVE'),
+  rules: rewardPolicySchema.default({}),
+})
+export type CreateRewardInput = z.infer<typeof createRewardSchema>
+
+/**
+ * `PATCH /api/rewards/:id` — edit, reprice, restock or disable.
+ *
+ * Every field optional so the UI can send just what changed. `status` is how a
+ * reward is disabled: `PAUSED` hides it but keeps it editable, `ARCHIVED` retires
+ * it. Neither deletes anything, so past redemptions keep their reward row.
+ */
+export const updateRewardSchema = z.object({
+  title: z.string().trim().min(2, 'عنوان پاداش را کامل بنویسید').max(80).optional(),
+  description: z.string().trim().max(600).optional().or(z.literal('')),
+  type: z.enum(REWARD_TYPES).optional(),
+  coinCost: z.coerce.number().int('قیمت باید عدد صحیح باشد').min(1, 'قیمت نمی‌تواند صفر باشد').max(1_000_000, 'قیمت بیش از حد بزرگ است').optional(),
+  stock: optionalInt(0, 1_000_000, 'موجودی معتبر نیست').optional(),
+  imageUrl: imageUrlSchema.optional().or(z.literal('')),
+  status: z.enum(CATALOG_STATUSES).optional(),
+  rules: rewardPolicySchema.optional(),
+})
+export type UpdateRewardInput = z.infer<typeof updateRewardSchema>
+
+/**
+ * `POST /api/rewards/:id/redeem` — spend coins on a reward.
+ *
+ * The price is **not** a parameter: the server reads it from the reward row. A
+ * client that could send its own price could buy anything for one coin.
+ *
+ * `idempotencyKey` is optional and client-generated (a UUID per attempt). A
+ * double-clicked button, a flaky network retry and a resubmitted form all carry
+ * the same key and produce one redemption, one debit.
+ */
+export const redeemRewardSchema = z.object({
+  note: z.string().trim().max(500).optional().or(z.literal('')),
+  idempotencyKey: z.string().uuid('کلید یکتایی معتبر نیست').optional(),
+})
+export type RedeemRewardInput = z.infer<typeof redeemRewardSchema>
+
+/** `POST /api/rewards/admin/redemptions/:id` — decide a request. */
+export const redemptionDecisionSchema = z.object({
+  action: z.enum(REDEMPTION_ACTIONS),
+  /** Required in effect for a rejection: the UI asks for it, and a "no" without
+   *  a reason is the humiliating kind. Bounded so it stays a note, not an essay. */
+  note: z.string().trim().max(500).optional().or(z.literal('')),
+})
+export type RedemptionDecisionInput = z.infer<typeof redemptionDecisionSchema>
+
+/** Query for `GET /api/rewards` and `GET /api/rewards/admin`. */
+export const rewardCatalogueQuerySchema = z.object({
+  type: z.enum(REWARD_TYPES).optional(),
+  /** Employees only ever see ACTIVE; admins may ask for anything. */
+  status: z.enum(CATALOG_STATUSES).optional(),
+})
+export type RewardCatalogueQuery = z.infer<typeof rewardCatalogueQuerySchema>
+
+/** Query for the admin redemption queue. */
+export const redemptionQueueQuerySchema = z.object({
+  status: z.enum(REDEMPTION_STATUSES).optional(),
+  rewardId: z.string().uuid('پاداش انتخاب‌شده معتبر نیست').optional(),
+  userId: z.string().uuid('کاربر انتخاب‌شده معتبر نیست').optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+})
+export type RedemptionQueueQuery = z.infer<typeof redemptionQueueQuerySchema>
+
+/** Query for `GET /api/rewards/redemptions` — the caller's own history. */
+export const myRedemptionsQuerySchema = z.object({
+  status: z.enum(REDEMPTION_STATUSES).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+})
+export type MyRedemptionsQuery = z.infer<typeof myRedemptionsQuerySchema>
 
 // ---------------------------------------------------------------------------
 // Recognition

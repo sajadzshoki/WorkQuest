@@ -318,6 +318,17 @@ export function redemptionKey(redemptionId: string): string {
   return `redemption:${redemptionId}:debit`
 }
 
+/**
+ * Idempotency key for the refund that follows a rejection or a cancellation.
+ *
+ * A distinct key, not a reversed reuse of `redemptionKey`: the debit and the
+ * refund are two immutable rows in the same ledger, and a statement has to show
+ * both. One key per movement also means a retried "reject" cannot refund twice.
+ */
+export function redemptionRefundKey(redemptionId: string): string {
+  return `redemption:${redemptionId}:refund`
+}
+
 /** Idempotency key for a recognition award. */
 export function recognitionKey(recognitionId: string): string {
   return `recognition:${recognitionId}:reward`

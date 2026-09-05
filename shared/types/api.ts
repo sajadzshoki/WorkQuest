@@ -1,3 +1,9 @@
+import type {
+  LeaderboardPeriod,
+  LeaderboardScope,
+  SeriesBucket as LeaderboardSeriesBucket,
+} from '../utils/leaderboard'
+import type { CatalogStatus, RewardStanding, RewardType } from '../utils/marketplace'
 import type { Role } from '../utils/permissions'
 import type { ReviewDecision, TaskPriority, TaskStatus } from '../utils/task'
 
@@ -494,4 +500,345 @@ export interface TaskDashboardResponse {
     }
     teamCompletion: TeamCompletionRow[]
   } | null
+}
+
+// ---------------------------------------------------------------------------
+// Leaderboards
+// ---------------------------------------------------------------------------
+
+/**
+ * The window a board covers, as the client sees it.
+ *
+ * The window *is* the reset: nothing is deleted at the boundary, the board
+ * simply starts counting from a new `startsAt`. `key` is stable inside the
+ * period, so the UI can tell "same week" from "new week" without a clock.
+ */
+export interface LeaderboardWindowInfo {
+  key: string
+  startsAt: string
+  endsAt: string
+  /** Whole days left, rounded up; `0` once the window has closed. */
+  endsInDays: number
+}
+
+/** A person on a board — no contact details, no manager, no team graph. */
+export interface LeaderboardUser {
+  id: string
+  fullName: string
+  avatarUrl: string | null
+  jobTitle: string | null
+  role: Role
+}
+
+/** One row of a board. */
+export interface LeaderboardEntry {
+  /** Competition rank — equal scores share it, the next one skips (1, 1, 3). */
+  rank: number
+  /** Somebody else shares this rank. */
+  tied: boolean
+  isMe: boolean
+  user: LeaderboardUser
+  /** Lifetime level and XP. These never reset; only the board does. */
+  level: number
+  levelTitle: string | null
+  levelIconKey: string | null
+  totalXp: number
+  /** Scored inside this window. */
+  score: number
+  periodXp: number
+  performanceXp: number
+  achievementXp: number
+  achievementsUnlocked: number
+  /** Most recent unlocks inside the window — the achievement indicators. */
+  achievements: LeaderboardAchievementInfo[]
+  currentStreak: number
+}
+
+export interface LeaderboardAchievementInfo {
+  key: string | null
+  title: string | null
+  iconKey: string | null
+  unlockedAt: string
+}
+
+/**
+ * The caller's own position.
+ *
+ * `rank` is `null` when they have not scored in this window — the UI turns that
+ * into an invitation, not a last place. `pointsToNextRank` carries no identity,
+ * so it is safe to show to everybody.
+ */
+export interface LeaderboardMe {
+  userId: string
+  /**
+   * Is the caller part of this board's population at all? False when a manager
+   * opens a subordinate team's board they do not sit in — which reads as "you
+   * are watching this team", not as "you scored nothing".
+   */
+  inScope: boolean
+  rank: number | null
+  score: number
+  periodXp: number
+  achievementsUnlocked: number
+  pointsToNextRank: number | null
+  /** True when the caller is already inside `entries`. */
+  inEntries: boolean
+}
+
+/** A team the caller may open a board for. */
+export interface LeaderboardTeamOption {
+  id: string
+  name: string
+  slug: string
+  memberCount: number
+  isMember: boolean
+  isLead: boolean
+}
+
+export interface LeaderboardScoringInfo {
+  performanceXpWeight: number
+  achievementXpWeight: number
+  achievementUnlockBonus: number
+  rankedSources: string[]
+  unrankedSources: string[]
+}
+
+/** `GET /api/leaderboard`. */
+export interface LeaderboardResponse {
+  period: LeaderboardPeriod
+  scope: LeaderboardScope
+  window: LeaderboardWindowInfo
+  /** Present for `scope=team`. */
+  team: { id: string, name: string, slug: string } | null
+  /** Teams this caller may switch to — their own, plus a manager's reports'. */
+  availableTeams: LeaderboardTeamOption[]
+  /** Top few rows only; never the whole company. */
+  entries: LeaderboardEntry[]
+  me: LeaderboardMe
+  /** How many people scored in this window and scope. */
+  participants: number
+  /** The privacy ceiling, so the UI can state the rule it is following. */
+  maxEntries: number
+  scoring: LeaderboardScoringInfo
+}
+
+/** What somebody earned inside one window. */
+export interface PeriodStats {
+  score: number
+  xp: number
+  performanceXp: number
+  achievementXp: number
+  achievementsUnlocked: number
+  achievements: LeaderboardAchievementInfo[]
+}
+
+/** One board period of the personal-progress view. */
+export interface PersonalProgressPeriod {
+  window: LeaderboardWindowInfo
+  previousWindow: LeaderboardWindowInfo
+  current: PeriodStats
+  previous: PeriodStats
+  delta: {
+    score: number
+    xp: number
+    direction: 'up' | 'down' | 'flat'
+  }
+  /** `null` ranks mean "not on the board yet", never "last". */
+  rank: {
+    company: number | null
+    team: number | null
+    participants: number
+  }
+  previousRank: {
+    company: number | null
+    team: number | null
+  }
+  /** Places climbed since the previous window; positive is up. */
+  movement: number | null
+  pointsToNextRank: number | null
+  /** Consecutive windows, oldest first — the sparkline. */
+  series: LeaderboardSeriesBucket[]
+}
+
+/** `GET /api/leaderboard/progress`. */
+export interface PersonalProgressResponse {
+  /** Permanent totals: these never reset. */
+  lifetime: {
+    xp: number
+    coins: number
+    level: number
+    levelTitle: string | null
+    levelIconKey: string | null
+    levelPercent: number
+    levelCurrentXp: number
+    levelNeededXp: number
+    nextLevel: { level: number, minXp: number, title: string | null } | null
+    currentStreak: number
+    longestStreak: number
+    achievementsUnlocked: number
+    achievementsTotal: number
+    badges: number
+  }
+  week: PersonalProgressPeriod
+  month: PersonalProgressPeriod
+  team: { id: string, name: string, slug: string } | null
+}
+
+// ---------------------------------------------------------------------------
+// Reward marketplace
+//
+// Coins are spent here. Every type in this block is served by
+// `/api/rewards*`; the arithmetic behind `standing` lives in
+// `shared/utils/marketplace.ts` so a card that looks redeemable and an API that
+// refuses it can never disagree.
+// ---------------------------------------------------------------------------
+
+/** A reward's own rules, as the company set them. */
+export interface RewardRulesInfo {
+  /** Simple/digital rewards skip the approval queue. */
+  autoApprove: boolean
+  /** Live redemptions one employee may hold; `null` is no cap. */
+  maxPerUser: number | null
+  /** Minimum level; `null` is everybody. */
+  minLevel: number | null
+  requiresNote: boolean
+  availableFrom: string | null
+  availableUntil: string | null
+}
+
+// `RedeemBlockCode` and `RewardStanding` are defined once, in
+// `shared/utils/marketplace.ts`, next to the rules that produce them. They are
+// imported rather than restated here so the API type and the pure type cannot
+// drift — and so Nuxt's auto-import does not see the same name twice.
+
+/** One shelf item, as an employee sees it. */
+export interface RewardCatalogueItem {
+  id: string
+  title: string
+  description: string | null
+  type: RewardType
+  coinCost: number
+  /** `null` means unlimited. */
+  stock: number | null
+  imageUrl: string | null
+  rules: RewardRulesInfo
+  standing: RewardStanding
+  /** How many more this employee may hold, or `null` for no cap. */
+  remainingAllowance: number | null
+  /** Live redemptions they already hold. */
+  myLiveRedemptions: number
+  /** Everything they have ever requested, whatever its status. */
+  myTotalRedemptions: number
+}
+
+/** `GET /api/rewards` — the marketplace. */
+export interface RewardCatalogueResponse {
+  /** The wallet balance, which is what a spend decision is made against. */
+  balance: number
+  level: number
+  items: RewardCatalogueItem[]
+  /** The caller's own requests, newest first — never anybody else's. */
+  redemptions: RedemptionSummary[]
+  /** How many of each status they hold, for the filter chips. */
+  counts: Record<string, number>
+}
+
+/** `GET /api/rewards/:id` — one reward, in full. */
+export interface RewardDetailResponse {
+  reward: RewardCatalogueItem
+  /** Their history with this reward specifically. */
+  redemptions: RedemptionSummary[]
+}
+
+/** One request, as its owner or an admin sees it. */
+export interface RedemptionSummary {
+  id: string
+  status: string
+  /** What was charged — a snapshot of the price at request time. */
+  coinCost: number
+  note: string | null
+  decisionNote: string | null
+  requestedAt: string
+  decidedAt: string | null
+  fulfilledAt: string | null
+  /** Whether the coins were given back (rejected or cancelled). */
+  refunded: boolean
+  reward: { id: string, title: string, type: RewardType, imageUrl: string | null }
+  /** Only populated for the admin queue; never on an employee's own list. */
+  user?: { id: string, fullName: string, jobTitle: string | null, avatarUrl: string | null }
+  /** The moves the caller is allowed to make from here — never an illegal one. */
+  availableActions: string[]
+  /** Whether *this* caller may cancel it themselves. */
+  cancellable: boolean
+}
+
+/** `GET /api/rewards/redemptions` and `GET /api/rewards/admin/redemptions`. */
+export type RedemptionListResponse = Paginated<RedemptionSummary>
+
+/** `POST /api/rewards/:id/redeem`. */
+export interface RedeemRewardResponse {
+  redemption: RedemptionSummary
+  /** Balance after the debit — or unchanged, when this was a replay. */
+  balance: number
+  /** False when an identical idempotency key had already been processed. */
+  charged: boolean
+  transactionId: string | null
+}
+
+/** `POST /api/rewards/admin/redemptions/:id`. */
+export interface RedemptionDecisionResponse {
+  redemption: RedemptionSummary
+  /** The employee's balance afterwards, so a refund is visible immediately. */
+  balance: number | null
+  refunded: number
+}
+
+/** Item-level availability only: nothing here is about a particular employee. */
+export interface RewardAvailability {
+  available: boolean
+  code: 'NOT_LISTED' | 'NOT_AVAILABLE_YET' | 'EXPIRED' | 'OUT_OF_STOCK' | null
+}
+
+/**
+ * One shelf item, as an admin sees it: the full row plus the demand behind it.
+ *
+ * Deliberately *not* the employee shape — an admin list has no "can I afford
+ * this?" column, and inventing one out of the admin's own wallet would be
+ * meaningless. It reports availability, which is a fact about the reward.
+ */
+export interface RewardAdminItem {
+  id: string
+  title: string
+  description: string | null
+  type: RewardType
+  coinCost: number
+  stock: number | null
+  imageUrl: string | null
+  status: CatalogStatus
+  rules: RewardRulesInfo
+  availability: RewardAvailability
+  createdAt: string
+  updatedAt: string
+  redemptions: {
+    total: number
+    pending: number
+    approved: number
+    fulfilled: number
+    rejected: number
+    cancelled: number
+  }
+  /** Coins this reward has taken out of circulation (debits minus refunds). */
+  coinsCollected: number
+}
+
+/** `GET /api/rewards/admin` — the whole shelf, including what is not listed. */
+export interface RewardAdminResponse {
+  items: RewardAdminItem[]
+  counts: Record<string, number>
+  queue: { pending: number, approved: number }
+}
+
+/** `POST /api/rewards` and `PATCH /api/rewards/:id`. */
+export interface RewardMutationResponse {
+  reward: { id: string }
 }

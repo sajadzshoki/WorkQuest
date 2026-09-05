@@ -454,9 +454,18 @@ describe('tenant isolation', () => {
       expect(Array.isArray(value) ? value.length : value).toBe(0)
     }
 
-    const leaderboard = await ownerB.request<{ items: unknown[] }>('/api/leaderboard')
+    // A brand-new tenant has no activity inside the current leaderboard window,
+    // so its board is empty — and, more to the point, holds none of tenant A's
+    // rows even though tenant A has plenty of XP in the same period.
+    const leaderboard = await ownerB.request<{
+      entries: Array<{ user: { id: string } }>
+      participants: number
+      availableTeams: unknown[]
+    }>('/api/leaderboard')
     expect(leaderboard.status).toBe(200)
-    expect(leaderboard.body.items.length).toBe(1)
+    expect(leaderboard.body.participants).toBe(0)
+    expect(leaderboard.body.entries).toHaveLength(0)
+    expect(leaderboard.body.availableTeams).toHaveLength(0)
   })
 
   it('keeps the seeded tenants apart from each other', async () => {

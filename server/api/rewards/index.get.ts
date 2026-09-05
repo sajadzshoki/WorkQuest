@@ -1,66 +1,33 @@
-import { requireAuth } from '../../utils/auth'
+import type { RewardCatalogueResponse } from '#shared/types/api'
+
+import { rewardCatalogueQuerySchema } from '#shared/schemas'
+
+import { requirePermission } from '../../utils/auth'
+import { readValidatedQuery } from '../../utils/http'
+import { listCatalogue } from '../../utils/marketplace'
 import { createTenantClient } from '../../utils/tenant'
 
-/** Reward catalogue plus the caller's balance and redemption history. */
-export default defineEventHandler(async (event) => {
-  const auth = requireAuth(event)
+/**
+ * `GET /api/rewards` — the company's reward marketplace.
+ *
+ *   ?type=MEAL   optional filter, so the shop can be browsed by kind
+ *
+ * Returns the ACTIVE shelf with the caller's own standing on each item — can
+ * they afford it, is it in stock, have they reached their allowance — plus their
+ * balance and their ten most recent requests.
+ *
+ * Two things this endpoint is careful about:
+ *
+ *  - it never lists another employee's requests. `redemptions` is the caller's
+ *    own history and there is no `userId` parameter to ask for somebody else's;
+ *  - it never lists a reward the caller cannot actually see. Drafts, paused and
+ *    archived items are admin-only (`/api/rewards/admin`), so an employee cannot
+ *    discover a reward that exists and then be refused it.
+ */
+export default defineEventHandler(async (event): Promise<RewardCatalogueResponse> => {
+  const auth = requirePermission(event, 'reward:read')
+  const query = readValidatedQuery(event, rewardCatalogueQuerySchema)
   const db = createTenantClient(auth)
 
-  const [rewards, wallet, progress, redemptions] = await Promise.all([
-    db.reward.findMany({
-      where: { status: 'ACTIVE' },
-      orderBy: { cost: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        type: true,
-        cost: true,
-        stock: true,
-        imageUrl: true,
-      },
-    }),
-    db.wallet.findUnique({
-      where: { userId: auth.userId },
-      select: { balance: true },
-    }),
-    db.userProgress.findUnique({ where: { userId: auth.userId }, select: { coins: true } }),
-    db.rewardRedemption.findMany({
-      where: { userId: auth.userId },
-      orderBy: { requestedAt: 'desc' },
-      take: 10,
-      select: {
-        id: true,
-        status: true,
-        cost: true,
-        requestedAt: true,
-        decidedAt: true,
-        note: true,
-        reward: { select: { id: true, title: true, type: true, imageUrl: true } },
-      },
-    }),
-  ])
-
-  // The wallet is authoritative for spend decisions (`affordable` below);
-  // `UserProgress.coins` is only the denormalised mirror kept for the
-  // leaderboard, so it is a fallback rather than the source of truth.
-  const coins = wallet?.balance ?? progress?.coins ?? 0
-
-  return {
-    balance: coins,
-    rewards: rewards.map(reward => ({
-      ...reward,
-      affordable: reward.cost <= coins,
-      available: reward.stock === null || reward.stock > 0,
-    })),
-    redemptions: redemptions.map(row => ({
-      id: row.id,
-      status: row.status,
-      cost: row.cost,
-      note: row.note,
-      requestedAt: row.requestedAt.toISOString(),
-      decidedAt: row.decidedAt?.toISOString() ?? null,
-      reward: row.reward,
-    })),
-  }
+  return listCatalogue(db, auth, { type: query.type })
 })

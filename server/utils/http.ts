@@ -52,6 +52,22 @@ export function readValidatedQuery<T>(event: H3Event, schema: Validator<T>): T {
   return parseWithSchema(getQuery(event), schema)
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Read a route parameter that has to be a uuid.
+ *
+ * Passing a hand-typed id straight to Prisma produces a client validation error,
+ * which the error handler can only report as a 500 — a server error for what is
+ * plainly a bad request. Checking here turns `/api/rewards/not-a-uuid` into a
+ * clean 404, and keeps an id-shaped string out of the query layer entirely.
+ */
+export function requireUuidParam(event: H3Event, name: string, message: string): string {
+  const value = getRouterParam(event, name)
+  if (!value || !UUID_PATTERN.test(value)) throw errors.notFound(message)
+  return value
+}
+
 function parseWithSchema<T>(input: unknown, schema: Validator<T>): T {
   const result = schema.safeParse(input)
   if (result.success) return result.data

@@ -83,11 +83,143 @@ const ACHIEVEMENTS = [
   },
 ]
 
-const REWARDS = [
-  { title: 'یک روز مرخصی تشویقی', description: 'یک روز مرخصی با حقوق به انتخاب شما', type: 'TIME_OFF', cost: 1200, stock: 12 },
-  { title: 'کارت هدیه خرید کتاب', description: 'کارت هدیه ۵۰۰ هزار تومانی کتاب', type: 'VOUCHER', cost: 600, stock: 30 },
-  { title: 'هدفون بی‌سیم', description: 'هدفون بی‌سیم برای تمرکز بیشتر', type: 'PHYSICAL', cost: 4500, stock: 3 },
-  { title: 'کمک به خیریه به نام شما', description: 'اهدا به خیریه همکار، به نام شما', type: 'DONATION', cost: 800, stock: null },
+/**
+ * The seeded shelf.
+ *
+ * Every price here is a *company* choice written into the database, not a
+ * constant in the product: nothing in `server/` or `shared/` knows that a day of
+ * leave costs 1500 coins, and an admin can reprice any of these from the
+ * marketplace screen. The rules vary on purpose so the demo tenant exercises
+ * automatic approval, per-person caps, level gates, required notes, limited
+ * stock and a closing date — one of each, rather than four identical rows.
+ */
+interface SeededReward {
+  title: string
+  description: string
+  type: string
+  coinCost: number
+  stock: number | null
+  imageUrl: string | null
+  rules: {
+    autoApprove: boolean
+    maxPerUser: number | null
+    minLevel: number | null
+    requiresNote: boolean
+    availableFrom?: Date | null
+    availableUntil?: Date | null
+  }
+}
+
+const REWARDS: SeededReward[] = [
+  {
+    title: 'یک روز مرخصی تشویقی',
+    description: 'یک روز مرخصی با حقوق، هر روزی که با مدیرتان هماهنگ کنید',
+    type: 'TIME_OFF',
+    coinCost: 1500,
+    stock: null,
+    imageUrl: null,
+    // Somebody has to agree the day, so it is not automatic — and the note says
+    // which day. Two a year is the company's own limit.
+    rules: { autoApprove: false, maxPerUser: 2, minLevel: 2, requiresNote: true },
+  },
+  {
+    title: 'کارت هدیه خرید کتاب',
+    description: 'کارت هدیهٔ ۵۰۰ هزار تومانی کتاب، کدش همان لحظه صادر می‌شود',
+    type: 'VOUCHER',
+    coinCost: 800,
+    stock: 30,
+    imageUrl: null,
+    // A digital code: the company already decided to give it, so it approves
+    // itself and never waits in a queue.
+    rules: { autoApprove: true, maxPerUser: 3, minLevel: null, requiresNote: false },
+  },
+  {
+    title: 'هدفون بی‌سیم',
+    description: 'هدفون بی‌سیم برای تمرکز بیشتر؛ تحویل در دفتر',
+    type: 'PHYSICAL',
+    coinCost: 4500,
+    stock: 3,
+    imageUrl: null,
+    // Three on the shelf, one per person, and only for people who have been
+    // around long enough to reach level 5.
+    rules: { autoApprove: false, maxPerUser: 1, minLevel: 5, requiresNote: false },
+  },
+  {
+    title: 'کمک به خیریه به نام شما',
+    description: 'اهدا به خیریهٔ همکار، به نام شما',
+    type: 'DONATION',
+    coinCost: 500,
+    stock: null,
+    imageUrl: null,
+    // Unlimited stock and no cap; the note says which cause to support.
+    rules: { autoApprove: false, maxPerUser: null, minLevel: null, requiresNote: true },
+  },
+  {
+    title: 'قهوهٔ ویژهٔ کافهٔ دفتر',
+    description: 'یک فنجان قهوه از کافهٔ طبقهٔ همکف، همین امروز',
+    type: 'MEAL',
+    coinCost: 120,
+    stock: null,
+    imageUrl: null,
+    // Cheap, digital-ish and unlimited: the smallest reward in the shop, so a
+    // newcomer can afford something in their first week.
+    rules: { autoApprove: true, maxPerUser: null, minLevel: null, requiresNote: false },
+  },
+  {
+    title: 'ناهار با تیم',
+    description: 'ناهار تیمی در رستوران همکار، با هماهنگی دفتر',
+    type: 'MEAL',
+    coinCost: 300,
+    stock: 20,
+    imageUrl: null,
+    rules: { autoApprove: true, maxPerUser: 4, minLevel: null, requiresNote: false },
+  },
+  {
+    title: 'بلیت سینما',
+    description: 'دو بلیت سینما برای آخر هفته',
+    type: 'TICKET',
+    coinCost: 450,
+    stock: 15,
+    imageUrl: null,
+    rules: { autoApprove: false, maxPerUser: 2, minLevel: null, requiresNote: false },
+  },
+  {
+    title: 'بلیت رویداد فصل',
+    description: 'بلیت رویداد تخصصی فصل، ظرفیت محدود',
+    type: 'TICKET',
+    coinCost: 1200,
+    // Six seats and a closing date 45 days out, computed from the moment the
+    // seed runs so the demo never goes stale.
+    stock: 6,
+    imageUrl: null,
+    rules: {
+      autoApprove: false,
+      maxPerUser: 1,
+      minLevel: 3,
+      requiresNote: false,
+      availableUntil: new Date(Date.now() + 45 * 86_400_000),
+    },
+  },
+  {
+    title: 'ماگ شرکتی',
+    description: 'ماگ سرامیکی با نشان تیم، از فروشگاه شرکت',
+    type: 'PHYSICAL',
+    coinCost: 250,
+    stock: 40,
+    imageUrl: null,
+    rules: { autoApprove: false, maxPerUser: null, minLevel: null, requiresNote: false },
+  },
+  {
+    title: 'پاداش نقدی پایان فصل',
+    description: 'پاداش نقدی به مناسبت پایان فصل، با تأیید مدیرعامل',
+    type: 'BONUS',
+    coinCost: 3000,
+    stock: null,
+    imageUrl: null,
+    // The biggest prize on the shelf: level-gated and once per person, and an
+    // owner has to approve it by hand.
+    rules: { autoApprove: false, maxPerUser: 1, minLevel: 4, requiresNote: false },
+  },
 ]
 
 /**
@@ -330,8 +462,25 @@ async function main() {
     }
   }
 
-  // Progress + ledger for the two people with approved work, plus a couple of
+  // Progress + ledger for the people with approved work, plus a couple of
   // achievements/badges so the gamification UI has something to render.
+  //
+  // The XP ledger is spread over recent weeks instead of landing in one row
+  // stamped "now": the leaderboards rank a *period*, so a flat seed would show
+  // an identical weekly and monthly board and an empty personal-progress
+  // history. Shares are rounded with the remainder on the oldest slice, so the
+  // ledger still sums exactly to `UserProgress.xp` — the invariant the reward
+  // engine and the integration suite both assert.
+  const XP_HISTORY = [
+    { daysAgo: 0, share: 0.18 },
+    { daysAgo: 2, share: 0.22 },
+    { daysAgo: 9, share: 0.25 },
+    { daysAgo: 23, share: 0.35 },
+  ]
+
+  /** When each seeded achievement was unlocked, oldest index last. */
+  const ACHIEVEMENT_HISTORY_DAYS = [1, 11, 26]
+
   const progressSeed = [
     { name: 'الناز کریمی', xp: 1840, coins: 920, streak: 7, longest: 12, achievements: [0, 1], badges: [0, 1] },
     { name: 'ترانه موسوی', xp: 1220, coins: 640, streak: 3, longest: 9, achievements: [0], badges: [0] },
@@ -359,16 +508,24 @@ async function main() {
       },
     })
 
-    await prisma.xpTransaction.create({
-      data: {
-        companyId: company.id,
-        userId: user.id,
-        amount: row.xp,
-        source: 'TASK_REVIEW',
-        reason: 'مجموع تسک‌های تأیید شده',
-        idempotencyKey: `seed:xp:${user.id}`,
-      },
-    })
+    let unallocatedXp = row.xp
+    for (const [index, slice] of XP_HISTORY.entries()) {
+      const isLast = index === XP_HISTORY.length - 1
+      const amount = isLast ? unallocatedXp : Math.round(row.xp * slice.share)
+      unallocatedXp -= amount
+
+      await prisma.xpTransaction.create({
+        data: {
+          companyId: company.id,
+          userId: user.id,
+          amount,
+          source: 'TASK_REVIEW',
+          reason: 'مجموع تسک‌های تأیید شده',
+          createdAt: new Date(Date.now() - slice.daysAgo * 86_400_000),
+          idempotencyKey: `seed:xp:${user.id}:${index}`,
+        },
+      })
+    }
 
     // Wallet first, then the ledger row that explains its balance — the same
     // order the runtime uses, so seeded data is indistinguishable from earned.
@@ -395,10 +552,18 @@ async function main() {
       },
     })
 
-    for (const index of row.achievements) {
+    for (const [position, index] of row.achievements.entries()) {
       const achievement = achievements[index]
       if (!achievement) continue
-      await prisma.userAchievement.create({ data: { companyId: company.id, userId: user.id, achievementId: achievement.id } })
+      const daysAgo = ACHIEVEMENT_HISTORY_DAYS[position] ?? 30
+      await prisma.userAchievement.create({
+        data: {
+          companyId: company.id,
+          userId: user.id,
+          achievementId: achievement.id,
+          unlockedAt: new Date(Date.now() - daysAgo * 86_400_000),
+        },
+      })
     }
     for (const index of row.badges) {
       const badge = createdBadges[index]
@@ -408,7 +573,20 @@ async function main() {
   }
 
   for (const reward of REWARDS) {
-    await prisma.reward.create({ data: { companyId: company.id, ...reward, status: 'ACTIVE' } })
+    const { rules, ...item } = reward
+    await prisma.reward.create({
+      data: {
+        companyId: company.id,
+        ...item,
+        status: 'ACTIVE',
+        autoApprove: rules.autoApprove,
+        maxPerUser: rules.maxPerUser,
+        minLevel: rules.minLevel,
+        requiresNote: rules.requiresNote,
+        availableFrom: rules.availableFrom ?? null,
+        availableUntil: rules.availableUntil ?? null,
+      },
+    })
   }
 
   const challenge = await prisma.challenge.create({
