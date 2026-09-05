@@ -173,7 +173,7 @@ describe('creating a task', () => {
 
     const rows = await query<{ n: number }>(
       `SELECT count(*)::int AS n FROM "Notification"
-       WHERE "userId" = $1 AND type = 'TASK_ASSIGNED' AND data->>'taskId' = $2`,
+       WHERE "userId" = $1 AND type = 'TASK_ASSIGNED' AND metadata->>'taskId' = $2`,
       [ids.employeeUser, task.id],
     )
     expect(rows[0]!.n).toBe(1)
@@ -325,7 +325,7 @@ describe('submitting a task', () => {
     await advanceTo(task.id, 'SUBMITTED')
     const rows = await query<{ n: number }>(
       `SELECT count(*)::int AS n FROM "Notification"
-       WHERE "userId" = $1 AND type = 'TASK_SUBMITTED' AND data->>'taskId' = $2`,
+       WHERE "userId" = $1 AND type = 'TASK_SUBMITTED' AND metadata->>'taskId' = $2`,
       [ids.managerUser, task.id],
     )
     expect(rows[0]!.n).toBe(1)

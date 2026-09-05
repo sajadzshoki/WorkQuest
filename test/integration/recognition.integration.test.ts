@@ -268,7 +268,7 @@ describe('cycle finalization', () => {
 
     // The winner is notified.
     const notifications = await query<{ type: string }>(
-      `SELECT type FROM "Notification" WHERE "userId" = $1::uuid AND type = 'RECOGNITION_RECEIVED'`,
+      `SELECT type FROM "Notification" WHERE "userId" = $1::uuid AND type = 'RECOGNITION_WINNER'`,
       [ids.employeeB],
     )
     expect(notifications.length).toBeGreaterThanOrEqual(1)

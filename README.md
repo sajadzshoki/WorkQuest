@@ -25,10 +25,18 @@ Implemented so far:
   one vote per coworker per category (no self-votes, no duplicates, no cross-company votes),
   private ballots, and an idempotent finalization step that tallies winners, seals results and
   pays XP/coins through the ledgers — see `docs/recognition.md`.
-
-Still not implemented (see [Remaining work](#11-remaining-work)): the reward **catalogue**
-redemption flow, the challenge engine, and windowed leaderboards — modelled in the database,
-but not wired to endpoints yet.
+- **Phase 7 — reward marketplace & windowed leaderboards.** Employees spend earned coins on
+  company-defined rewards (stock, level and per-user caps checked before money moves; auto- or
+  admin-approved requests with refunds on rejection), and weekly/monthly/team leaderboards
+  ranked on windowed XP — see `docs/reward-marketplace.md` and `docs/leaderboards.md`.
+- **Phase 8 — challenges.** Individual and team challenges with goals computed from real data
+  (approved-task counts, on-time rate, team completion), an engine that resolves windows and
+  pays rewards at-most-once through the ledgers, and a Persian-first challenge board —
+  see `docs/challenges.md`.
+- **Phase 9 — in-app notifications.** A persistent per-user feed with a fourteen-event
+  catalogue, one service every event flows through (self-suppression, at-most-once delivery),
+  a bell with a live unread badge and dropdown, mark-read / mark-all-read, and a channel seam
+  ready for email, SMS and push — see `docs/notifications.md`.
 
 ---
 
@@ -496,11 +504,13 @@ throwaway one, and `npm run test:integration` reads it from `.env` like the serv
 - ~~Task review~~ — done in phase 4: score → XP/coin award inside a transaction, level
   recalculation and notification fan-out (`POST /api/tasks/:id/transition` with `action:
   approve`/`request_revision`).
-- Reward redemption (`POST /api/rewards/:id/redeem`) with stock/coin checks and a coin ledger row.
-  The `REWARD_REDEMPTION` ledger type, wallet debit helper and `redemptionKey()` idempotency key
-  already exist and are tested; only the catalogue endpoint and UI remain.
-- Challenge engine: metric collectors that advance `ChallengeParticipant.progress`.
-- Notification read/mark-all-read endpoints (currently read-only).
+- ~~Reward redemption~~ — done in phase 7: `POST /api/rewards/:id/redeem` with stock, level and
+  per-user checks, coin ledger rows keyed by `redemptionKey()`, auto-approval, admin decisions
+  and refunds on rejection.
+- ~~Challenge engine~~ — done in phase 8: goal collectors advance
+  `ChallengeParticipant.progress` from real application data; windows resolve on read.
+- ~~Notification read/mark-all-read endpoints~~ — done in phase 9, alongside the bell, the
+  dropdown and the feed page.
 
 **Gamification rules**
 
@@ -510,7 +520,7 @@ throwaway one, and `npm run test:integration` reads it from `.env` like the serv
 - ~~Streak calculation bound to the company timezone~~ — done in phase 5:
   `shared/utils/streak.ts` + `advanceUserStreak` (at most once per calendar day).
 - Badges are awarded alongside achievements (linked via `Badge.achievementId`).
-- Windowed leaderboards computed from `XpTransaction` instead of the denormalised counter.
+- ~~Windowed leaderboards computed from `XpTransaction`~~ — done in phase 7.
 
 **Administration**
 
