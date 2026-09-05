@@ -60,12 +60,21 @@ export interface LedgerResult {
  * Postgres unique-violation. Prisma surfaces this as P2002; we also match the
  * raw code because the driver adapter can pass errors through unwrapped.
  *
+ * The `cause` chain is walked as well: when a write fails inside an interactive
+ * transaction, Prisma can hand back a rollback error that *carries* the original
+ * one instead of being it, and a classifier that only looks at the top object
+ * would report "not a duplicate" for exactly the case it exists to recognise.
+ *
  * Exported so other idempotent writers (achievement grants) reuse the same
  * definition instead of drifting.
  */
 export function isUniqueViolation(error: unknown): boolean {
-  const code = (error as { code?: string })?.code
-  return code === 'P2002' || code === '23505'
+  let node = error as { code?: string, cause?: unknown } | null | undefined
+  for (let depth = 0; node && depth < 5; depth += 1) {
+    if (node.code === 'P2002' || node.code === '23505') return true
+    node = node.cause as typeof node
+  }
+  return false
 }
 
 /**

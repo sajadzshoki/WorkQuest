@@ -12,18 +12,30 @@ interface DashboardSummary {
     levelNeededXp: number
     currentStreak: number
     longestStreak: number
-    rank: number
+    /** This week's rank on the windowed board; null before you have scored. */
+    rank: number | null
+    pointsToNextRank: number | null
     achievementsUnlocked: number
   }
   tasks: {
     /** Per-status counts. The task lists themselves live in `TasksTaskDashboard`. */
     counts: Record<string, number>
   }
-  leaderboard: Array<{
-    rank: number
-    xp: number
-    user: { id: string, fullName: string, avatarUrl: string | null, jobTitle: string | null }
-  }>
+  /** The weekly board — the same rows `/api/leaderboard` serves, capped at three. */
+  leaderboard: {
+    period: 'week' | 'month'
+    window: { key: string, startsAt: string, endsAt: string, endsInDays: number }
+    participants: number
+    entries: Array<{
+      rank: number
+      tied: boolean
+      score: number
+      periodXp: number
+      achievementsUnlocked: number
+      isMe: boolean
+      user: { id: string, fullName: string, avatarUrl: string | null, jobTitle: string | null, role: string }
+    }>
+  }
   recognitions: Array<{
     id: string
     message: string
@@ -151,8 +163,23 @@ function daysUntil(date: string): number {
               <p class="text-xs text-muted">
                 {{ t('dashboard.myRank') }}
               </p>
-              <p class="text-lg font-black tabular-nums">
+              <p
+                v-if="data?.gamification.rank !== null && data?.gamification.rank !== undefined"
+                class="text-lg font-black tabular-nums"
+              >
                 {{ format.number(data?.gamification.rank ?? 0) }}
+              </p>
+              <p
+                v-else
+                class="truncate text-xs font-bold text-muted"
+              >
+                {{ t('dashboard.noRank') }}
+              </p>
+              <p
+                v-if="data?.gamification.pointsToNextRank"
+                class="mt-0.5 truncate text-[10px] text-primary"
+              >
+                {{ t('dashboard.toNextRank', { points: format.number(data.gamification.pointsToNextRank) }) }}
               </p>
             </div>
           </div>
@@ -207,40 +234,44 @@ function daysUntil(date: string): number {
           :title="t('dashboard.topPerformers')"
           icon="i-heroicons-trophy"
           :to="localePath('/leaderboard')"
-          :to-label="t('common.viewAll')"
+          :to-label="t('leaderboard.title')"
         >
           <CommonEmptyState
-            v-if="!data?.leaderboard.length"
+            v-if="!data?.leaderboard.entries.length"
             icon="i-heroicons-trophy"
             :title="t('leaderboard.noData')"
+            :description="t('leaderboard.noDataHint')"
           />
-          <ol
-            v-else
-            class="space-y-2.5"
-          >
-            <li
-              v-for="entry in data.leaderboard"
-              :key="entry.user.id"
-              class="flex items-center gap-3 rounded-lg px-2 py-1.5"
-              :class="entry.user.id === user?.id ? 'bg-primary/8' : ''"
-            >
-              <span
-                class="grid size-6 shrink-0 place-items-center rounded-md text-[11px] font-black tabular-nums"
-                :class="entry.rank === 1 ? 'bg-coin-400 text-white' : 'bg-elevated text-muted'"
+          <template v-else>
+            <ol class="space-y-2.5">
+              <li
+                v-for="entry in data.leaderboard.entries"
+                :key="entry.user.id"
+                class="flex items-center gap-3 rounded-lg px-2 py-1.5"
+                :class="entry.isMe ? 'bg-primary/8' : ''"
               >
-                {{ format.number(entry.rank) }}
-              </span>
-              <UAvatar
-                :src="entry.user.avatarUrl ?? undefined"
-                :text="entry.user.fullName.charAt(0)"
-                size="sm"
-              />
-              <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ entry.user.fullName }}</span>
-              <span class="text-xs font-bold text-muted tabular-nums">
-                {{ format.compact(entry.xp) }}
-              </span>
-            </li>
-          </ol>
+                <LeaderboardRankMedal
+                  :rank="entry.rank"
+                  :tied="entry.tied"
+                  size="sm"
+                />
+                <UAvatar
+                  :src="entry.user.avatarUrl ?? undefined"
+                  :text="entry.user.fullName.charAt(0)"
+                  size="sm"
+                />
+                <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ entry.user.fullName }}</span>
+                <span class="text-xs font-bold text-muted tabular-nums">
+                  {{ format.number(entry.score) }}
+                </span>
+              </li>
+            </ol>
+
+            <p class="mt-3 border-t border-default pt-2.5 text-[11px] text-dimmed">
+              {{ t('leaderboard.endsIn', { days: format.number(data.leaderboard.window.endsInDays) }) }}
+              · {{ t('leaderboard.participants', { count: format.number(data.leaderboard.participants) }) }}
+            </p>
+          </template>
         </CommonSectionCard>
 
         <CommonSectionCard

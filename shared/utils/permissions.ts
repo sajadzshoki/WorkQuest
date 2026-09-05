@@ -80,6 +80,10 @@ const MATRIX: Record<Role, readonly Permission[] | '*'> = {
     'task:review',
     'achievement:read',
     'reward:read',
+    // A manager earns coins like anybody else, so they may spend their own.
+    // `reward:manage` (the shelf) and `wallet:adjust` (other people's balances)
+    // stay OWNER/ADMIN — this grants no authority over anybody else's coins.
+    'reward:redeem',
     'challenge:read',
     'recognition:create',
     'leaderboard:read',

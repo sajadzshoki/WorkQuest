@@ -1,4 +1,5 @@
 import { requireAuth } from '../../utils/auth'
+import { buildLeaderboard } from '../../utils/leaderboard'
 import { resolveLevelProgress } from '../../utils/levels'
 import { createTenantClient } from '../../utils/tenant'
 
@@ -8,13 +9,17 @@ import { createTenantClient } from '../../utils/tenant'
  * Read-only and deliberately chatty in one request: the dashboard is the first
  * screen every user sees, so it is better to spend one round trip here than
  * five from the browser.
+ *
+ * The "top performers" strip is the **weekly board**, served by the same
+ * service as `/api/leaderboard`: one definition of rank, one cap on how many
+ * rows anybody sees, and no all-time ranking anywhere in the product.
  */
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event)
   const db = createTenantClient(auth)
   const since = new Date(Date.now() - 30 * 86_400_000)
 
-  const [progress, taskCounts, leaderboard, recognitions, achievements, challenge]
+  const [progress, taskCounts, board, recognitions, achievements, challenge]
     = await Promise.all([
       db.userProgress.findUnique({ where: { userId: auth.userId } }),
       db.task.groupBy({
@@ -22,11 +27,7 @@ export default defineEventHandler(async (event) => {
         where: { assigneeId: auth.userId },
         _count: { _all: true },
       }),
-      db.userProgress.findMany({
-        orderBy: { xp: 'desc' },
-        take: 5,
-        select: { xp: true, user: { select: { id: true, fullName: true, avatarUrl: true, jobTitle: true } } },
-      }),
+      buildLeaderboard(db, auth, { period: 'week', scope: 'company', limit: 3 }),
       db.recognition.findMany({
         where: { toUserId: auth.userId, createdAt: { gte: since } },
         orderBy: { createdAt: 'desc' },
@@ -51,10 +52,6 @@ export default defineEventHandler(async (event) => {
   const level = await resolveLevelProgress(db, auth.companyId, xp)
   const counts = Object.fromEntries(taskCounts.map(row => [row.status, row._count._all]))
 
-  const myRankRow = await db.userProgress.count({
-    where: { xp: { gt: xp } },
-  })
-
   return {
     gamification: {
       xp,
@@ -66,17 +63,28 @@ export default defineEventHandler(async (event) => {
       levelNeededXp: level.neededXp,
       currentStreak: progress?.currentStreak ?? 0,
       longestStreak: progress?.longestStreak ?? 0,
-      rank: myRankRow + 1,
+      /** This week's place, or null before the caller has scored anything. */
+      rank: board.me.rank,
+      pointsToNextRank: board.me.pointsToNextRank,
       achievementsUnlocked: achievements,
     },
     // Counts only: the task *lists* are served by `/api/tasks/dashboard`, which
     // owns every task surface and applies the lifecycle rules.
     tasks: { counts },
-    leaderboard: leaderboard.map((row, index) => ({
-      rank: index + 1,
-      xp: row.xp,
-      user: row.user,
-    })),
+    leaderboard: {
+      period: board.period,
+      window: board.window,
+      participants: board.participants,
+      entries: board.entries.map(entry => ({
+        rank: entry.rank,
+        tied: entry.tied,
+        score: entry.score,
+        periodXp: entry.periodXp,
+        achievementsUnlocked: entry.achievementsUnlocked,
+        isMe: entry.isMe,
+        user: entry.user,
+      })),
+    },
     recognitions,
     activeChallenge: challenge,
   }

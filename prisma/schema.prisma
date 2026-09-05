@@ -131,16 +131,28 @@ enum CatalogStatus {
   ARCHIVED
 }
 
+/// What kind of thing a reward is. Drives the icon, the copy and — through
+/// `Reward.autoApprove` — whether a human has to hand it over.
 enum RewardType {
   PHYSICAL
   VOUCHER
   TIME_OFF
   DONATION
+  MEAL
+  TICKET
+  BONUS
   CUSTOM
 }
 
+/// The life of a redemption.
+///
+/// `PENDING → APPROVED → FULFILLED` is the manual path; a reward flagged
+/// `autoApprove` starts at APPROVED. `REJECTED` and `CANCELLED` refund the
+/// coins and give the stock back. FULFILLED, REJECTED and CANCELLED are
+/// terminal — `REDEMPTION_TRANSITIONS` in `shared/utils/marketplace.ts` is the
+/// only definition of what may follow what.
 enum RedemptionStatus {
-  REQUESTED
+  PENDING
   APPROVED
   REJECTED
   FULFILLED
@@ -520,6 +532,9 @@ model XpTransaction {
   @@unique([companyId, idempotencyKey])
   @@index([companyId, userId, createdAt])
   @@index([companyId, source])
+  /// Windowed leaderboards sum a period, not a person: the board asks for
+  /// "every XP row in this company between Monday and Monday".
+  @@index([companyId, createdAt])
 }
 
 /// Immutable coin ledger. Append-only: corrections are new rows, never edits.
@@ -591,6 +606,8 @@ model UserAchievement {
 
   @@unique([userId, achievementId])
   @@index([companyId, userId])
+  /// Achievement progress inside a leaderboard period.
+  @@index([companyId, unlockedAt])
 }
 
 model Badge {
@@ -1001,6 +1018,12 @@ model TaskReview {
 // Rewards & challenges
 // ---------------------------------------------------------------------------
 
+/// One thing a company offers in exchange for coins.
+///
+/// Nothing about a reward is built into the product: the company writes the
+/// title, sets `coinCost`, decides how much `stock` there is, and configures the
+/// `rules` below. "500 coins for a day of leave" is a row in this table, not a
+/// constant in the code.
 model Reward {
   id          String        @id @default(uuid(7)) @db.Uuid
   companyId   String        @db.Uuid
@@ -1008,18 +1031,45 @@ model Reward {
   title       String
   description String?
   type        RewardType    @default(CUSTOM)
-  cost        Int
+  /// The price, in company coins. Renamed from `cost` so it cannot be mistaken
+  /// for a task payout.
+  coinCost    Int
+  /// `null` means unlimited; `0` means sold out.
   stock       Int?
   imageUrl    String?
   status      CatalogStatus @default(ACTIVE)
+
+  // -- rules: the company's own policy for this reward ----------------------
+
+  /// Simple or digital rewards the company is happy to approve automatically.
+  /// Manual rewards stay PENDING until an admin decides.
+  autoApprove  Boolean   @default(false)
+  /// How many *live* redemptions one employee may hold; `null` is no cap, `1`
+  /// is "once per person". Rejected and cancelled requests do not count.
+  maxPerUser   Int?
+  /// Minimum level an employee must have reached; `null` is everybody.
+  minLevel     Int?
+  /// The employee must say something — which day, which charity, which size.
+  requiresNote Boolean   @default(false)
+  /// Optional availability window. `null` on either side is open-ended.
+  availableFrom  DateTime?
+  availableUntil DateTime?
+
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   redemptions RewardRedemption[]
 
   @@index([companyId, status])
+  @@index([companyId, type, status])
 }
 
+/// One employee's request for one reward.
+///
+/// The coins are charged when the request is made — not when it is approved —
+/// so two people cannot both spend the same coins on the last item in stock. A
+/// rejection or a cancellation refunds through the same ledger gateway, and the
+/// refund is its own immutable row rather than an edit of the debit.
 model RewardRedemption {
   id         String           @id @default(uuid(7)) @db.Uuid
   companyId  String           @db.Uuid
@@ -1028,15 +1078,30 @@ model RewardRedemption {
   reward     Reward           @relation(fields: [rewardId], references: [id], onDelete: Cascade)
   userId     String           @db.Uuid
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status     RedemptionStatus @default(REQUESTED)
-  cost       Int
+  status     RedemptionStatus @default(PENDING)
+  /// What was actually charged. A snapshot: repricing the reward later must not
+  /// rewrite what somebody paid.
+  coinCost   Int
+  /// The employee's own words, when the reward asks for them.
   note       String?
+  /// Why an admin approved, rejected or cancelled — shown to the employee, so a
+  /// "no" is explainable rather than silent.
+  decisionNote String?
   decidedBy  String?
   decidedAt  DateTime?
+  fulfilledBy String?
+  fulfilledAt DateTime?
   requestedAt DateTime        @default(now())
+  /// Natural key making a submission at-most-once: a double-clicked button, a
+  /// retried request and a resubmitted form all collide here, and the caller
+  /// gets the original redemption back instead of a second charge.
+  idempotencyKey String?      @db.VarChar(200)
 
+  @@unique([companyId, idempotencyKey])
   @@index([companyId, userId, status])
   @@index([companyId, status])
+  @@index([companyId, userId, rewardId])
+  @@index([companyId, status, requestedAt])
 }
 
 model Challenge {
