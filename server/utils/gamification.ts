@@ -4,6 +4,7 @@ import { evaluateAchievement, type GamificationMetrics } from '#shared/utils/ach
 import { advanceStreak, dayKey } from '#shared/utils/streak'
 import { computeLevelProgress } from '#shared/utils/xp'
 
+import { notify } from './notifications'
 import type { TenantTx } from './tasks'
 import { applyCoinDelta, applyXpDelta } from './wallet'
 
@@ -240,15 +241,13 @@ export async function unlockDueAchievements(
       badge = entry
     }
 
-    await tx.notification.create({
-      data: {
-        companyId: input.companyId,
-        userId: input.userId,
-        type: 'ACHIEVEMENT_UNLOCKED',
-        title: 'دستاورد تازه باز شد',
-        body: `«${achievement.title}» را کسب کردید`,
-        data: { achievementId: achievement.id, achievementKey: achievement.key },
-      },
+    await notify(tx, {
+      companyId: input.companyId,
+      userId: input.userId,
+      type: 'ACHIEVEMENT_UNLOCKED',
+      title: 'دستاورد تازه باز شد',
+      message: `«${achievement.title}» را کسب کردید`,
+      metadata: { achievementId: achievement.id, achievementKey: achievement.key, xp: achievement.xpReward, coins: achievement.coinReward },
     })
 
     achievements.push({

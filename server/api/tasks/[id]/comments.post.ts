@@ -43,7 +43,10 @@ export default defineEventHandler(async (event) => {
     companyId: auth.companyId,
     userId: counterpart,
     actorId: auth.userId,
-    type: 'TASK_REVIEWED',
+    // A comment is not one of the fourteen product events — it stays in the
+    // feed as an internal notice rather than stretching a task type to mean
+    // something it does not.
+    type: 'SYSTEM',
     title: 'یادداشت جدید روی تسک',
     body: task.title,
     taskId,

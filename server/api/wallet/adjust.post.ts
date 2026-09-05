@@ -2,6 +2,7 @@ import { walletAdjustSchema } from '#shared/schemas'
 
 import { requirePermission } from '../../utils/auth'
 import { errors, readValidated } from '../../utils/http'
+import { notify } from '../../utils/notifications'
 import { createTenantClient } from '../../utils/tenant'
 import { applyCoinDelta } from '../../utils/wallet'
 
@@ -60,14 +61,17 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    await tx.notification.create({
-      data: {
-        companyId: auth.companyId,
-        userId: target.id,
-        type: 'SYSTEM',
-        title: input.amount > 0 ? 'سکه به کیف پول شما اضافه شد' : 'از کیف پول شما سکه کسر شد',
-        body: input.reason,
-      },
+    // An adjustment arrives with no event of its own — this is the one coin
+    // movement that is *only* a coin movement, so it carries the
+    // coins-earned type on the credit side.
+    await notify(tx, {
+      companyId: auth.companyId,
+      userId: target.id,
+      actorId: auth.userId,
+      type: input.amount > 0 ? 'COINS_EARNED' : 'SYSTEM',
+      title: input.amount > 0 ? 'سکه به کیف پول شما اضافه شد' : 'از کیف پول شما سکه کسر شد',
+      message: input.reason,
+      metadata: { amount: input.amount, balance: ledger.balance },
     })
 
     return ledger

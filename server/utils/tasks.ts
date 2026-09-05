@@ -6,6 +6,7 @@ import { checkTransition, isOverdue } from '#shared/utils/task'
 
 import { getManagedUserIds } from './auth'
 import { apiError, errors } from './http'
+import { notify } from './notifications'
 import { createTenantClient } from './tenant'
 
 /**
@@ -342,8 +343,8 @@ export async function recordTaskEvent(
  * Notify a user about their task, unless they did it to themselves.
  *
  * Self-notifications are pure noise — nobody needs a bell for a button they
- * just pressed — so the caller's own id is filtered out here rather than at
- * each of the five call sites.
+ * just pressed — so the caller's own id is filtered out here (and again in
+ * the notification service) rather than at each call site.
  */
 export async function notifyTask(
   db: TaskWriteClient,
@@ -351,22 +352,21 @@ export async function notifyTask(
     companyId: string
     userId: string | null | undefined
     actorId: string
-    type: 'TASK_ASSIGNED' | 'TASK_SUBMITTED' | 'TASK_REVIEWED'
+    type: 'TASK_ASSIGNED' | 'TASK_SUBMITTED' | 'TASK_APPROVED' | 'TASK_NEEDS_REVISION' | 'SYSTEM'
     title: string
     body?: string | null
     taskId: string
   },
 ): Promise<void> {
-  if (!input.userId || input.userId === input.actorId) return
-  await db.notification.create({
-    data: {
-      companyId: input.companyId,
-      userId: input.userId,
-      type: input.type,
-      title: input.title,
-      body: input.body ?? null,
-      data: { taskId: input.taskId },
-    },
+  if (!input.userId) return
+  await notify(db, {
+    companyId: input.companyId,
+    userId: input.userId,
+    actorId: input.actorId,
+    type: input.type,
+    title: input.title,
+    message: input.body ?? null,
+    metadata: { taskId: input.taskId },
   })
 }
 

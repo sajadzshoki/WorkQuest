@@ -203,25 +203,29 @@ enum RecognitionCycleStatus {
   CANCELLED
 }
 
+/// The notification catalogue.
+///
+/// The first fourteen values are the product vocabulary — one per event the
+/// spec names. `INVITATION` and `SYSTEM` are internal catch-alls (an accepted
+/// invitation, a comment on a task, administrative messages) that exist
+/// outside that catalogue but still show up in the feed.
 enum NotificationType {
   TASK_ASSIGNED
   TASK_SUBMITTED
-  TASK_REVIEWED
+  TASK_APPROVED
+  TASK_NEEDS_REVISION
+  COINS_EARNED
   ACHIEVEMENT_UNLOCKED
   LEVEL_UP
-  REWARD_AVAILABLE
-  REDEMPTION_UPDATE
   RECOGNITION_RECEIVED
-  CHALLENGE_UPDATE
+  RECOGNITION_WINNER
+  CHALLENGE_STARTED
+  CHALLENGE_COMPLETED
+  REWARD_REDEEMED
+  REWARD_APPROVED
+  REWARD_REJECTED
   INVITATION
-  TEAM_UPDATE
   SYSTEM
-}
-
-enum NotificationStatus {
-  UNREAD
-  READ
-  ARCHIVED
 }
 
 // ---------------------------------------------------------------------------
@@ -1179,20 +1183,23 @@ model ChallengeParticipant {
 // ---------------------------------------------------------------------------
 
 model Notification {
-  id        String             @id @default(uuid(7)) @db.Uuid
-  companyId String             @db.Uuid
-  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  userId    String             @db.Uuid
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String           @id @default(uuid(7)) @db.Uuid
+  companyId String           @db.Uuid
+  company   Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String           @db.Uuid
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      NotificationType
   title     String
-  body      String?
-  data      Json               @default("{}")
-  status    NotificationStatus @default(UNREAD)
+  message   String?
+  metadata  Json             @default("{}")
+  /// Natural key for at-most-once delivery, e.g. `challenge:<id>:reward`.
+  /// Null for events that are legitimately repeatable.
+  dedupeKey String?          @db.VarChar(200)
   readAt    DateTime?
-  createdAt DateTime           @default(now())
+  createdAt DateTime         @default(now())
 
-  @@index([companyId, userId, status])
+  @@unique([companyId, userId, dedupeKey])
+  @@index([companyId, userId, readAt])
   @@index([companyId, userId, createdAt])
 }
 

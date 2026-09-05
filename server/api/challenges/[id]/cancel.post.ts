@@ -5,6 +5,7 @@ import { isCancellableChallenge } from '#shared/utils/challenges'
 import { requirePermission } from '../../../utils/auth'
 import { assertChallengeScope, challengeSummaryFor, loadChallengeRow } from '../../../utils/challenges'
 import { apiError, errors, requireUuidParam } from '../../../utils/http'
+import { notifyMany } from '../../../utils/notifications'
 import { createTenantClient } from '../../../utils/tenant'
 
 /**
@@ -39,18 +40,17 @@ export default defineEventHandler(async (event): Promise<ChallengeMutationRespon
         select: { userId: true },
       })
 
-      if (enrolled.length > 0) {
-        await tx.notification.createMany({
-          data: enrolled.map(participant => ({
-            companyId: auth.companyId,
-            userId: participant.userId,
-            type: 'CHALLENGE_UPDATE' as const,
-            title: 'چالش لغو شد',
-            body: `«${row.title}» پیش از پایان مهلت لغو شد`,
-            data: { challengeId: id },
-          })),
-        })
-      }
+      // A cancellation is not one of the fourteen product events — it is told
+      // as an internal notice, but told to everybody who was racing.
+      await notifyMany(tx, {
+        companyId: auth.companyId,
+        userIds: enrolled.map(participant => participant.userId),
+        type: 'SYSTEM',
+        title: 'چالش لغو شد',
+        message: `«${row.title}» پیش از پایان مهلت لغو شد`,
+        metadata: { challengeId: id },
+        actorId: auth.userId,
+      })
     }
 
     await tx.auditLog.create({

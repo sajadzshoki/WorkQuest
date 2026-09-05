@@ -138,9 +138,11 @@ export default defineEventHandler(async (event) => {
         companyId: auth.companyId,
         userId: assigneeId,
         actorId: auth.userId,
-        type: 'TASK_REVIEWED',
+        type: input.action === 'approve' ? 'TASK_APPROVED' : 'TASK_NEEDS_REVISION',
         title: input.action === 'approve' ? 'تسک شما تأیید شد' : 'تسک شما نیاز به اصلاح دارد',
-        body: task.title,
+        body: input.action === 'approve'
+          ? `${task.title} — پاداش آن به کیف پول شما اضافه شد`
+          : task.title,
         taskId,
       })
     }

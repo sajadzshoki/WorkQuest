@@ -25,9 +25,11 @@
 
 import type { CoinTransactionType, LedgerSource, Prisma } from '#prisma/client'
 
+import { levelUpDedupeKey } from '#shared/utils/notifications'
 import { DEFAULT_REWARD_RULES, type RewardRules } from '#shared/utils/rewards'
 
 import { errors } from './http'
+import { notify } from './notifications'
 import type { TenantTx } from './tasks'
 import type { TenantClient } from './tenant'
 
@@ -228,6 +230,11 @@ export async function applyXpDelta(
  *
  * Called after an XP award. Levels are company-defined rows, so this is a
  * lookup rather than arithmetic.
+ *
+ * A level-up is announced from here — the one place every payout path
+ * (task review, challenge, recognition, achievement) funnels through — so no
+ * caller can forget it. The dedupe key means a level is announced at most
+ * once no matter how many flows sync it.
  */
 export async function syncLevel(
   tx: TenantTx,
@@ -256,6 +263,18 @@ export async function syncLevel(
   const levelUp = progress?.levelId !== reached.id
   if (levelUp) {
     await tx.userProgress.update({ where: { userId }, data: { levelId: reached.id } })
+
+    if (reached.level > 1) {
+      await notify(tx, {
+        companyId,
+        userId,
+        type: 'LEVEL_UP',
+        title: `به سطح ${reached.level} رسیدید`,
+        message: 'کارهای تأییدشده شما شما را به سطح تازه‌ای رساند',
+        metadata: { level: reached.level, minXp: reached.minXp },
+        dedupeKey: levelUpDedupeKey(userId, reached.level),
+      })
+    }
   }
 
   return { level: reached.level, levelUp }

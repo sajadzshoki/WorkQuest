@@ -277,8 +277,8 @@ afterAll(async () => {
 
   await query(
     `DELETE FROM "Notification"
-      WHERE type = 'REDEMPTION_UPDATE'
-        AND data->>'redemptionId' IN (
+      WHERE type IN ('REWARD_REDEEMED', 'REWARD_APPROVED', 'REWARD_REJECTED')
+        AND metadata->>'redemptionId' IN (
           SELECT r.id FROM "RewardRedemption" r
            WHERE r."rewardId" IN (SELECT id FROM "Reward" WHERE title LIKE $1)
         )`,

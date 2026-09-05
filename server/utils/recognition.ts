@@ -3,6 +3,7 @@ import type { RecognitionCycleStatus, RecognitionFrequency } from '#prisma/clien
 import { cycleWindow, pickWinner, tallyVotes, type RecognitionFrequency as RecognitionFrequencyInput } from '#shared/utils/recognition'
 
 import { apiError, errors } from './http'
+import { notify } from './notifications'
 import type { TenantTx } from './tasks'
 import type { TenantClient } from './tenant'
 import { applyCoinDelta, applyXpDelta, isUniqueViolation } from './wallet'
@@ -133,7 +134,7 @@ export async function castVote(
 ): Promise<{ cycle: CycleInfo, categoryId: string, nomineeId: string }> {
   const category = await db.recognitionCategory.findUnique({
     where: { id: input.categoryId },
-    select: { id: true, isActive: true },
+    select: { id: true, isActive: true, name: true },
   })
   if (!category || !category.isActive) throw errors.notFound('دسته انتخاب‌شده پیدا نشد')
 
@@ -150,6 +151,11 @@ export async function castVote(
   if (!nominee || nominee.status !== 'ACTIVE') {
     throw errors.notFound('همکار انتخاب‌شده پیدا نشد')
   }
+
+  const voter = await db.user.findUnique({
+    where: { id: input.voterId },
+    select: { fullName: true },
+  })
 
   const frequency = await configuredFrequency(db, input.companyId)
   const cycle = await ensureActiveCycle(db, input.companyId, frequency, input.now, input.timeZone)
@@ -174,6 +180,21 @@ export async function castVote(
       voterId: input.voterId,
       nomineeId: input.nomineeId,
     },
+  })
+
+  // The nomination itself is news to the nominee — the tally stays sealed
+  // until the cycle finalizes, so this says "you were recognised", never
+  // "you are winning".
+  await notify(db, {
+    companyId: input.companyId,
+    userId: input.nomineeId,
+    actorId: input.voterId,
+    type: 'RECOGNITION_RECEIVED',
+    title: 'همکاری شما را قدردانی کرد',
+    message: voter
+      ? `${voter.fullName} شما را در دستهٔ «${category.name}» نامزد کرد`
+      : `در دستهٔ «${category.name}» نامزد شدید`,
+    metadata: { cycleId: cycle.id, categoryId: category.id },
   })
 
   return { cycle, categoryId: input.categoryId, nomineeId: input.nomineeId }
@@ -305,15 +326,21 @@ export async function finalizeCycle(
       }
     }
 
-    await tx.notification.create({
-      data: {
-        companyId,
-        userId: winnerId,
-        type: 'RECOGNITION_RECEIVED',
-        title: 'در قدردانی همکاران برنده شدید',
-        body: titleName ? `«${titleName}» — ${category.name}` : category.name,
-        data: { recognitionResultId: result.id, categoryId: category.id },
+    await notify(tx, {
+      companyId,
+      userId: winnerId,
+      type: 'RECOGNITION_WINNER',
+      title: 'در قدردانی همکاران برنده شدید',
+      message: titleName ? `«${titleName}» — ${category.name}` : category.name,
+      metadata: {
+        recognitionResultId: result.id,
+        categoryId: category.id,
+        xp: category.xpReward,
+        coins: category.coinReward,
       },
+      // Finalization is idempotent and re-runs on every cycle sweep; the
+      // winner hears about it exactly once.
+      dedupeKey: `recognition:${result.id}:winner`,
     })
 
     await tx.recognitionResult.update({

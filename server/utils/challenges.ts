@@ -53,6 +53,7 @@ import {
 import { computeMetrics, unlockDueAchievements } from './gamification'
 import { ledTeamIds } from './members'
 import { errors } from './http'
+import { notify, notifyMany } from './notifications'
 import type { TenantTx } from './tasks'
 import type { TenantClient } from './tenant'
 import { applyCoinDelta, applyXpDelta, syncLevel } from './wallet'
@@ -271,15 +272,14 @@ async function activateChallenge(tx: TenantTx, challenge: ChallengeRow): Promise
       skipDuplicates: true,
     })
 
-    await tx.notification.createMany({
-      data: enrolled.map(userId => ({
-        companyId: challenge.companyId,
-        userId,
-        type: 'CHALLENGE_UPDATE' as const,
-        title: 'چالش تازه‌ای آغاز شد',
-        body: `«${challenge.title}» شروع شد — تا پایان مهلت پیشرفت خود را ببینید`,
-        data: { challengeId: challenge.id },
-      })),
+    await notifyMany(tx, {
+      companyId: challenge.companyId,
+      userIds: enrolled,
+      type: 'CHALLENGE_STARTED',
+      title: 'چالش تازه‌ای آغاز شد',
+      message: `«${challenge.title}» شروع شد — تا پایان مهلت پیشرفت خود را ببینید`,
+      metadata: { challengeId: challenge.id },
+      dedupeKey: `challenge:${challenge.id}:started`,
     })
   }
 
@@ -710,19 +710,21 @@ async function rewardParticipant(
   const metrics = await computeMetrics(tx, challenge.companyId, userId, progressRow?.currentStreak ?? 0)
   await unlockDueAchievements(tx, { companyId: challenge.companyId, userId, metrics })
 
-  await tx.notification.create({
-    data: {
-      companyId: challenge.companyId,
-      userId,
-      type: 'CHALLENGE_UPDATE',
-      title: 'چالش را کامل کردید',
-      body: `${challenge.title} — پاداش شما پرداخت شد`,
-      data: {
-        challengeId: challenge.id,
-        xp: challenge.xpReward,
-        coins: challenge.coinReward,
-      },
+  await notify(tx, {
+    companyId: challenge.companyId,
+    userId,
+    type: 'CHALLENGE_COMPLETED',
+    title: 'چالش را کامل کردید',
+    message: `${challenge.title} — پاداش شما پرداخت شد`,
+    metadata: {
+      challengeId: challenge.id,
+      xp: challenge.xpReward,
+      coins: challenge.coinReward,
     },
+    // The engine's CLAIMED marker already guards the payout; this key makes
+    // the *notification* at-most-once even if a hand-edited row ever lets a
+    // participant be rewarded again.
+    dedupeKey: `challenge:${challenge.id}:reward`,
   })
 
   // The at-most-once marker, written only after everything above committed

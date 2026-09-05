@@ -1,4 +1,4 @@
-import type { NotificationStatus } from '#prisma/client'
+import type { NotificationListResponse } from '#shared/types/api'
 
 import { paginationSchema } from '#shared/schemas'
 
@@ -6,26 +6,53 @@ import { requireAuth } from '../../utils/auth'
 import { readValidatedQuery } from '../../utils/http'
 import { createTenantClient } from '../../utils/tenant'
 
-/** The caller's notification feed, unread first. */
-export default defineEventHandler(async (event) => {
+/**
+ * `GET /api/notifications` — the caller's feed.
+ *
+ * Unread first, newest within each group. The tenant-scoped client makes the
+ * rows the caller's own by construction: there is no "other user's
+ * notifications" path to have to defend.
+ */
+export default defineEventHandler(async (event): Promise<NotificationListResponse> => {
   const auth = requireAuth(event)
   const query = readValidatedQuery(event, paginationSchema)
   const db = createTenantClient(auth)
 
-  const visibleStatuses: NotificationStatus[] = ['UNREAD', 'READ']
-  const where = { userId: auth.userId, status: { in: visibleStatuses } }
+  const where = { userId: auth.userId }
 
-  const [items, total, unread] = await Promise.all([
+  const [rows, total, unread] = await Promise.all([
     db.notification.findMany({
       where,
-      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [{ readAt: { sort: 'asc', nulls: 'first' } }, { createdAt: 'desc' }],
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
-      select: { id: true, type: true, title: true, body: true, data: true, status: true, createdAt: true },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        message: true,
+        metadata: true,
+        readAt: true,
+        createdAt: true,
+      },
     }),
     db.notification.count({ where }),
-    db.notification.count({ where: { userId: auth.userId, status: 'UNREAD' } }),
+    db.notification.count({ where: { userId: auth.userId, readAt: null } }),
   ])
 
-  return { items, total, unread, page: query.page, pageSize: query.pageSize }
+  return {
+    items: rows.map(row => ({
+      id: row.id,
+      type: row.type,
+      title: row.title,
+      message: row.message,
+      metadata: row.metadata as Record<string, unknown>,
+      readAt: row.readAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    total,
+    unread,
+    page: query.page,
+    pageSize: query.pageSize,
+  }
 })

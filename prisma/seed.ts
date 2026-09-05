@@ -705,11 +705,12 @@ async function main() {
   })
 
   const notifications = [
-    { userId: users['نگار احمدی']!.id, type: 'TASK_ASSIGNED', title: 'تسک جدید به شما محول شد', body: 'بازطراحی صفحه ورود — سررسید ۳ روز دیگر' },
-    { userId: users['الناز کریمی']!.id, type: 'ACHIEVEMENT_UNLOCKED', title: 'دستاورد تازه باز شد', body: '«هفت روز پیاپی» را کسب کردید' },
-    { userId: users['پویا محمدی']!.id, type: 'TASK_REVIEWED', title: 'بازبینی تسک شما انجام شد', body: 'تسک «پیاده‌سازی سرویس اعلان‌ها» در انتظار بررسی نهایی است' },
-    { userId: users['الناز کریمی']!.id, type: 'LEVEL_UP', title: 'به سطح ۳ رسیدید', body: 'سطح تازه: سازنده' },
-  ] as const
+    { userId: users['نگار احمدی']!.id, type: 'TASK_ASSIGNED', title: 'تسک جدید به شما محول شد', message: 'بازطراحی صفحه ورود — سررسید ۳ روز دیگر', metadata: { } },
+    { userId: users['الناز کریمی']!.id, type: 'ACHIEVEMENT_UNLOCKED', title: 'دستاورد تازه باز شد', message: '«هفت روز پیاپی» را کسب کردید', metadata: { achievementKey: 'streak_7' } },
+    { userId: users['پویا محمدی']!.id, type: 'TASK_APPROVED', title: 'تسک شما تأیید شد', message: 'بررسی بازخوردهای پشتیبانی — پاداش آن به کیف پول شما اضافه شد', metadata: { } },
+    { userId: users['الناز کریمی']!.id, type: 'LEVEL_UP', title: 'به سطح ۳ رسیدید', message: 'کارهای تأییدشده شما شما را به سطح تازه‌ای رساند', metadata: { level: 3 } },
+    { userId: users['ترانه موسوی']!.id, type: 'RECOGNITION_RECEIVED', title: 'همکاری شما را قدردانی کرد', message: 'مریم نوروزی شما را در دستهٔ «همکار فداکار» نامزد کرد', metadata: { } },
+  ]
 
   for (const notification of notifications) {
     await prisma.notification.create({ data: { companyId: company.id, ...notification } })

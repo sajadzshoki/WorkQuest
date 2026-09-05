@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const level = await resolveLevelProgress(db, auth.companyId, xp)
 
   const unreadNotifications = await db.notification.count({
-    where: { userId: auth.userId, status: 'UNREAD' },
+    where: { userId: auth.userId, readAt: null },
   })
 
   return {

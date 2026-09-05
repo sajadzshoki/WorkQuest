@@ -10,6 +10,7 @@ import type {
   SeriesBucket as LeaderboardSeriesBucket,
 } from '../utils/leaderboard'
 import type { CatalogStatus, RewardStanding, RewardType } from '../utils/marketplace'
+import type { NotificationType } from '../utils/notifications'
 import type { Role } from '../utils/permissions'
 import type { ReviewDecision, TaskPriority, TaskStatus } from '../utils/task'
 
@@ -919,4 +920,43 @@ export interface ChallengeDetailResponse {
 
 export interface ChallengeMutationResponse {
   challenge: ChallengeSummary
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+/** One row of the feed, as the UI renders it. */
+export interface NotificationItem {
+  id: string
+  type: NotificationType
+  title: string
+  message: string | null
+  /** Event payload, e.g. `{ taskId }` or `{ challengeId, xp, coins }`. */
+  metadata: Record<string, unknown>
+  /** Null means unread — the single read state. */
+  readAt: string | null
+  createdAt: string
+}
+
+export interface NotificationListResponse {
+  items: NotificationItem[]
+  total: number
+  unread: number
+  page: number
+  pageSize: number
+}
+
+/** The bell's cheap poll. */
+export interface NotificationSummaryResponse {
+  unread: number
+}
+
+export interface NotificationReadResponse {
+  id: string
+  readAt: string
+}
+
+export interface NotificationReadAllResponse {
+  updated: number
 }
