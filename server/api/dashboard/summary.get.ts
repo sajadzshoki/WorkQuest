@@ -1,4 +1,5 @@
 import { requireAuth } from '../../utils/auth'
+import { refreshChallenges } from '../../utils/challenges'
 import { buildLeaderboard } from '../../utils/leaderboard'
 import { resolveLevelProgress } from '../../utils/levels'
 import { createTenantClient } from '../../utils/tenant'
@@ -17,7 +18,11 @@ import { createTenantClient } from '../../utils/tenant'
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event)
   const db = createTenantClient(auth)
+  const now = new Date()
   const since = new Date(Date.now() - 30 * 86_400_000)
+
+  // Resolve first, so the challenge the card below shows is never a stale one.
+  await refreshChallenges(db, auth.companyId, now)
 
   const [progress, taskCounts, board, recognitions, achievements, challenge]
     = await Promise.all([
@@ -44,13 +49,43 @@ export default defineEventHandler(async (event) => {
       db.challenge.findFirst({
         where: { status: 'ACTIVE' },
         orderBy: { endsAt: 'asc' },
-        select: { id: true, title: true, goalKey: true, goalValue: true, xpReward: true, coinReward: true, endsAt: true },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          goalKey: true,
+          goalValue: true,
+          progress: true,
+          xpReward: true,
+          coinReward: true,
+          endsAt: true,
+          participants: { select: { userId: true, progress: true, status: true } },
+        },
       }),
     ])
 
   const xp = progress?.xp ?? 0
   const level = await resolveLevelProgress(db, auth.companyId, xp)
   const counts = Object.fromEntries(taskCounts.map(row => [row.status, row._count._all]))
+
+  // The card shows the bar the caller is actually racing: their own for an
+  // individual challenge, the team's shared one for a team push. Both are
+  // engine-computed from real data — never a placeholder.
+  const mine = challenge?.participants.find(row => row.userId === auth.userId) ?? null
+  const activeChallenge = challenge
+    ? {
+        id: challenge.id,
+        title: challenge.title,
+        type: challenge.type,
+        goalKey: challenge.goalKey,
+        goalValue: challenge.goalValue,
+        progress: challenge.type === 'INDIVIDUAL' ? (mine?.progress ?? 0) : challenge.progress,
+        xpReward: challenge.xpReward,
+        coinReward: challenge.coinReward,
+        endsAt: challenge.endsAt.toISOString(),
+        participantsCount: challenge.participants.length,
+      }
+    : null
 
   return {
     gamification: {
@@ -86,6 +121,6 @@ export default defineEventHandler(async (event) => {
       })),
     },
     recognitions,
-    activeChallenge: challenge,
+    activeChallenge,
   }
 })

@@ -911,8 +911,8 @@ export interface ChallengeDetailResponse {
   challenge: ChallengeSummary
   /**
    * The full roster with per-person progress. Only callers holding
-   * `challenge:manage` (in scope) receive it; an employee gets their own row
-   * and the aggregate numbers only.
+   * `challenge:manage` (in scope) receive it; an employee gets an empty list
+   * plus their own numbers in `challenge.myParticipation`.
    */
   participants: ChallengeParticipantSummary[]
 }

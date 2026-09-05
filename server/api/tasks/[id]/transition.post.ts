@@ -7,6 +7,7 @@ import { calculateReward, taskRewardKey } from '#shared/utils/rewards'
 import { nextStatus } from '#shared/utils/task'
 
 import { requireAuth } from '../../../utils/auth'
+import { refreshChallenges, type ChallengeCompletionEvent } from '../../../utils/challenges'
 import { runGamification, type GamificationOutcome } from '../../../utils/gamification'
 import { errors, readValidated } from '../../../utils/http'
 import { createTenantClient } from '../../../utils/tenant'
@@ -36,6 +37,11 @@ import {
  * inside the same transaction as the status change, because a task that is
  * approved but unpaid is a support ticket. The payout is keyed on the task id,
  * so approving twice pays once.
+ *
+ * After an approval (or a reopen, which takes a completion back), the
+ * challenge engine runs for the company: a goal this task just pushed over
+ * the line is completed and paid immediately, and the response carries those
+ * completions in `challengeCompletions` so the UI can celebrate them.
  */
 export default defineEventHandler(async (event) => {
   const auth = requireAuth(event)
@@ -87,6 +93,7 @@ export default defineEventHandler(async (event) => {
 
   let payout: TaskPayout | null = null
   let gamification: GamificationOutcome | null = null
+  let challengeCompletions: ChallengeCompletionEvent[] = []
 
   const updated = await db.$transaction(async (tx) => {
     await tx.task.update({
@@ -185,11 +192,23 @@ export default defineEventHandler(async (event) => {
     return tx.task.findUniqueOrThrow({ where: { id: taskId }, select: TASK_SELECT })
   })
 
+  // An approval or a reopen moves the numbers a live challenge tracks, so the
+  // engine runs right after the transition commits — in its own transactions,
+  // keyed idempotently, so a goal reached here is paid here (and only once).
+  // It deliberately does not join the task transaction above: the payout is
+  // already durable, and the challenge's own FOR UPDATE lock keeps the two
+  // from fighting over rows.
+  if (input.action === 'approve' || input.action === 'reopen') {
+    const outcome = await refreshChallenges(db, auth.companyId, now)
+    challengeCompletions = outcome.completions.filter(completion => completion.userId === assigneeId)
+  }
+
   return {
     task: toTaskSummary(updated as never, now),
     reward: breakdown ? { ...breakdown, ruleVersion: rules.version } : null,
     payout,
     gamification,
+    challengeCompletions,
   }
 })
 
