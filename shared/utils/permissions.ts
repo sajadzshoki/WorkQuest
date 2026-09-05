@@ -47,6 +47,12 @@ export const PERMISSIONS = [
   /** Configure categories, cadence and titles. OWNER/ADMIN only. */
   'recognition:manage',
   'leaderboard:read',
+  /**
+   * The company analytics dashboard. OWNER/ADMIN read the whole company; the
+   * endpoint narrows a MANAGER to their own subordinates and led teams.
+   * An EMPLOYEE has their own profile instead.
+   */
+  'analytics:read',
   'wallet:adjust',
 ] as const
 
@@ -93,6 +99,9 @@ const MATRIX: Record<Role, readonly Permission[] | '*'> = {
     'challenge:manage',
     'recognition:create',
     'leaderboard:read',
+    // The manager's analytics view: the endpoint scopes every number to their
+    // own subordinates and led teams.
+    'analytics:read',
   ],
   EMPLOYEE: [
     'company:read',

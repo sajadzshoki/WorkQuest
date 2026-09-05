@@ -97,6 +97,9 @@ export interface CompanySummary {
   timezone: string
 }
 
+/** `PATCH /api/companies` — the profile after the update. */
+export interface CompanyUpdateResponse extends CompanySummary {}
+
 /** User summary returned to the client. */
 export interface UserSummary {
   id: string
@@ -255,6 +258,26 @@ export interface MemberDetail extends MemberSummary {
     completed: number
     inReview: number
     overdue: number
+  }
+  /**
+   * The deep performance profile — every number a review conversation needs,
+   * derived the same way the company dashboard derives its own.
+   */
+  performanceProfile: {
+    tasksCompleted: number
+    /** Average score of approved tasks; null when nothing is scored yet. */
+    averageScore: number | null
+    /** On-time percentage over approved tasks with a due date; null when none. */
+    onTimeRate: number | null
+    coinsEarned: number
+    coinsSpent: number
+    achievements: number
+    /** Peer recognitions received. */
+    recognition: number
+    /** Average approved-task score per day, last 30 days (null = no data). */
+    scoreTrend: Array<{ day: string, value: number | null }>
+    /** The latest approved tasks, newest first — the shape of the work. */
+    recentTasks: Array<{ id: string, title: string, score: number | null, completedAt: string }>
   }
   /** Only present for managers/admins who may act on this member. */
   permissions: { canEdit: boolean, canChangeRole: boolean, canRemove: boolean }
@@ -959,4 +982,87 @@ export interface NotificationReadResponse {
 
 export interface NotificationReadAllResponse {
   updated: number
+}
+
+// ---------------------------------------------------------------------------
+// Company analytics
+// ---------------------------------------------------------------------------
+
+/** One KPI tile on the administration dashboard. */
+export interface AnalyticsKpis {
+  totalEmployees: number
+  activeEmployees: number
+  /** Every task in scope, whatever its status. */
+  tasks: number
+  completedTasks: number
+  pendingReviews: number
+  overdueTasks: number
+  /** Average score over approved tasks in scope; null when nothing is scored. */
+  averageScore: number | null
+  /** On-time percentage over approved tasks with a due date; null when none. */
+  onTimeRate: number | null
+  /** Net XP the scoped population has generated. */
+  totalXp: number
+  /** Coin credits the scoped population has earned. */
+  totalCoinsEarned: number
+  /** Coins spent on reward redemptions. */
+  coinsRedeemed: number
+}
+
+/** One row of the employee performance table. */
+export interface AnalyticsEmployeeRow {
+  id: string
+  fullName: string
+  avatarUrl: string | null
+  jobTitle: string | null
+  role: Role
+  teamName: string | null
+  tasksCompleted: number
+  averageScore: number | null
+  onTimeRate: number | null
+  xp: number
+  level: number | null
+  levelTitle: string | null
+  coinsEarned: number
+  coinsSpent: number
+  achievements: number
+  recognition: number
+  currentStreak: number
+}
+
+/** One row of the team performance table. */
+export interface AnalyticsTeamRow {
+  id: string
+  name: string
+  memberCount: number
+  /** Approved / all tasks on the team's tagged board. */
+  completionRate: number
+  averageScore: number | null
+  onTimeRate: number | null
+  activeTasks: number
+  overdueTasks: number
+}
+
+/** Daily series, one point per day, zero-filled where nothing happened. */
+export interface AnalyticsDayPoint {
+  /** `YYYY-MM-DD`, company-local. */
+  day: string
+  value: number
+}
+
+export interface AnalyticsOverviewResponse {
+  /** `company` for OWNER/ADMIN, `team` for a MANAGER (scoped to subordinates). */
+  scope: 'company' | 'team'
+  /** The window the series cover. */
+  range: { days: number, from: string, to: string }
+  kpis: AnalyticsKpis
+  teams: AnalyticsTeamRow[]
+  employees: AnalyticsEmployeeRow[]
+  series: {
+    tasksCompleted: AnalyticsDayPoint[]
+    /** Null on days with no scored approvals — a gap, not a zero. */
+    averageScore: Array<{ day: string, value: number | null }>
+    xpEarned: AnalyticsDayPoint[]
+    coins: Array<{ day: string, earned: number, redeemed: number }>
+  }
 }

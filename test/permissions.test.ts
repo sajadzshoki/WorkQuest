@@ -3,6 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { PERMISSIONS, ROLES, can, isRole, roleAtLeast } from '#shared/utils/permissions'
 
 describe('permission matrix', () => {
+  it('lets managers read analytics while employees cannot', () => {
+    expect(can('OWNER', 'analytics:read')).toBe(true)
+    expect(can('ADMIN', 'analytics:read')).toBe(true)
+    expect(can('MANAGER', 'analytics:read')).toBe(true)
+    expect(can('EMPLOYEE', 'analytics:read')).toBe(false)
+  })
+
   it('grants owners and admins everything', () => {
     for (const permission of PERMISSIONS) {
       expect(can('OWNER', permission)).toBe(true)

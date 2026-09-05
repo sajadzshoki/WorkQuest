@@ -95,6 +95,20 @@ export const onboardingCompanySchema = z.object({
 export type OnboardingCompanyInput = z.infer<typeof onboardingCompanySchema>
 
 /**
+ * `PATCH /api/companies` — the editable slice of the company profile.
+ *
+ * Only the display name for now: the slug is the tenant's public address
+ * (changing it would break every shared link), and timezone/locale are set
+ * during onboarding on purpose — silently re-basing every streak and cycle
+ * calendar from a settings form is the kind of "small edit" that corrupts
+ * history, so it stays a deliberate, operational change if ever needed.
+ */
+export const updateCompanySchema = z.object({
+  name: z.string().trim().min(2, 'نام شرکت را وارد کنید').max(120),
+})
+export type UpdateCompanyInput = z.infer<typeof updateCompanySchema>
+
+/**
  * The single submit that creates the company.
  *
  * The profile and company halves are re-validated here even though the client
