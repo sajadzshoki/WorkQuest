@@ -55,10 +55,18 @@ export function formatDate(
 export function formatRelativeDate(value: Date | string | number, locale?: string | null): string {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.RelativeTimeFormat(numberLocale(locale), { numeric: 'auto' }).format(
-    Math.round((date.getTime() - Date.now()) / 86_400_000),
-    'day',
-  )
+  // The finest unit that still tells the story: "3 minutes ago", not
+  // "today", and "2 days ago", not "172,800 seconds ago".
+  const seconds = Math.round((date.getTime() - Date.now()) / 1000)
+  const [amount, unit]: [number, Intl.RelativeTimeFormatUnit]
+    = Math.abs(seconds) < 60
+      ? [seconds, 'second']
+      : Math.abs(seconds) < 3_600
+        ? [Math.round(seconds / 60), 'minute']
+        : Math.abs(seconds) < 86_400
+          ? [Math.round(seconds / 3_600), 'hour']
+          : [Math.round(seconds / 86_400), 'day']
+  return new Intl.RelativeTimeFormat(numberLocale(locale), { numeric: 'auto' }).format(amount, unit)
 }
 
 /** Iranian mobile numbers, E.164. Accepts 09xxxxxxxxx and normalises to +98. */

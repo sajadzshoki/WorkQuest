@@ -1,37 +1,61 @@
 <script setup lang="ts">
-definePageMeta({ middleware: ['auth'] })
+import type { NotificationItem, NotificationListResponse } from '#shared/types/api'
 
-interface NotificationsResponse {
-  items: Array<{
-    id: string
-    type: string
-    title: string
-    body: string | null
-    status: string
-    createdAt: string
-  }>
-  total: number
-  unread: number
-  page: number
-  pageSize: number
-}
+definePageMeta({ middleware: ['auth'] })
 
 const { t } = useI18n()
 const format = useLocaleFormat()
+const toast = useToast()
+const { unread, markRead, markAllRead, isUnread, chipClass, metaOf, refreshUnread } = useNotifications()
 
-const { data } = await useFetch<NotificationsResponse>(`/api/notifications`)
+const PAGE_SIZE = 20
+const page = ref(1)
+const busyId = ref<string | null>(null)
 
-const icons: Record<string, string> = {
-  TASK_ASSIGNED: 'i-heroicons-clipboard-document-list',
-  TASK_REVIEWED: 'i-heroicons-clipboard-document-check',
-  ACHIEVEMENT_UNLOCKED: 'i-heroicons-star',
-  LEVEL_UP: 'i-heroicons-arrow-trending-up',
-  REWARD_AVAILABLE: 'i-heroicons-gift',
-  REDEMPTION_UPDATE: 'i-heroicons-receipt-percent',
-  RECOGNITION_RECEIVED: 'i-heroicons-heart',
-  CHALLENGE_UPDATE: 'i-heroicons-flag',
-  SYSTEM: 'i-heroicons-information-circle',
+const { data, pending, refresh } = await useFetch<NotificationListResponse>('/api/notifications', {
+  query: computed(() => ({ page: page.value, pageSize: PAGE_SIZE })),
+  watch: [page],
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / PAGE_SIZE)))
+
+async function onMarkRead(item: NotificationItem): Promise<void> {
+  busyId.value = item.id
+  try {
+    await markRead(item.id)
+    // One row changes state; re-reading the page keeps the unread-first
+    // ordering honest instead of patching it by hand.
+    await refresh()
+  }
+  catch {
+    toast.add({ title: t('errors.generic'), color: 'error' })
+  }
+  finally {
+    busyId.value = null
+  }
 }
+
+async function onMarkAll(): Promise<void> {
+  try {
+    const updated = await markAllRead()
+    toast.add({
+      title: t('notifications.allReadDone', { count: format.number(updated) }),
+      color: 'success',
+      icon: 'i-heroicons-check',
+    })
+    page.value = 1
+    await refresh()
+  }
+  catch {
+    toast.add({ title: t('errors.generic'), color: 'error' })
+  }
+}
+
+onMounted(() => {
+  // Arriving on the page with a stale badge (another tab, a slow poll) fixes
+  // it immediately.
+  void refreshUnread()
+})
 </script>
 
 <template>
@@ -42,18 +66,19 @@ const icons: Record<string, string> = {
     >
       <template #actions>
         <UBadge
-          v-if="data?.unread"
+          v-if="unread > 0"
           color="primary"
           variant="subtle"
           size="lg"
         >
-          {{ t('notifications.unreadCount', { count: format.number(data.unread) }) }}
+          {{ t('notifications.unreadCount', { count: format.number(unread) }) }}
         </UBadge>
         <UButton
           color="neutral"
           variant="outline"
-          icon="i-heroicons-check"
-          disabled
+          icon="i-heroicons-check-double"
+          :disabled="unread === 0"
+          @click="onMarkAll"
         >
           {{ t('notifications.markAllRead') }}
         </UButton>
@@ -61,61 +86,91 @@ const icons: Record<string, string> = {
     </CommonPageHeader>
 
     <CommonEmptyState
-      v-if="!data?.items.length"
+      v-if="!pending && !data?.items.length"
       class="wq-panel"
       icon="i-heroicons-bell-slash"
       :title="t('notifications.empty')"
+      :description="t('notifications.emptyHint')"
     />
 
-    <ul
+    <div
       v-else
-      class="wq-panel divide-y divide-default"
+      class="wq-panel"
     >
-      <li
-        v-for="notification in data.items"
-        :key="notification.id"
-        class="flex items-start gap-3 p-4"
-        :class="notification.status === 'UNREAD' ? 'bg-primary/5' : ''"
+      <ul
+        class="divide-y divide-default"
+        :class="pending ? 'opacity-60 transition-opacity' : ''"
       >
-        <span
-          class="grid size-9 shrink-0 place-items-center rounded-lg"
-          :class="notification.status === 'UNREAD' ? 'bg-primary/12 text-primary' : 'bg-elevated text-muted'"
+        <li
+          v-for="item in data?.items ?? []"
+          :key="item.id"
+          class="flex items-start gap-3 p-4"
+          :class="isUnread(item) ? 'bg-primary/5' : ''"
         >
-          <UIcon
-            :name="icons[notification.type] ?? 'i-heroicons-bell'"
-            class="size-4.5"
-          />
-        </span>
-
-        <div class="min-w-0 flex-1">
-          <p class="flex items-center gap-2 text-sm font-semibold text-highlighted">
-            <span class="truncate">{{ notification.title }}</span>
-            <UBadge
-              color="neutral"
-              variant="subtle"
-              size="sm"
-              class="shrink-0"
-            >
-              {{ t(`notifications.type.${notification.type}`) }}
-            </UBadge>
-          </p>
-          <p
-            v-if="notification.body"
-            class="mt-1 text-xs leading-6 text-muted"
+          <span
+            class="grid size-9 shrink-0 place-items-center rounded-lg"
+            :class="isUnread(item) ? chipClass(item.type) : 'bg-elevated text-muted'"
           >
-            {{ notification.body }}
-          </p>
-          <p class="mt-1.5 text-[11px] text-dimmed">
-            {{ format.relative(notification.createdAt) }}
-          </p>
-        </div>
+            <UIcon
+              :name="metaOf(item.type).icon"
+              class="size-4.5"
+            />
+          </span>
 
-        <span
-          v-if="notification.status === 'UNREAD'"
-          class="mt-1.5 size-2 shrink-0 rounded-full bg-primary"
-          aria-hidden="true"
+          <div class="min-w-0 flex-1">
+            <p class="flex flex-wrap items-center gap-2 text-sm font-semibold text-highlighted">
+              <span class="truncate">{{ item.title }}</span>
+              <UBadge
+                color="neutral"
+                variant="subtle"
+                size="sm"
+                class="shrink-0"
+              >
+                {{ t(`notifications.type.${item.type}`) }}
+              </UBadge>
+            </p>
+            <p
+              v-if="item.message"
+              class="mt-1 text-xs leading-6 text-muted"
+            >
+              {{ item.message }}
+            </p>
+            <p class="mt-1.5 text-[11px] text-dimmed">
+              {{ format.relative(item.createdAt) }}
+            </p>
+          </div>
+
+          <div class="flex shrink-0 items-center gap-2">
+            <UButton
+              v-if="isUnread(item)"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-heroicons-check"
+              :label="t('notifications.markRead')"
+              :loading="busyId === item.id"
+              @click="onMarkRead(item)"
+            />
+            <span
+              v-if="isUnread(item)"
+              class="size-2 rounded-full bg-primary"
+              aria-hidden="true"
+            />
+          </div>
+        </li>
+      </ul>
+
+      <div class="flex flex-col items-center gap-3 border-t border-default px-4 py-3">
+        <UPagination
+          v-if="totalPages > 1"
+          v-model:page="page"
+          :total="data?.total ?? 0"
+          :items-per-page="PAGE_SIZE"
         />
-      </li>
-    </ul>
+        <p class="text-xs text-dimmed">
+          {{ t('notifications.total', { count: format.number(data?.total ?? 0) }) }}
+        </p>
+      </div>
+    </div>
   </div>
 </template>
