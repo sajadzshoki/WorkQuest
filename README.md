@@ -37,6 +37,12 @@ Implemented so far:
   catalogue, one service every event flows through (self-suppression, at-most-once delivery),
   a bell with a live unread badge and dropdown, mark-read / mark-all-read, and a channel seam
   ready for email, SMS and push — see `docs/notifications.md`.
+- **Phase 10 — company analytics & administration dashboard.** Role-scoped KPIs (people,
+  tasks, reviews, performance, economy), four simple hand-rolled SVG charts on company-local
+  days, employee and team performance tables, a per-employee performance profile on the
+  member page, company-name editing and the first UI over the versioned gamification
+  rules — every number computed live from tasks, review scores and the XP/coin ledgers —
+  see `docs/analytics.md`.
 
 ---
 
@@ -526,18 +532,30 @@ throwaway one, and `npm run test:integration` reads it from `.env` like the serv
 
 - ~~Member management~~ — done in phase 2 (invite by phone, role changes, suspend, remove,
   team CRUD, invitation lifecycle).
+- ~~Company analytics dashboard~~ — done in phase 10: KPIs, charts, employee/team
+  performance and per-employee performance profiles, scoped by role
+  (`docs/analytics.md`).
+- ~~Company profile editing (name)~~ — done in phase 10: `PATCH /api/companies` behind
+  `company:update`, editable from settings. Logo upload and timezone/locale changes remain
+  deliberate gaps (see below).
+- ~~Gamification rules editor~~ — done in phase 10: the rewards admin page edits the
+  versioned economy over the existing `GET/PUT /api/rewards/rules`.
+- ~~Reward catalogue management~~ — done in phase 7 (`/rewards/admin`: shelf CRUD,
+  stock and the redemption queue).
 - Transferring company ownership. Deliberately absent: nobody can change an `OWNER` role today,
   so a tenant cannot be left ownerless by accident either.
 - Assigning a member's **direct manager** from the UI. The field and its validation exist
   (`TeamMember.managerId`, `MANAGER_NOT_IN_TEAM`); only the owner/manager-facing control is
   missing, so manager scope currently comes from the seed data.
-- Company settings: level ladder editor, reward catalogue, achievement catalogue.
+- Company settings: level ladder editor, achievement catalogue editor.
 - Cross-company identity (`Membership` join model) if a person must belong to several tenants.
   Today `User` is per-company and `TeamMember` is unique per company, so one person per tenant.
 
 **Platform**
 
-- Company profile editing (name, logo upload, timezone) — the onboarding form only creates them.
+- Company profile editing beyond the name (logo upload, timezone) — the name is editable
+  since phase 10; the slug, timezone and locale stay as onboarding set them, on purpose
+  (see `updateCompanySchema`).
 - Avatar upload for members; the profile shows initials until then.
 - Browser tests (Playwright) for the wizard and the people screens; the HTTP-level flows are
   already covered.
