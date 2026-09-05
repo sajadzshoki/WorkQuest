@@ -107,9 +107,10 @@ export default defineNuxtConfig({
 
   nitro: {
     // Every API error is serialised through one handler (server/utils/error-handler.ts).
-    // Use a file URL rather than a Windows filesystem path here; Nitro emits an import
-    // string for this and plain backslash paths break static generation on Windows.
-    errorHandler: new URL('./server/utils/error-handler.ts', import.meta.url).href,
+    // Use a project-relative module path rather than an absolute filesystem URL so Nitro
+    // can bundle it for serverless/Netlify runtimes instead of trying to import a raw
+    // source file from the deployment filesystem.
+    errorHandler: './server/utils/error-handler',
     experimental: { asyncContext: true },
     routeRules: {
       // Baseline browser hardening for every route: the app is a dashboard,
