@@ -486,7 +486,9 @@
     "errors": {
       "generic": "That did not work"
     },
-    "leadNeedsManager": "promote them to Team manager first"
+    "leadNeedsManager": "promote them to Team manager first",
+    "removeMemberTitle": "Remove from team",
+    "deleteTitle": "Delete team"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -972,7 +974,8 @@
       "errors": {
         "generic": "Could not save the changes"
       }
-    }
+    },
+    "removeTitle": "Remove employee"
   },
   "invitations": {
     "title": "Invitations",
@@ -999,7 +1002,8 @@
     "joinAs": "Join as {name}",
     "joinAsDetail": "Your role in this company: {role}",
     "joinedTitle": "Welcome",
-    "joinedDetail": "You joined “{company}”."
+    "joinedDetail": "You joined “{company}”.",
+    "confirmTitle": "Revoke invitation"
   },
   "wallet": {
     "title": "Wallet",

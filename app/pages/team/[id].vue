@@ -9,6 +9,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const format = useLocaleFormat()
 const toast = useToast()
+const confirm = useConfirm()
 const { user } = useSession()
 
 const teamId = computed(() => String(route.params.id ?? ''))
@@ -113,7 +114,7 @@ async function addMember() {
 }
 
 async function removeMember(userId: string, fullName: string) {
-  if (!window.confirm(t('team.removeMemberConfirm', { name: fullName }))) return
+  if (!(await confirm({ title: t('team.removeMemberTitle'), description: t('team.removeMemberConfirm', { name: fullName }), tone: 'error' }))) return
   busy.value = true
   try {
     await $fetch(`/api/teams/${teamId.value}/members/${userId}`, { method: 'DELETE' })
@@ -129,7 +130,7 @@ async function removeMember(userId: string, fullName: string) {
 
 async function destroy() {
   if (!team.value) return
-  if (!window.confirm(t('team.deleteConfirm', { name: team.value.name }))) return
+  if (!(await confirm({ title: t('team.deleteTitle'), description: t('team.deleteConfirm', { name: team.value.name }), tone: 'error', icon: 'i-heroicons-trash' }))) return
   busy.value = true
   try {
     await $fetch(`/api/teams/${teamId.value}`, { method: 'DELETE' })

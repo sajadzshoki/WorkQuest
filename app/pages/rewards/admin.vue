@@ -405,6 +405,8 @@ async function saveRules() {
               :src="reward.imageUrl"
               :alt="reward.title"
               class="size-full object-cover"
+              loading="lazy"
+              decoding="async"
             >
             <UIcon
               v-else

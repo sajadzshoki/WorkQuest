@@ -486,7 +486,9 @@
     "errors": {
       "generic": "انجام این کار ناموفق بود"
     },
-    "leadNeedsManager": "ابتدا نقش او را به «مدیر تیم» ارتقا دهید"
+    "leadNeedsManager": "ابتدا نقش او را به «مدیر تیم» ارتقا دهید",
+    "removeMemberTitle": "حذف از تیم",
+    "deleteTitle": "حذف تیم"
   },
   "leaderboard": {
     "title": "جدول امتیازها",
@@ -972,7 +974,8 @@
       "errors": {
         "generic": "ذخیره تغییرات ناموفق بود"
       }
-    }
+    },
+    "removeTitle": "حذف کارمند"
   },
   "invitations": {
     "title": "دعوت‌نامه‌ها",
@@ -999,7 +1002,8 @@
     "joinAs": "پیوستن به‌عنوان {name}",
     "joinAsDetail": "نقش شما در این شرکت: {role}",
     "joinedTitle": "خوش آمدید",
-    "joinedDetail": "به «{company}» پیوستید."
+    "joinedDetail": "به «{company}» پیوستید.",
+    "confirmTitle": "لغو دعوت‌نامه"
   },
   "wallet": {
     "title": "کیف پول",

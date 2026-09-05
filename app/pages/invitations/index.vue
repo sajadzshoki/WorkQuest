@@ -7,6 +7,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const format = useLocaleFormat()
 const toast = useToast()
+const confirm = useConfirm()
 const { can } = useCan()
 
 /**
@@ -51,7 +52,7 @@ function daysLeft(expiresAt: string): string {
 }
 
 async function revoke(id: string, fullName: string) {
-  if (!window.confirm(t('invitations.revokeConfirm', { name: fullName }))) return
+  if (!(await confirm({ title: t('invitations.confirmTitle'), description: t('invitations.revokeConfirm', { name: fullName }), tone: 'error' }))) return
 
   revokingId.value = id
   try {

@@ -188,8 +188,38 @@ const employeeRowTone = (row: AnalyticsEmployeeRow) =>
       :description="errorMessage"
     />
 
+    <!-- First paint: the shape of the page before the numbers arrive, so a
+         slow request reads as "loading", not as an empty dashboard. -->
     <div
-      v-else-if="data"
+      v-else-if="!data"
+      class="space-y-4"
+      aria-busy="true"
+    >
+      <USkeleton class="h-6 w-40" />
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div
+          v-for="index in 6"
+          :key="index"
+          class="wq-panel p-3.5"
+        >
+          <USkeleton class="size-5 rounded-md" />
+          <USkeleton class="mt-2 h-6 w-16" />
+          <USkeleton class="mt-2 h-3 w-20" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div
+          v-for="index in 2"
+          :key="index"
+          class="wq-panel p-5"
+        >
+          <USkeleton class="h-40 w-full" />
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-else
       class="space-y-4"
     >
       <!-- scope + window of every number below -->
@@ -358,110 +388,181 @@ const employeeRowTone = (row: AnalyticsEmployeeRow) =>
           icon="i-heroicons-users"
           :title="t('analytics.employees.empty')"
         />
-        <div
-          v-else
-          class="-mx-4 overflow-x-auto px-4 sm:-mx-5 sm:px-5"
-        >
-          <table class="w-full min-w-[900px] text-sm">
-            <thead>
-              <tr class="border-b border-default text-start text-xs text-muted">
-                <th class="px-2 py-2.5 text-start font-semibold">
-                  {{ t('analytics.employees.employee') }}
-                </th>
-                <th class="px-2 py-2.5 text-start font-semibold">
-                  {{ t('analytics.employees.team') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.completed') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.avgScore') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.onTime') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.xp') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.level') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.coinsEarned') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.coinsSpent') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.achievements') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.recognition') }}
-                </th>
-                <th class="px-2 py-2.5 text-end font-semibold">
-                  {{ t('analytics.employees.streak') }}
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-default">
-              <tr
-                v-for="row in employees"
-                :key="row.id"
-                class="transition-colors hover:bg-elevated/50"
-              >
-                <td class="px-2 py-3">
-                  <NuxtLink
-                    :to="localePath(`/members/${row.id}`)"
-                    class="flex items-center gap-2.5 font-bold text-highlighted hover:text-primary"
-                  >
-                    <UAvatar
-                      :src="row.avatarUrl ?? undefined"
-                      :text="row.fullName.charAt(0)"
-                      size="sm"
-                    />
-                    <span class="whitespace-nowrap">{{ row.fullName }}</span>
-                  </NuxtLink>
-                </td>
-                <td class="whitespace-nowrap px-2 py-3 text-xs text-muted">
-                  {{ row.teamName ?? '—' }}
-                </td>
-                <td class="px-2 py-3 text-end font-bold tabular-nums text-highlighted">
-                  {{ format.number(row.tasksCompleted) }}
-                </td>
-                <td class="px-2 py-3 text-end tabular-nums">
-                  {{ numberOrDash(row.averageScore) }}
-                </td>
-                <td
-                  class="px-2 py-3 text-end tabular-nums"
-                  :class="employeeRowTone(row)"
+
+        <!--
+          Two layouts, not one shrunken table: phones get a card per employee
+          with the handful of numbers that matter on a small screen; the full
+          twelve-column table waits for a viewport that can actually hold it.
+        -->
+        <template v-else>
+          <ul class="grid gap-3 sm:hidden">
+            <li
+              v-for="row in employees"
+              :key="row.id"
+              class="wq-panel p-4"
+            >
+              <div class="flex items-center gap-3">
+                <UAvatar
+                  :src="row.avatarUrl ?? undefined"
+                  :text="row.fullName.charAt(0)"
+                  size="sm"
+                />
+                <NuxtLink
+                  :to="localePath(`/members/${row.id}`)"
+                  class="min-w-0 flex-1 truncate text-sm font-bold text-highlighted hover:text-primary"
                 >
-                  {{ percentOrDash(row.onTimeRate) }}
-                </td>
-                <td class="px-2 py-3 text-end tabular-nums text-highlighted">
-                  {{ format.compact(row.xp) }}
-                </td>
-                <td class="whitespace-nowrap px-2 py-3 text-end text-xs text-muted">
-                  {{ row.level === null ? '—' : `${t('analytics.employees.level')} ${format.number(row.level)}${row.levelTitle ? ` · ${row.levelTitle}` : ''}` }}
-                </td>
-                <td class="px-2 py-3 text-end tabular-nums">
-                  {{ format.number(row.coinsEarned) }}
-                </td>
-                <td class="px-2 py-3 text-end tabular-nums text-muted">
-                  {{ format.number(row.coinsSpent) }}
-                </td>
-                <td class="px-2 py-3 text-end tabular-nums">
-                  {{ format.number(row.achievements) }}
-                </td>
-                <td class="px-2 py-3 text-end tabular-nums">
-                  {{ format.number(row.recognition) }}
-                </td>
-                <td class="px-2 py-3 text-end tabular-nums">
-                  {{ format.number(row.currentStreak) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  {{ row.fullName }}
+                </NuxtLink>
+                <span class="shrink-0 text-[11px] text-muted">{{ row.teamName ?? '—' }}</span>
+              </div>
+
+              <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div class="rounded-lg bg-elevated p-2">
+                  <dt class="text-[10px] text-muted">
+                    {{ t('analytics.employees.completed') }}
+                  </dt>
+                  <dd class="mt-0.5 text-sm font-black tabular-nums text-highlighted">
+                    {{ format.number(row.tasksCompleted) }}
+                  </dd>
+                </div>
+                <div class="rounded-lg bg-elevated p-2">
+                  <dt class="text-[10px] text-muted">
+                    {{ t('analytics.employees.avgScore') }}
+                  </dt>
+                  <dd class="mt-0.5 text-sm font-black tabular-nums text-highlighted">
+                    {{ numberOrDash(row.averageScore) }}
+                  </dd>
+                </div>
+                <div class="rounded-lg bg-elevated p-2">
+                  <dt class="text-[10px] text-muted">
+                    {{ t('analytics.employees.onTime') }}
+                  </dt>
+                  <dd
+                    class="mt-0.5 text-sm font-black tabular-nums"
+                    :class="employeeRowTone(row)"
+                  >
+                    {{ percentOrDash(row.onTimeRate) }}
+                  </dd>
+                </div>
+              </dl>
+
+              <div class="mt-2.5 flex items-center justify-between text-[11px] text-muted">
+                <span class="inline-flex items-center gap-1">
+                  <UIcon
+                    name="i-heroicons-bolt"
+                    class="size-3.5 text-primary"
+                  />
+                  {{ format.compact(row.xp) }} XP
+                </span>
+                <span v-if="row.level !== null">
+                  {{ t('analytics.employees.level') }} {{ format.number(row.level) }}{{ row.levelTitle ? ` · ${row.levelTitle}` : '' }}
+                </span>
+              </div>
+            </li>
+          </ul>
+
+          <div class="hidden -mx-4 overflow-x-auto px-4 sm:-mx-5 sm:block sm:px-5">
+            <table class="w-full min-w-[900px] text-sm">
+              <thead>
+                <tr class="border-b border-default text-start text-xs text-muted">
+                  <th class="px-2 py-2.5 text-start font-semibold">
+                    {{ t('analytics.employees.employee') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-start font-semibold">
+                    {{ t('analytics.employees.team') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.completed') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.avgScore') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.onTime') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.xp') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.level') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.coinsEarned') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.coinsSpent') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.achievements') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.recognition') }}
+                  </th>
+                  <th class="px-2 py-2.5 text-end font-semibold">
+                    {{ t('analytics.employees.streak') }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-default">
+                <tr
+                  v-for="row in employees"
+                  :key="row.id"
+                  class="transition-colors hover:bg-elevated/50"
+                >
+                  <td class="px-2 py-3">
+                    <NuxtLink
+                      :to="localePath(`/members/${row.id}`)"
+                      class="flex items-center gap-2.5 font-bold text-highlighted hover:text-primary"
+                    >
+                      <UAvatar
+                        :src="row.avatarUrl ?? undefined"
+                        :text="row.fullName.charAt(0)"
+                        size="sm"
+                      />
+                      <span class="whitespace-nowrap">{{ row.fullName }}</span>
+                    </NuxtLink>
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-3 text-xs text-muted">
+                    {{ row.teamName ?? '—' }}
+                  </td>
+                  <td class="px-2 py-3 text-end font-bold tabular-nums text-highlighted">
+                    {{ format.number(row.tasksCompleted) }}
+                  </td>
+                  <td class="px-2 py-3 text-end tabular-nums">
+                    {{ numberOrDash(row.averageScore) }}
+                  </td>
+                  <td
+                    class="px-2 py-3 text-end tabular-nums"
+                    :class="employeeRowTone(row)"
+                  >
+                    {{ percentOrDash(row.onTimeRate) }}
+                  </td>
+                  <td class="px-2 py-3 text-end tabular-nums text-highlighted">
+                    {{ format.compact(row.xp) }}
+                  </td>
+                  <td class="whitespace-nowrap px-2 py-3 text-end text-xs text-muted">
+                    {{ row.level === null ? '—' : `${t('analytics.employees.level')} ${format.number(row.level)}${row.levelTitle ? ` · ${row.levelTitle}` : ''}` }}
+                  </td>
+                  <td class="px-2 py-3 text-end tabular-nums">
+                    {{ format.number(row.coinsEarned) }}
+                  </td>
+                  <td class="px-2 py-3 text-end tabular-nums text-muted">
+                    {{ format.number(row.coinsSpent) }}
+                  </td>
+                  <td class="px-2 py-3 text-end tabular-nums">
+                    {{ format.number(row.achievements) }}
+                  </td>
+                  <td class="px-2 py-3 text-end tabular-nums">
+                    {{ format.number(row.recognition) }}
+                  </td>
+                  <td class="px-2 py-3 text-end tabular-nums">
+                    {{ format.number(row.currentStreak) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </CommonSectionCard>
 
       <!-- the admin hub — only for people who can actually use the targets -->
