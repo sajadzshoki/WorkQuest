@@ -63,7 +63,94 @@
     "expand": "باز کردن منو",
     "members": "کارکنان",
     "invitations": "دعوت‌نامه‌ها",
-    "challenges": "چالش‌ها"
+    "challenges": "چالش‌ها",
+    "analytics": "تحلیل سازمان"
+  },
+  "analytics": {
+    "title": "تحلیل سازمان",
+    "subtitle": "تصویری از عملکرد سازمان، بر اساس داده‌های واقعی تسک‌ها و دفترهای امتیاز",
+    "subtitleTeam": "عملکرد اعضای زیرمجموعه و تیم‌های تحت مدیریت شما",
+    "scopeCompany": "نمای کل سازمان",
+    "scopeTeam": "نمای تیمی",
+    "rangeLabel": "بازه {from} تا {to}",
+    "noData": "داده‌ای برای نمایش نیست",
+    "kpis": {
+      "totalEmployees": "کل کارکنان",
+      "activeEmployees": "کارکنان فعال",
+      "tasks": "کل تسک‌ها",
+      "completedTasks": "تسک‌های تکمیل‌شده",
+      "pendingReviews": "در انتظار بررسی",
+      "overdueTasks": "عقب‌افتاده",
+      "averageScore": "میانگین عملکرد",
+      "onTimeRate": "نرخ تحویل به‌موقع",
+      "totalXp": "مجموع XP تولیدی",
+      "totalCoinsEarned": "سکه‌های کسب‌شده",
+      "coinsRedeemed": "سکه‌های خرج‌شده"
+    },
+    "charts": {
+      "tasksCompleted": "تسک‌های تکمیل‌شده در طول زمان",
+      "averageScore": "روند میانگین عملکرد",
+      "xpEarned": "XP کسب‌شده در طول زمان",
+      "coins": "سکه‌ها: کسب در برابر خرج",
+      "coinsEarned": "کسب‌شده",
+      "coinsRedeemed": "خرج‌شده"
+    },
+    "employees": {
+      "title": "عملکرد کارکنان",
+      "description": "هر عدد مستقیماً از تسک‌ها، دفترهای XP و سکه و قدردانی‌ها محاسبه می‌شود",
+      "employee": "کارمند",
+      "team": "تیم",
+      "completed": "تکمیل‌شده",
+      "avgScore": "میانگین نمره",
+      "onTime": "به‌موقع",
+      "xp": "XP",
+      "level": "سطح",
+      "coinsEarned": "سکه کسب‌شده",
+      "coinsSpent": "سکه خرج‌شده",
+      "achievements": "دستاورد",
+      "recognition": "قدردانی",
+      "streak": "روز پیوسته",
+      "empty": "کارمندی در این بازه برای نمایش نیست"
+    },
+    "teams": {
+      "title": "عملکرد تیم‌ها",
+      "members": "عضو",
+      "completionRate": "نرخ تکمیل",
+      "avgScore": "میانگین نمره",
+      "onTime": "به‌موقع",
+      "activeTasks": "تسک فعال",
+      "overdue": "عقب‌افتاده",
+      "empty": "تیمی برای نمایش نیست"
+    },
+    "hub": {
+      "title": "مدیریت سازمان",
+      "description": "میان‌بر به صفحات مدیریتی",
+      "settings": "پروفایل شرکت",
+      "settingsDesc": "نام شرکت و اطلاعات پایه",
+      "team": "تیم‌ها",
+      "teamDesc": "ساختار تیم‌ها و اعضا",
+      "members": "کارکنان",
+      "membersDesc": "مدیریت افراد، نقش‌ها و وضعیت",
+      "recognition": "قدردانی‌ها",
+      "recognitionDesc": "دسته‌ها و دوره‌های قدردانی",
+      "rewards": "پاداش‌ها و قوانین",
+      "rewardsDesc": "غرفه پاداش و قوانین گیمیفیکیشن",
+      "challenges": "چالش‌ها",
+      "challengesDesc": "چالش‌های سازمان و پیشرفت آن‌ها"
+    },
+    "profile": {
+      "title": "پروفایل عملکرد",
+      "avgScore": "میانگین نمره",
+      "onTimeRate": "نرخ تحویل به‌موقع",
+      "coinsEarned": "سکه کسب‌شده",
+      "coinsSpent": "سکه خرج‌شده",
+      "achievements": "دستاورد",
+      "recognition": "قدردانی دریافتی",
+      "scoreTrend": "روند نمره (۳۰ روز گذشته)",
+      "recentTasks": "آخرین تسک‌های تأییدشده",
+      "noRecentTasks": "تسک تأییدشده‌ای برای نمایش نیست"
+    },
+    "accessDenied": "دسترسی به تحلیل سازمان ندارید"
   },
   "auth": {
     "loginTitle": "ورود به ورک‌کوئست",
@@ -673,6 +760,45 @@
         "filterStatus": "وضعیت",
         "filterReward": "پاداش",
         "allRewards": "همهٔ پاداش‌ها"
+      },
+      "rules": {
+        "title": "قوانین گیمیفیکیشن",
+        "description": "نسخهٔ فعال: {version}",
+        "edit": "ویرایش قوانین",
+        "versioningHint": "هر ذخیره یک نسخهٔ جدید منتشر می‌کند؛ پرداخت‌های قبلی با نسخهٔ خودشان توضیح داده می‌شوند",
+        "activeSummary": "پایه: {xp} XP و {coins} سکه برای هر تسک",
+        "saved": "نسخهٔ جدید قوانین منتشر شد",
+        "saveError": "ذخیرهٔ قوانین ناموفق بود",
+        "invalid": "مقادیر واردشده معتبر نیست",
+        "groups": {
+          "base": "مقدار پایه",
+          "priority": "ضریب اولویت",
+          "quality": "ضریب کیفیت",
+          "bonus": "پاداش‌ها",
+          "penalty": "جریمه‌ها",
+          "limits": "سقف ضریب"
+        },
+        "fields": {
+          "baseXp": "XP پایه",
+          "baseCoins": "سکه پایه",
+          "lowPriorityBp": "اولویت کم (واحد در هزار)",
+          "mediumPriorityBp": "اولویت متوسط (واحد در هزار)",
+          "highPriorityBp": "اولویت بالا (واحد در هزار)",
+          "excellentBp": "عالی (واحد در هزار)",
+          "goodBp": "خوب (واحد در هزار)",
+          "fairBp": "متوسط (واحد در هزار)",
+          "poorBp": "ضعیف (واحد در هزار)",
+          "onTimeBonusBp": "پاداش تحویل به‌موقع (واحد در هزار)",
+          "earlyBonusBp": "پاداش تحویل زودتر (واحد در هزار)",
+          "earlyDays": "روز زودتر برای پاداش",
+          "highQualityBonusBp": "پاداش کیفیت بالا (واحد در هزار)",
+          "highQualityThreshold": "آستانهٔ کیفیت بالا (۱ تا ۵)",
+          "overduePenaltyBp": "جریمهٔ تأخیر (واحد در هزار)",
+          "revisionPenaltyBp": "جریمهٔ هر بازگشت (واحد در هزار)",
+          "maxRevisionPenaltyBp": "سقف جریمهٔ بازگشت (واحد در هزار)",
+          "minMultiplierBp": "حداقل ضریب نهایی (واحد در هزار)",
+          "maxMultiplierBp": "حداکثر ضریب نهایی (واحد در هزار)"
+        }
       }
     }
   },
@@ -722,7 +848,12 @@
     "themeLabel": "پوسته",
     "saved": "تغییرات ذخیره شد",
     "companyInfo": "اطلاعات سازمان",
-    "timezone": "منطقه زمانی"
+    "timezone": "منطقه زمانی",
+    "companyNameLabel": "نام سازمان",
+    "companyNamePlaceholder": "نام سازمان را وارد کنید",
+    "companySaved": "نام سازمان به‌روزرسانی شد",
+    "companySaveError": "ذخیرهٔ نام سازمان ناموفق بود",
+    "companyNameHint": "نام نمایشی سازمان؛ تغییر آدرس (slug)، منطقه زمانی و زبان فقط هنگام ساخت سازمان تعیین می‌شود"
   },
   "roles": {
     "OWNER": "مالک",

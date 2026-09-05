@@ -63,7 +63,94 @@
     "expand": "Expand menu",
     "members": "Employees",
     "invitations": "Invitations",
-    "challenges": "Challenges"
+    "challenges": "Challenges",
+    "analytics": "Analytics"
+  },
+  "analytics": {
+    "title": "Organization analytics",
+    "subtitle": "A picture of company performance, computed from real task and ledger data",
+    "subtitleTeam": "Performance of your reports and the teams you lead",
+    "scopeCompany": "Company-wide view",
+    "scopeTeam": "Team view",
+    "rangeLabel": "{from} — {to}",
+    "noData": "No data to show yet",
+    "kpis": {
+      "totalEmployees": "Total employees",
+      "activeEmployees": "Active employees",
+      "tasks": "All tasks",
+      "completedTasks": "Completed tasks",
+      "pendingReviews": "Pending reviews",
+      "overdueTasks": "Overdue",
+      "averageScore": "Average score",
+      "onTimeRate": "On-time rate",
+      "totalXp": "Total XP generated",
+      "totalCoinsEarned": "Coins earned",
+      "coinsRedeemed": "Coins redeemed"
+    },
+    "charts": {
+      "tasksCompleted": "Tasks completed over time",
+      "averageScore": "Average score over time",
+      "xpEarned": "XP earned over time",
+      "coins": "Coins: earned vs redeemed",
+      "coinsEarned": "Earned",
+      "coinsRedeemed": "Redeemed"
+    },
+    "employees": {
+      "title": "Employee performance",
+      "description": "Every number is computed straight from tasks, XP and coin ledgers, and recognitions",
+      "employee": "Employee",
+      "team": "Team",
+      "completed": "Completed",
+      "avgScore": "Avg score",
+      "onTime": "On time",
+      "xp": "XP",
+      "level": "Level",
+      "coinsEarned": "Coins earned",
+      "coinsSpent": "Coins spent",
+      "achievements": "Achievements",
+      "recognition": "Recognition",
+      "streak": "Day streak",
+      "empty": "Nobody to show in this scope yet"
+    },
+    "teams": {
+      "title": "Team performance",
+      "members": "members",
+      "completionRate": "Completion rate",
+      "avgScore": "Avg score",
+      "onTime": "On time",
+      "activeTasks": "Active tasks",
+      "overdue": "Overdue",
+      "empty": "No teams to show yet"
+    },
+    "hub": {
+      "title": "Manage the organization",
+      "description": "Shortcuts to the admin pages",
+      "settings": "Company profile",
+      "settingsDesc": "Company name and basics",
+      "team": "Teams",
+      "teamDesc": "Team structure and members",
+      "members": "Employees",
+      "membersDesc": "People, roles and status",
+      "recognition": "Recognition",
+      "recognitionDesc": "Categories and cycles",
+      "rewards": "Rewards & rules",
+      "rewardsDesc": "Reward shop and gamification rules",
+      "challenges": "Challenges",
+      "challengesDesc": "Company challenges and progress"
+    },
+    "profile": {
+      "title": "Performance profile",
+      "avgScore": "Average score",
+      "onTimeRate": "On-time rate",
+      "coinsEarned": "Coins earned",
+      "coinsSpent": "Coins spent",
+      "achievements": "Achievements",
+      "recognition": "Recognition received",
+      "scoreTrend": "Score trend (last 30 days)",
+      "recentTasks": "Recent approved tasks",
+      "noRecentTasks": "No approved tasks to show yet"
+    },
+    "accessDenied": "You do not have access to organization analytics"
   },
   "auth": {
     "loginTitle": "Sign in to WorkQuest",
@@ -673,6 +760,45 @@
         "filterStatus": "Status",
         "filterReward": "Reward",
         "allRewards": "All rewards"
+      },
+      "rules": {
+        "title": "Gamification rules",
+        "description": "Active version: {version}",
+        "edit": "Edit rules",
+        "versioningHint": "Every save publishes a new version; past payouts stay explained by the version that produced them",
+        "activeSummary": "Base: {xp} XP and {coins} coins per task",
+        "saved": "A new rules version was published",
+        "saveError": "Could not save the rules",
+        "invalid": "Some values are not valid",
+        "groups": {
+          "base": "Base payout",
+          "priority": "Priority multipliers",
+          "quality": "Quality multipliers",
+          "bonus": "Bonuses",
+          "penalty": "Penalties",
+          "limits": "Multiplier caps"
+        },
+        "fields": {
+          "baseXp": "Base XP",
+          "baseCoins": "Base coins",
+          "lowPriorityBp": "Low priority (bp)",
+          "mediumPriorityBp": "Medium priority (bp)",
+          "highPriorityBp": "High priority (bp)",
+          "excellentBp": "Excellent (bp)",
+          "goodBp": "Good (bp)",
+          "fairBp": "Fair (bp)",
+          "poorBp": "Poor (bp)",
+          "onTimeBonusBp": "On-time bonus (bp)",
+          "earlyBonusBp": "Early delivery bonus (bp)",
+          "earlyDays": "Early days for bonus",
+          "highQualityBonusBp": "High-quality bonus (bp)",
+          "highQualityThreshold": "High-quality threshold (1–5)",
+          "overduePenaltyBp": "Overdue penalty (bp)",
+          "revisionPenaltyBp": "Per-revision penalty (bp)",
+          "maxRevisionPenaltyBp": "Revision penalty cap (bp)",
+          "minMultiplierBp": "Minimum final multiplier (bp)",
+          "maxMultiplierBp": "Maximum final multiplier (bp)"
+        }
       }
     }
   },
@@ -722,7 +848,12 @@
     "themeLabel": "Theme",
     "saved": "Changes saved",
     "companyInfo": "Company details",
-    "timezone": "Timezone"
+    "timezone": "Timezone",
+    "companyNameLabel": "Company name",
+    "companyNamePlaceholder": "Enter the company name",
+    "companySaved": "Company name updated",
+    "companySaveError": "Could not save the company name",
+    "companyNameHint": "Display name only — the address (slug), timezone and language are fixed when the company is created"
   },
   "roles": {
     "OWNER": "Owner",

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type {
+  ApiErrorBody,
   RedemptionListResponse,
   RedemptionSummary,
   RewardAdminItem,
   RewardAdminResponse,
 } from '#shared/types/api'
 import type { RedemptionAction } from '#shared/utils/marketplace'
+import type { RewardRulesInput } from '#shared/schemas'
 
+import { rewardRulesSchema } from '#shared/schemas'
 import { CATALOG_STATUSES, REDEMPTION_STATUSES, REWARD_TYPES } from '#shared/utils/marketplace'
 import { can } from '#shared/utils/permissions'
 
@@ -144,6 +147,76 @@ const stats = computed(() => {
     { key: 'listed', value: items.filter(item => item.status === 'ACTIVE').length, icon: 'i-heroicons-building-storefront', tone: 'text-primary' },
   ]
 })
+
+// --- Gamification rules -----------------------------------------------------
+
+/**
+ * The economy itself: the numbers that turn a review into XP and coins. The
+ * endpoints have existed since the reward engine shipped — this is the first
+ * surface that edits them. Saving never mutates history: the API publishes a
+ * new version and freezes the old payouts' explanations in place.
+ */
+type EconomyRules = RewardRulesInput & { version: number }
+
+const RULE_FIELD_GROUPS: Array<{ key: 'base' | 'priority' | 'quality' | 'bonus' | 'penalty' | 'limits', fields: Array<keyof RewardRulesInput> }> = [
+  { key: 'base', fields: ['baseXp', 'baseCoins'] },
+  { key: 'priority', fields: ['lowPriorityBp', 'mediumPriorityBp', 'highPriorityBp'] },
+  { key: 'quality', fields: ['excellentBp', 'goodBp', 'fairBp', 'poorBp', 'highQualityThreshold', 'highQualityBonusBp'] },
+  { key: 'bonus', fields: ['onTimeBonusBp', 'earlyBonusBp', 'earlyDays'] },
+  { key: 'penalty', fields: ['overduePenaltyBp', 'revisionPenaltyBp', 'maxRevisionPenaltyBp'] },
+  { key: 'limits', fields: ['minMultiplierBp', 'maxMultiplierBp'] },
+]
+
+const { data: rulesData, refresh: refreshRules } = await useFetch<{ rules: EconomyRules }>(
+  '/api/rewards/rules',
+)
+
+const rulesOpen = ref(false)
+const rulesSaving = ref(false)
+const rulesError = ref<string | null>(null)
+/** Form state, stringly on purpose: `<input type="number">` speaks strings. */
+const rulesForm = ref<Record<string, string>>({})
+
+const activeRules = computed(() => rulesData.value?.rules ?? null)
+
+function openRules() {
+  const rules = activeRules.value
+  if (!rules) return
+  rulesForm.value = Object.fromEntries(
+    Object.entries(rules)
+      .filter(([key]) => key !== 'version')
+      .map(([key, value]) => [key, String(value)]),
+  )
+  rulesError.value = null
+  rulesOpen.value = true
+}
+
+async function saveRules() {
+  const parsed = rewardRulesSchema.safeParse(rulesForm.value)
+  if (!parsed.success) {
+    rulesError.value = parsed.error.issues[0]?.message ?? t('rewards.admin.rules.invalid')
+    return
+  }
+  if (parsed.data.minMultiplierBp > parsed.data.maxMultiplierBp) {
+    rulesError.value = t('rewards.admin.rules.invalid')
+    return
+  }
+  rulesSaving.value = true
+  rulesError.value = null
+  try {
+    await $fetch('/api/rewards/rules', { method: 'PUT', body: parsed.data })
+    await refreshRules()
+    rulesOpen.value = false
+    toast.add({ title: t('rewards.admin.rules.saved'), color: 'success', icon: 'i-heroicons-check-circle' })
+  }
+  catch (err) {
+    const payload = (err as { data?: ApiErrorBody }).data
+    rulesError.value = payload?.message ?? t('rewards.admin.rules.saveError')
+  }
+  finally {
+    rulesSaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -192,6 +265,38 @@ const stats = computed(() => {
         </p>
       </div>
     </div>
+
+    <!-- Gamification rules: the economy behind the payouts -->
+    <CommonSectionCard
+      class="mb-6"
+      :title="t('rewards.admin.rules.title')"
+      icon="i-heroicons-adjustments-horizontal"
+      :description="activeRules
+        ? t('rewards.admin.rules.description', { version: format.number(activeRules.version) })
+        : undefined"
+    >
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p
+            v-if="activeRules"
+            class="text-sm text-highlighted"
+          >
+            {{ t('rewards.admin.rules.activeSummary', { xp: format.number(activeRules.baseXp), coins: format.number(activeRules.baseCoins) }) }}
+          </p>
+          <p class="mt-1 text-xs text-muted">
+            {{ t('rewards.admin.rules.versioningHint') }}
+          </p>
+        </div>
+        <UButton
+          color="primary"
+          variant="soft"
+          icon="i-heroicons-pencil-square"
+          @click="openRules"
+        >
+          {{ t('rewards.admin.rules.edit') }}
+        </UButton>
+      </div>
+    </CommonSectionCard>
 
     <!-- Queue -->
     <CommonSectionCard
@@ -434,5 +539,68 @@ const stats = computed(() => {
       :reward="editing"
       @saved="refreshAll"
     />
+
+    <!-- The economy editor. Fields are grouped the way the payout formula
+         reads: what a task is worth, how priority and quality scale it, which
+         behaviours earn a bonus, which lose one, and the guard rails. -->
+    <UModal
+      v-model:open="rulesOpen"
+      :title="t('rewards.admin.rules.title')"
+      :description="t('rewards.admin.rules.versioningHint')"
+    >
+      <template #body>
+        <div class="space-y-5">
+          <p
+            v-if="rulesError"
+            class="rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error"
+          >
+            {{ rulesError }}
+          </p>
+
+          <fieldset
+            v-for="group in RULE_FIELD_GROUPS"
+            :key="group.key"
+          >
+            <legend class="mb-2 text-xs font-bold text-muted">
+              {{ t(`rewards.admin.rules.groups.${group.key}`) }}
+            </legend>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <UFormField
+                v-for="field in group.fields"
+                :key="field"
+                :label="t(`rewards.admin.rules.fields.${field}`)"
+              >
+                <UInput
+                  v-model="rulesForm[field]"
+                  type="number"
+                  class="w-full"
+                  :disabled="rulesSaving"
+                />
+              </UFormField>
+            </div>
+          </fieldset>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="flex w-full items-center justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            @click="rulesOpen = false"
+          >
+            {{ t('common.cancel') }}
+          </UButton>
+          <UButton
+            color="primary"
+            icon="i-heroicons-paper-airplane"
+            :loading="rulesSaving"
+            @click="saveRules"
+          >
+            {{ t('common.save') }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

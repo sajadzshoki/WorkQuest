@@ -30,6 +30,9 @@ export function useNavItems() {
     // People management: an EMPLOYEE has nobody to manage, so the entry would
     // only ever show them a one-row list of themselves.
     { key: 'members', label: t('nav.members'), to: localePath('/members'), icon: 'i-heroicons-users', permission: 'member:read' },
+    // Company analytics: managers see their own scope, admins the company —
+    // an employee has a personal dashboard instead.
+    { key: 'analytics', label: t('nav.analytics'), to: localePath('/analytics'), icon: 'i-heroicons-chart-bar-square', permission: 'analytics:read' },
     { key: 'invitations', label: t('nav.invitations'), to: localePath('/invitations'), icon: 'i-heroicons-envelope', permission: 'member:invite' },
     { key: 'leaderboard', label: t('nav.leaderboard'), to: localePath('/leaderboard'), icon: 'i-heroicons-trophy' },
     { key: 'recognition', label: t('nav.recognition'), to: localePath('/recognition'), icon: 'i-heroicons-hand-thumb-up' },

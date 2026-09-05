@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import type { ApiErrorBody, CompanyUpdateResponse } from '#shared/types/api'
+
+import { updateCompanySchema } from '#shared/schemas'
+
 definePageMeta({ middleware: ['auth'] })
 
 const { t, locale, locales, setLocale } = useI18n()
 const colorMode = useColorMode()
-const { user, company } = useSession()
+const { user, company, refresh } = useSession()
 const format = useLocaleFormat()
 const toast = useToast()
+const { can } = useCan()
 
 const localeItems = computed(() =>
   locales.value.map(entry => ({
@@ -41,6 +46,44 @@ const profileFields = computed(() => [
   { label: t('settings.email'), value: user.value?.email ?? '—' },
   { label: t('settings.role'), value: t(`roles.${user.value?.role ?? 'EMPLOYEE'}`) },
 ])
+
+// ---- company profile -------------------------------------------------------
+
+const canEditCompany = can('company:update')
+const companyName = ref('')
+const companySaving = ref(false)
+const companyError = ref<string | null>(null)
+
+watchEffect(() => {
+  if (company.value && !companySaving.value) companyName.value = company.value.name
+})
+
+async function saveCompany() {
+  const parsed = updateCompanySchema.safeParse({ name: companyName.value })
+  if (!parsed.success) {
+    companyError.value = parsed.error.issues[0]?.message ?? t('settings.companySaveError')
+    return
+  }
+  companySaving.value = true
+  companyError.value = null
+  try {
+    await $fetch<CompanyUpdateResponse>('/api/companies', {
+      method: 'PATCH',
+      body: parsed.data,
+    })
+    // Refresh the session so the header/sidebar pick the new name up too,
+    // not just this form.
+    await refresh()
+    toast.add({ title: t('settings.companySaved'), color: 'success', icon: 'i-heroicons-check-circle' })
+  }
+  catch (err) {
+    const payload = (err as { data?: ApiErrorBody }).data
+    companyError.value = payload?.message ?? t('settings.companySaveError')
+  }
+  finally {
+    companySaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -140,6 +183,38 @@ const profileFields = computed(() => [
           :title="t('settings.companyInfo')"
           icon="i-heroicons-building-office"
         >
+          <!-- The display name is the one editable field; the slug, timezone
+               and language are onboarding decisions the rest of the product
+               builds on, so they stay read-only here. -->
+          <form
+            v-if="canEditCompany"
+            class="mb-4 space-y-2"
+            @submit.prevent="saveCompany"
+          >
+            <UFormField
+              :label="t('settings.companyNameLabel')"
+              :error="companyError ?? undefined"
+              :hint="t('settings.companyNameHint')"
+            >
+              <UInput
+                v-model="companyName"
+                :placeholder="t('settings.companyNamePlaceholder')"
+                icon="i-heroicons-building-office-2"
+                class="w-full"
+                :disabled="companySaving"
+              />
+            </UFormField>
+            <div class="flex justify-end">
+              <UButton
+                type="submit"
+                icon="i-heroicons-check"
+                :loading="companySaving"
+              >
+                {{ t('common.save') }}
+              </UButton>
+            </div>
+          </form>
+
           <dl class="divide-y divide-default">
             <div class="flex items-center justify-between gap-4 py-2.5">
               <dt class="text-xs text-muted">

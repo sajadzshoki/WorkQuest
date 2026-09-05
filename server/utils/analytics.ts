@@ -66,19 +66,15 @@ export async function buildAnalyticsOverview(auth: AuthContext): Promise<Analyti
   const ledgerScope = managedIds ? { userId: { in: managedIds } } : {}
   const taskScope = managedIds ? { assigneeId: { in: managedIds } } : {}
 
+  // Queries run in **waves of at most six**, never fourteen at once: the
+  // development database is PGlite behind a socket with a small connection
+  // cap, and a wider fan-out kills the server rather than queueing. Three
+  // short waves cost a few milliseconds and keep the endpoint working
+  // everywhere, real PostgreSQL included.
   const [
     users,
     tasks,
     reviews,
-    xpRows,
-    xpTotal,
-    coinRows,
-    coinEarnedTotal,
-    coinRedeemedTotal,
-    progressRows,
-    walletRows,
-    achievementCounts,
-    recognitionCounts,
     levels,
     teams,
   ] = await Promise.all([
@@ -108,12 +104,31 @@ export async function buildAnalyticsOverview(auth: AuthContext): Promise<Analyti
     // the score. The nested task filter needs no companyId — TaskReview and
     // Task are stamped with the same one, and the tenant scope covers the row.
     db.taskReview.findMany({
-      where: { decision: 'APPROVED', task: taskScope },
+      where: managedIds
+        ? { decision: 'APPROVED', task: { assigneeId: { in: managedIds } } }
+        : { decision: 'APPROVED' },
       select: {
         score: true,
         task: { select: { assigneeId: true, teamId: true, completedAt: true, dueDate: true } },
       },
     }),
+    db.level.findMany({
+      orderBy: { minXp: 'asc' },
+      select: { level: true, minXp: true, title: true },
+    }),
+    db.team.findMany({
+      where: companyWide ? {} : { leadId: auth.userId },
+      select: { id: true, name: true, members: { select: { userId: true } } },
+    }),
+  ])
+
+  const [
+    xpRows,
+    xpTotal,
+    coinRows,
+    coinEarnedTotal,
+    coinRedeemedTotal,
+  ] = await Promise.all([
     db.xpTransaction.findMany({
       where: { ...ledgerScope, createdAt: { gte: seriesFrom } },
       select: { amount: true, createdAt: true },
@@ -134,6 +149,9 @@ export async function buildAnalyticsOverview(auth: AuthContext): Promise<Analyti
       where: { ...ledgerScope, type: 'REWARD_REDEMPTION' },
       _sum: { amount: true },
     }),
+  ])
+
+  const [progressRows, walletRows, achievementCounts, recognitionCounts, teamTasks] = await Promise.all([
     db.userProgress.findMany({
       where: ledgerScope,
       select: { userId: true, xp: true, currentStreak: true },
@@ -152,14 +170,12 @@ export async function buildAnalyticsOverview(auth: AuthContext): Promise<Analyti
       where: managedIds ? { toUserId: { in: managedIds } } : {},
       _count: { _all: true },
     }),
-    db.level.findMany({
-      orderBy: { minXp: 'asc' },
-      select: { level: true, minXp: true, title: true },
-    }),
-    db.team.findMany({
-      where: companyWide ? {} : { leadId: auth.userId },
-      select: { id: true, name: true, members: { select: { userId: true } } },
-    }),
+    teams.length
+      ? db.task.findMany({
+          where: { teamId: { in: teams.map(team => team.id) } },
+          select: { teamId: true, status: true, dueDate: true, completedAt: true },
+        })
+      : Promise.resolve([]),
   ])
 
   // ---- tasks & grades, in-memory -----------------------------------------
@@ -285,13 +301,6 @@ export async function buildAnalyticsOverview(auth: AuthContext): Promise<Analyti
   })
 
   // ---- team rows -------------------------------------------------------------
-
-  const teamTasks = teams.length
-    ? await db.task.findMany({
-        where: { teamId: { in: teams.map(team => team.id) } },
-        select: { teamId: true, status: true, dueDate: true, completedAt: true },
-      })
-    : []
 
   const teamsOut: AnalyticsTeamRow[] = teams.map((team) => {
     const rows = teamTasks.filter(task => task.teamId === team.id)

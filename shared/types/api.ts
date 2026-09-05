@@ -98,7 +98,7 @@ export interface CompanySummary {
 }
 
 /** `PATCH /api/companies` — the profile after the update. */
-export interface CompanyUpdateResponse extends CompanySummary {}
+export type CompanyUpdateResponse = CompanySummary
 
 /** User summary returned to the client. */
 export interface UserSummary {

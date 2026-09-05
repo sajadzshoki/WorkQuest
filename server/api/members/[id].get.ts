@@ -48,68 +48,74 @@ export default defineEventHandler(async (event): Promise<MemberDetailResponse> =
 
   const membership = user.teamMemberships[0] ?? null
 
-  const [progress, achievements, badges, taskCounts, openTasks, approvedTasks, reviewScores, wallet, achievementCount, recognitionCount]
-    = await Promise.all([
-      db.userProgress.findUnique({
-        where: { userId: user.id },
-        select: {
-          xp: true,
-          coins: true,
-          currentStreak: true,
-          longestStreak: true,
-          // `UserProgress` has no relation to `Level`, so the ladder position is
-          // resolved from `minXp` below.
-        },
-      }),
-      db.userAchievement.findMany({
-        where: { userId: user.id },
-        select: {
-          unlockedAt: true,
-          achievement: { select: { title: true, description: true, iconKey: true } },
-        },
-        orderBy: { unlockedAt: 'desc' },
-        take: 12,
-      }),
-      db.userBadge.findMany({
-        where: { userId: user.id },
-        orderBy: { awardedAt: 'desc' },
-        select: {
-          awardedAt: true,
-          badge: { select: { id: true, name: true, description: true, iconKey: true, tone: true, imageUrl: true } },
-        },
-      }),
-      db.task.groupBy({
-        by: ['status'],
-        where: { assigneeId: user.id },
-        _count: { _all: true },
-      }),
-      db.task.count({
-        where: {
-          assigneeId: user.id,
-          dueDate: { lt: new Date() },
-          status: { notIn: [...CLOSED_TASK_STATUSES] },
-        },
-      }),
-      // The deep performance profile: every approved task plus the APPROVED
-      // review that graded it — together they power the average score, the
-      // on-time rate, the 30-day trend and the recent list. One definition of
-      // each number, four views of it.
-      db.task.findMany({
-        where: { assigneeId: user.id, status: 'APPROVED', completedAt: { not: null } },
-        orderBy: { completedAt: 'desc' },
-        select: { id: true, title: true, completedAt: true, dueDate: true },
-      }),
-      db.taskReview.findMany({
-        where: { decision: 'APPROVED', task: { assigneeId: user.id } },
-        select: { taskId: true, score: true },
-      }),
-      db.wallet.findUnique({
-        where: { userId: user.id },
-        select: { lifetimeEarned: true, lifetimeSpent: true },
-      }),
-      db.userAchievement.count({ where: { userId: user.id } }),
-      db.recognition.count({ where: { toUserId: user.id } }),
-    ])
+  // Two waves, not one: the development database (PGlite over a socket) caps
+  // concurrent connections well below this fan-out, and a single wide
+  // Promise.all takes the whole server down with it. Five at a time is the
+  // proven budget — the dashboard endpoint runs the same shape.
+  const [progress, achievements, badges, taskCounts, openTasks] = await Promise.all([
+    db.userProgress.findUnique({
+      where: { userId: user.id },
+      select: {
+        xp: true,
+        coins: true,
+        currentStreak: true,
+        longestStreak: true,
+        // `UserProgress` has no relation to `Level`, so the ladder position is
+        // resolved from `minXp` below.
+      },
+    }),
+    db.userAchievement.findMany({
+      where: { userId: user.id },
+      select: {
+        unlockedAt: true,
+        achievement: { select: { title: true, description: true, iconKey: true } },
+      },
+      orderBy: { unlockedAt: 'desc' },
+      take: 12,
+    }),
+    db.userBadge.findMany({
+      where: { userId: user.id },
+      orderBy: { awardedAt: 'desc' },
+      select: {
+        awardedAt: true,
+        badge: { select: { id: true, name: true, description: true, iconKey: true, tone: true, imageUrl: true } },
+      },
+    }),
+    db.task.groupBy({
+      by: ['status'],
+      where: { assigneeId: user.id },
+      _count: { _all: true },
+    }),
+    db.task.count({
+      where: {
+        assigneeId: user.id,
+        dueDate: { lt: new Date() },
+        status: { notIn: [...CLOSED_TASK_STATUSES] },
+      },
+    }),
+  ])
+
+  const [approvedTasks, reviewScores, wallet, achievementCount, recognitionCount] = await Promise.all([
+    // The deep performance profile: every approved task plus the APPROVED
+    // review that graded it — together they power the average score, the
+    // on-time rate, the 30-day trend and the recent list. One definition of
+    // each number, four views of it.
+    db.task.findMany({
+      where: { assigneeId: user.id, status: 'APPROVED', completedAt: { not: null } },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true, title: true, completedAt: true, dueDate: true },
+    }),
+    db.taskReview.findMany({
+      where: { decision: 'APPROVED', task: { assigneeId: user.id } },
+      select: { taskId: true, score: true },
+    }),
+    db.wallet.findUnique({
+      where: { userId: user.id },
+      select: { lifetimeEarned: true, lifetimeSpent: true },
+    }),
+    db.userAchievement.count({ where: { userId: user.id } }),
+    db.recognition.count({ where: { toUserId: user.id } }),
+  ])
 
   const countOf = (status: string) =>
     taskCounts.find(row => row.status === status)?._count._all ?? 0

@@ -110,6 +110,64 @@ async function save() {
 
 const performance = computed(() => member.value?.performance ?? null)
 const progress = computed(() => member.value?.progress ?? null)
+
+/**
+ * The deep performance profile — the same numbers the company dashboard
+ * shows, for this one person: where the average comes from, whether deadlines
+ * hold, and the shape of their recent work.
+ */
+const performanceProfile = computed(() => member.value?.performanceProfile ?? null)
+
+const profileTiles = computed(() => {
+  const profile = performanceProfile.value
+  if (!profile) return []
+  return [
+    {
+      label: t('analytics.profile.avgScore'),
+      value: profile.averageScore === null ? '—' : format.number(profile.averageScore),
+      icon: 'i-heroicons-chart-bar',
+      tone: 'primary' as const,
+    },
+    {
+      label: t('analytics.profile.onTimeRate'),
+      value: profile.onTimeRate === null ? '—' : format.percent(profile.onTimeRate),
+      icon: 'i-heroicons-clock',
+      tone: 'success' as const,
+    },
+    {
+      label: t('analytics.profile.coinsEarned'),
+      value: format.number(profile.coinsEarned),
+      icon: 'i-heroicons-circle-stack-solid',
+      tone: 'coin' as const,
+    },
+    {
+      label: t('analytics.profile.coinsSpent'),
+      value: format.number(profile.coinsSpent),
+      icon: 'i-heroicons-gift',
+      tone: 'neutral' as const,
+    },
+    {
+      label: t('analytics.profile.achievements'),
+      value: format.number(profile.achievements),
+      icon: 'i-heroicons-star',
+      tone: 'streak' as const,
+    },
+    {
+      label: t('analytics.profile.recognition'),
+      value: format.number(profile.recognition),
+      icon: 'i-heroicons-hand-thumb-up',
+      tone: 'primary' as const,
+    },
+  ]
+})
+
+const scoreTrendSeries = computed(() => [
+  {
+    name: t('analytics.profile.avgScore'),
+    points: performanceProfile.value?.scoreTrend ?? [],
+    colorClass: 'text-primary',
+  },
+])
 </script>
 
 <template>
@@ -353,6 +411,78 @@ const progress = computed(() => member.value?.progress ?? null)
           </ul>
         </CommonSectionCard>
       </div>
+
+      <!-- The performance profile: not a database record — a review
+           conversation. Headline numbers first, then the trend they came
+           from, then the work itself. -->
+      <CommonSectionCard
+        :title="t('analytics.profile.title')"
+        icon="i-heroicons-chart-bar-square"
+        class="mt-4"
+      >
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <GamificationStatTile
+            v-for="tile in profileTiles"
+            :key="tile.label"
+            :label="tile.label"
+            :value="tile.value"
+            :icon="tile.icon"
+            :tone="tile.tone"
+          />
+        </div>
+
+        <div class="mt-5 grid gap-5 lg:grid-cols-2">
+          <div>
+            <h3 class="mb-2 text-xs font-bold text-muted">
+              {{ t('analytics.profile.scoreTrend') }}
+            </h3>
+            <AnalyticsLineChart
+              :series="scoreTrendSeries"
+              :max="100"
+              :format-value="format.number"
+            />
+          </div>
+
+          <div>
+            <h3 class="mb-2 text-xs font-bold text-muted">
+              {{ t('analytics.profile.recentTasks') }}
+            </h3>
+            <CommonEmptyState
+              v-if="!performanceProfile?.recentTasks.length"
+              icon="i-heroicons-clipboard-document-check"
+              :title="t('analytics.profile.noRecentTasks')"
+            />
+            <ul
+              v-else
+              class="divide-y divide-default"
+            >
+              <li
+                v-for="task in performanceProfile.recentTasks"
+                :key="task.id"
+                class="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+              >
+                <NuxtLink
+                  :to="localePath(`/tasks/${task.id}`)"
+                  class="min-w-0 flex-1 truncate text-sm text-highlighted hover:text-primary"
+                >
+                  {{ task.title }}
+                </NuxtLink>
+                <span class="shrink-0 text-xs text-dimmed">
+                  {{ format.relative(task.completedAt) }}
+                </span>
+                <UBadge
+                  :color="task.score === null ? 'neutral' : task.score >= 70 ? 'success' : task.score >= 40 ? 'warning' : 'error'"
+                  variant="subtle"
+                  size="sm"
+                  class="shrink-0 tabular-nums"
+                >
+                  {{ task.score === null ? '—' : format.number(task.score) }}
+                </UBadge>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </CommonSectionCard>
     </template>
 
     <UModal
