@@ -2,6 +2,17 @@ import { z } from 'zod'
 
 import { SUPPORTED_LOCALES, SUPPORTED_TIMEZONES } from '../constants'
 import {
+  CHALLENGE_GOAL_KEYS,
+  CHALLENGE_GOALS,
+  CHALLENGE_STATUSES,
+  CHALLENGE_TYPES,
+  GOAL_BOUNDS,
+  goalAllowedFor,
+  validateWindow,
+  type ChallengeGoalKey,
+  type ChallengeType,
+} from '../utils/challenges'
+import {
   LEADERBOARD_PERIODS,
   LEADERBOARD_SCOPES,
   MAX_LEADERBOARD_ENTRIES,
@@ -642,3 +653,115 @@ export const recognitionTitleSchema = z.object({
   description: z.string().trim().max(300).optional(),
 })
 export type RecognitionTitleInput = z.infer<typeof recognitionTitleSchema>
+
+// ---------------------------------------------------------------------------
+// Challenges
+// ---------------------------------------------------------------------------
+
+/** A datetime the forms send as `YYYY-MM-DDTHH:mm` or an ISO string. */
+const challengeDate = (message: string) => z.coerce.date({ error: message })
+
+/**
+ * The cross-field rules a challenge spec has to satisfy, shared by create
+ * validation and by the PATCH endpoint (which re-runs them on the *merged*
+ * row — a partial update must not be able to assemble an invalid challenge).
+ *
+ * Returns zod-shaped issues so both callers surface them the same way.
+ */
+export function challengeSpecIssues(spec: {
+  type: ChallengeType
+  teamId?: string | null
+  goalKey: ChallengeGoalKey
+  goalValue: number
+  startsAt: Date
+  endsAt: Date
+}): Array<{ path: string, message: string }> {
+  const issues: Array<{ path: string, message: string }> = []
+
+  if (!goalAllowedFor(spec.type, spec.goalKey)) {
+    issues.push({ path: 'goalKey', message: 'این هدف با نوع چالش سازگار نیست' })
+  }
+
+  const unit = CHALLENGE_GOALS[spec.goalKey].unit
+  const bounds = GOAL_BOUNDS[unit]
+  if (spec.goalValue < bounds.min || spec.goalValue > bounds.max) {
+    issues.push({
+      path: 'goalValue',
+      message: unit === 'percent'
+        ? 'درصد هدف باید بین ۱ تا ۱۰۰ باشد'
+        : 'تعداد هدف باید بین ۱ تا ۱۰۰٬۰۰۰ باشد',
+    })
+  }
+
+  if (spec.type === 'TEAM' && !spec.teamId) {
+    issues.push({ path: 'teamId', message: 'برای چالش تیمی، یک تیم انتخاب کنید' })
+  }
+
+  const windowIssue = validateWindow({ startsAt: spec.startsAt, endsAt: spec.endsAt }, new Date())
+  if (windowIssue === 'ORDER') {
+    issues.push({ path: 'endsAt', message: 'پایان چالش باید بعد از شروع آن باشد' })
+  }
+  else if (windowIssue === 'PAST') {
+    issues.push({ path: 'endsAt', message: 'پایان چالش باید در آینده باشد' })
+  }
+  else if (windowIssue === 'TOO_LONG') {
+    issues.push({ path: 'endsAt', message: 'چالش حداکثر می‌تواند یک سال طول بکشد' })
+  }
+
+  return issues
+}
+
+/**
+ * `POST /api/challenges` — publish a challenge.
+ *
+ * `startsAt` may be in the past ("starting today"); `endsAt` may not. The
+ * goal's shape is checked against the challenge type, and a TEAM challenge
+ * must name its team. Everything else — rewards, badge — is the company's call.
+ */
+export const createChallengeSchema = z.object({
+  title: z.string().trim().min(2, 'عنوان چالش را کامل بنویسید').max(80),
+  description: z.string().trim().max(600).optional().or(z.literal('')),
+  type: z.enum(CHALLENGE_TYPES).default('INDIVIDUAL'),
+  /** Required for TEAM challenges; an optional member scope for individual ones. */
+  teamId: z.string().uuid('تیم انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+  goalKey: z.enum(CHALLENGE_GOAL_KEYS),
+  goalValue: z.coerce.number().int('مقدار هدف باید عدد صحیح باشد'),
+  xpReward: z.coerce.number().int().min(0, 'امتیاز نمی‌تواند منفی باشد').max(100_000, 'امتیاز بیش از حد بزرگ است').default(0),
+  coinReward: z.coerce.number().int().min(0, 'سکه نمی‌تواند منفی باشد').max(100_000, 'سکه بیش از حد بزرگ است').default(0),
+  startsAt: challengeDate('تاریخ شروع معتبر نیست'),
+  endsAt: challengeDate('تاریخ پایان معتبر نیست'),
+  badgeId: z.string().uuid('نشان انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+}).superRefine((value, ctx) => {
+  for (const issue of challengeSpecIssues(value)) {
+    ctx.addIssue({ code: 'custom', path: [issue.path], message: issue.message })
+  }
+})
+export type CreateChallengeInput = z.infer<typeof createChallengeSchema>
+
+/**
+ * `PATCH /api/challenges/:id` — edit before the start.
+ *
+ * Every field optional; the endpoint merges onto the current row and re-runs
+ * `challengeSpecIssues` so a partial edit cannot assemble an invalid challenge.
+ */
+export const updateChallengeSchema = z.object({
+  title: z.string().trim().min(2, 'عنوان چالش را کامل بنویسید').max(80).optional(),
+  description: z.string().trim().max(600).optional().or(z.literal('')),
+  type: z.enum(CHALLENGE_TYPES).optional(),
+  teamId: z.string().uuid('تیم انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+  goalKey: z.enum(CHALLENGE_GOAL_KEYS).optional(),
+  goalValue: z.coerce.number().int('مقدار هدف باید عدد صحیح باشد').optional(),
+  xpReward: z.coerce.number().int().min(0, 'امتیاز نمی‌تواند منفی باشد').max(100_000, 'امتیاز بیش از حد بزرگ است').optional(),
+  coinReward: z.coerce.number().int().min(0, 'سکه نمی‌تواند منفی باشد').max(100_000, 'سکه بیش از حد بزرگ است').optional(),
+  startsAt: challengeDate('تاریخ شروع معتبر نیست').optional(),
+  endsAt: challengeDate('تاریخ پایان معتبر نیست').optional(),
+  badgeId: z.string().uuid('نشان انتخاب‌شده معتبر نیست').optional().or(z.literal('')),
+})
+export type UpdateChallengeInput = z.infer<typeof updateChallengeSchema>
+
+/** Query for `GET /api/challenges`. */
+export const challengeListQuerySchema = z.object({
+  status: z.enum(CHALLENGE_STATUSES).optional(),
+  type: z.enum(CHALLENGE_TYPES).optional(),
+})
+export type ChallengeListQuery = z.infer<typeof challengeListQuerySchema>

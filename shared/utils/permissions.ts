@@ -62,6 +62,8 @@ export type Permission = (typeof PERMISSIONS)[number]
  *  - `member:read` / `member:invite` — a MANAGER only reaches their own team and
  *    their subordinates (`getManagedUserIds`).
  *  - `team:manage:assigned` — a MANAGER only reaches teams they lead.
+ *  - `challenge:manage` — a MANAGER only reaches challenges tied to a team
+ *    they lead; company-wide challenges stay with OWNER/ADMIN.
  *
  * OWNER and ADMIN hold `'*'` and are company-wide.
  */
@@ -85,6 +87,10 @@ const MATRIX: Record<Role, readonly Permission[] | '*'> = {
     // stay OWNER/ADMIN — this grants no authority over anybody else's coins.
     'reward:redeem',
     'challenge:read',
+    // A manager may run challenges for the teams they lead. The handlers add
+    // the scope on top: a MANAGER cannot publish company-wide challenges or
+    // touch another team's — those stay with OWNER/ADMIN.
+    'challenge:manage',
     'recognition:create',
     'leaderboard:read',
   ],

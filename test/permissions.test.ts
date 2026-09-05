@@ -27,6 +27,14 @@ describe('permission matrix', () => {
     expect(can('MANAGER', 'company:update')).toBe(false)
   })
 
+  it('lets managers run challenges; employees can only watch them', () => {
+    expect(can('MANAGER', 'challenge:read')).toBe(true)
+    // The team scope itself is enforced in the handlers, not in the matrix.
+    expect(can('MANAGER', 'challenge:manage')).toBe(true)
+    expect(can('EMPLOYEE', 'challenge:read')).toBe(true)
+    expect(can('EMPLOYEE', 'challenge:manage')).toBe(false)
+  })
+
   it('denies everything for an unknown or missing role', () => {
     expect(can(undefined, 'task:read:own')).toBe(false)
     expect(can(null, 'task:read:own')).toBe(false)

@@ -1,4 +1,10 @@
 import type {
+  ChallengeGoalKey,
+  ChallengeStatus,
+  ChallengeType,
+  ParticipantStatus,
+} from '../utils/challenges'
+import type {
   LeaderboardPeriod,
   LeaderboardScope,
   SeriesBucket as LeaderboardSeriesBucket,
@@ -841,4 +847,76 @@ export interface RewardAdminResponse {
 /** `POST /api/rewards` and `PATCH /api/rewards/:id`. */
 export interface RewardMutationResponse {
   reward: { id: string }
+}
+
+// ---------------------------------------------------------------------------
+// Challenges
+// ---------------------------------------------------------------------------
+
+/** One enrolled member's standing in a challenge, as managers see it. */
+export interface ChallengeParticipantSummary {
+  id: string
+  user: { id: string, fullName: string, avatarUrl: string | null, jobTitle: string | null }
+  progress: number
+  status: ParticipantStatus
+  completedAt: string | null
+  rewardedAt: string | null
+}
+
+export interface ChallengeSummary {
+  id: string
+  title: string
+  description: string | null
+  type: ChallengeType
+  status: ChallengeStatus
+  goalKey: ChallengeGoalKey
+  goalValue: number
+  /**
+   * Live progress, computed by the engine from real application data. For a
+   * TEAM challenge it is the team's aggregate; for an INDIVIDUAL challenge
+   * the average of its participants. The caller's own number — the one their
+   * bar shows — is `myParticipation.progress`.
+   */
+  progress: number
+  startsAt: string
+  endsAt: string
+  xpReward: number
+  coinReward: number
+  badgeId: string | null
+  team: { id: string, name: string, slug: string } | null
+  participantsCount: number
+  /** Participants who reached the goal (completed or already rewarded). */
+  completersCount: number
+  /** The caller's own row, when they are enrolled. */
+  myParticipation: {
+    progress: number
+    status: ParticipantStatus
+    completedAt: string | null
+    rewardedAt: string | null
+  } | null
+  /** Editable while the challenge has not started; computed server-side. */
+  editable: boolean
+  cancellable: boolean
+  /** The caller holds `challenge:manage` over this challenge's scope. */
+  canManage: boolean
+}
+
+export interface ChallengeListResponse {
+  items: ChallengeSummary[]
+  /** Row counts per status, for the filter chips. */
+  counts: Partial<Record<ChallengeStatus, number>>
+}
+
+export interface ChallengeDetailResponse {
+  challenge: ChallengeSummary
+  /**
+   * The full roster with per-person progress. Only callers holding
+   * `challenge:manage` (in scope) receive it; an employee gets their own row
+   * and the aggregate numbers only.
+   */
+  participants: ChallengeParticipantSummary[]
+}
+
+export interface ChallengeMutationResponse {
+  challenge: ChallengeSummary
 }
