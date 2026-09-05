@@ -44,6 +44,24 @@ Implemented so far:
   rules — every number computed live from tasks, review scores and the XP/coin ledgers —
   see `docs/analytics.md`.
 
+### Documentation index
+
+| Document | Contents |
+| --- | --- |
+| `docs/architecture.md` | layers, tenancy, authorization, ledger rules, testing strategy |
+| `docs/database.md` | model map, cascades, indexes, money invariants, migrations |
+| `docs/api.md` | HTTP reference — every endpoint, permission and convention |
+| `docs/task-management.md` | task lifecycle, review flow, dashboards (phase 3) |
+| `docs/reward-engine.md` | scored review → XP/coin payout, versioned rules (phase 4) |
+| `docs/gamification.md` | streaks, achievements, badges, levels (phase 5) |
+| `docs/recognition.md` | peer voting, cycles, finalization (phase 6) |
+| `docs/reward-marketplace.md` | shelf, redemption queue, refunds (phase 7) |
+| `docs/leaderboards.md` | windowed boards, team boards, privacy cap (phase 7) |
+| `docs/challenges.md` | goals from real data, windows, payouts (phase 8) |
+| `docs/notifications.md` | event catalogue, at-most-once delivery, channels (phase 9) |
+| `docs/analytics.md` | KPIs, charts, scopes, performance profiles (phase 10) |
+| `docs/qa-report.md` | the final production-readiness QA report |
+
 ---
 
 ## 1. Stack
@@ -562,3 +580,64 @@ throwaway one, and `npm run test:integration` reads it from `.env` like the serv
 - Structured logging, request IDs and error reporting.
 - CI pipeline: `npm run verify` + migration dry-run.
 - Persian/English parity pass on `en.json` once the UI settles.
+
+---
+
+## 12. Production deployment
+
+The app is a stateless SSR Node server — everything that survives a request
+lives in PostgreSQL.
+
+### Build & run
+
+```bash
+npm ci
+npx prisma generate            # client is also committed under prisma/generated/
+npm run build                  # nuxt build → .output/
+node .output/server/index.mjs  # honours PORT, HOST and the NUXT_* env vars
+```
+
+Behind a reverse proxy, terminate TLS and forward `X-Forwarded-*`; set
+`NUXT_SECURE_COOKIES=true` (default) so the session cookie never travels
+unflagged, and `NUXT_APP_URL` to the public origin.
+
+### Environment checklist
+
+- `DATABASE_URL` — a real PostgreSQL (PGlite / `scripts/local-db.mjs` is a
+  **development** engine with a small connection cap; do not ship it).
+- `NUXT_SESSION_SECRET` — ≥ 32 random chars (`openssl rand -base64 48`). The
+  server refuses to boot without one.
+- `NUXT_OTP_PROVIDER=http` + `NUXT_OTP_HTTP_URL` (+ `NUXT_OTP_HTTP_API_KEY`)
+  — the `console` provider **refuses to run outside development** on purpose;
+  logins cannot silently degrade to printed codes in production.
+- Optional out-of-app notification channels:
+  `NUXT_NOTIFICATION_{EMAIL,SMS,PUSH}_DSN` (unset = dormant, never called).
+- `NUXT_DB_POOL_MAX` — size against the server's `max_connections` ÷ workers.
+
+### Database
+
+```bash
+npx prisma migrate deploy      # apply committed migrations only, idempotent
+npx prisma migrate status      # drift check before every release
+```
+
+The seed (`prisma/seed.ts`) is demo data — never run it against production.
+Backups are ordinary PostgreSQL backups; tenant deletion is a single cascade,
+and the ledgers are append-only, which makes point-in-time recovery boring in
+the good way.
+
+### Release gates
+
+Run locally (or in CI) before shipping:
+
+```bash
+npm run verify                 # lint + typecheck + unit tests + build
+npm run test:integration       # full HTTP suite against a real PostgreSQL
+```
+
+### Health & observability
+
+- `GET /api/health` — liveness + database ping, for the load balancer.
+- Admin mutations write `AuditLog` rows (actor, action, target, payload).
+- Known gaps, deliberate: no structured logging/request IDs, no error
+  reporting integration, no CI pipeline yet — see `docs/qa-report.md`.
