@@ -2,16 +2,15 @@
  * OTP delivery is a pluggable transport.
  *
  * Nothing in the app talks to an SMS gateway directly: handlers call
- * `resolveOtpProvider().send(...)`. Two drivers ship with the foundation:
+ * `resolveOtpProvider().send(...)`. Drivers:
  *
- *  - `console` — logs the code. Safe for development, refuses to run when
- *    NODE_ENV=production so it can never leak codes in a real deployment.
- *  - `http`    — POSTs a JSON payload to any gateway. Vendor agnostic on
- *    purpose; a dedicated driver (Kavenegar, SMS.ir, …) can be added by
- *    implementing `OtpProvider` and registering it in `resolveOtpProvider`.
+ *  - `console` — logs the code. Dev-only; refuses outside `import.meta.dev`.
+ *  - `http`    — POSTs a JSON payload to any gateway when `NUXT_OTP_HTTP_URL`
+ *    is set. If that URL is empty, resolution falls back to `mock`.
+ *  - `mock`    — fixed code (`111111`) for deploys without an SMS gateway.
  *
- * An unconfigured driver reports `isConfigured() === false` and `send()` rejects
- * with a clear error instead of silently pretending to deliver.
+ * An unconfigured `http` driver never silently no-ops: either the real
+ * gateway is used, or mock takes over so login still works.
  */
 export interface OtpSendInput {
   /** Destination phone number in E.164 form. */
@@ -37,6 +36,9 @@ export class OtpDeliveryError extends Error {
     this.name = 'OtpDeliveryError'
   }
 }
+
+/** Fixed login code used when no SMS gateway URL is configured. */
+export const MOCK_OTP_CODE = '111111'
 
 function otpConfig() {
   const config = useRuntimeConfig()
@@ -66,6 +68,16 @@ export const consoleOtpProvider: OtpProvider = {
     }
 
     console.warn(`[workquest:otp] code for ${to} is ${code} (valid ${ttlSeconds}s)`)
+  },
+}
+
+export const mockOtpProvider: OtpProvider = {
+  id: 'mock',
+  isConfigured: () => true,
+  async send({ to, code, ttlSeconds }) {
+    console.warn(
+      `[workquest:otp:mock] NUXT_OTP_HTTP_URL empty — using mock code ${code} for ${to} (valid ${ttlSeconds}s)`,
+    )
   },
 }
 
@@ -105,10 +117,27 @@ export const httpOtpProvider: OtpProvider = {
 const providers: Record<string, OtpProvider> = {
   console: consoleOtpProvider,
   http: httpOtpProvider,
+  mock: mockOtpProvider,
+}
+
+/** True when SMS gateway URL is unset — login uses the fixed mock code. */
+export function isMockOtpMode(): boolean {
+  const { provider, httpUrl } = otpConfig()
+  if (provider === 'mock') return true
+  if (provider === 'http' && !httpUrl) return true
+  // Production default: empty http URL with leftover "console" → mock.
+  if (provider === 'console' && !import.meta.dev) return true
+  return false
 }
 
 export function resolveOtpProvider(): OtpProvider {
-  const { provider } = otpConfig()
+  const { provider, httpUrl } = otpConfig()
+
+  if (provider === 'http' && httpUrl) return httpOtpProvider
+  if (provider === 'http' && !httpUrl) return mockOtpProvider
+  if (provider === 'mock') return mockOtpProvider
+  if (provider === 'console' && !import.meta.dev) return mockOtpProvider
+
   const resolved = providers[provider]
   if (!resolved) {
     throw new OtpDeliveryError(

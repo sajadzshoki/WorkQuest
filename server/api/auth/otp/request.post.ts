@@ -6,7 +6,13 @@ import { normalizeIranianPhone } from '#shared/utils/format'
 import { usePrisma } from '../../../utils/db'
 import { errors, readValidated } from '../../../utils/http'
 import { generateOtpCode, hashOtpCode } from '../../../utils/crypto'
-import { OtpDeliveryError, otpSettings, resolveOtpProvider } from '../../../utils/otp'
+import {
+  isMockOtpMode,
+  MOCK_OTP_CODE,
+  OtpDeliveryError,
+  otpSettings,
+  resolveOtpProvider,
+} from '../../../utils/otp'
 
 /**
  * Step 1 of authentication: request a one-time code for a phone number.
@@ -59,7 +65,7 @@ export default defineEventHandler(async (event) => {
     )
   }
 
-  const code = generateOtpCode(codeLength)
+  const code = isMockOtpMode() ? MOCK_OTP_CODE.slice(0, codeLength).padEnd(codeLength, '1') : generateOtpCode(codeLength)
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
 
   // Invalidate any pending code for this phone so only the newest one works.

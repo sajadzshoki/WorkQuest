@@ -3,6 +3,8 @@ import { SignJWT, jwtVerify } from 'jose'
 import type { Role } from '#shared/utils/permissions'
 import type { H3Event } from 'h3'
 
+import { requestWantsSecureCookies } from './http'
+
 export interface SessionClaims {
   /** User id. */
   sub: string
@@ -12,15 +14,16 @@ export interface SessionClaims {
   role: Role
 }
 
-function sessionConfig() {
+function sessionConfig(event?: H3Event) {
   const config = useRuntimeConfig()
+  const forcedOff = String(config.secureCookies ?? 'true') === 'false'
   return {
     secret: String(config.sessionSecret ?? ''),
     issuer: String(config.sessionIssuer ?? 'workquest'),
     cookieName: String(config.sessionCookieName ?? 'workquest_session'),
     maxAgeSeconds: Number(config.sessionMaxAgeSeconds ?? 60 * 60 * 24 * 7),
     renewThresholdSeconds: Number(config.sessionRenewThresholdSeconds ?? 60 * 60 * 24),
-    secure: String(config.secureCookies ?? 'true') !== 'false',
+    secure: forcedOff ? false : event ? requestWantsSecureCookies(event) : false,
   }
 }
 
@@ -73,7 +76,7 @@ export function readSessionToken(event: H3Event): string | undefined {
 }
 
 export function setSessionCookie(event: H3Event, token: string): void {
-  const { cookieName, maxAgeSeconds, secure } = sessionConfig()
+  const { cookieName, maxAgeSeconds, secure } = sessionConfig(event)
   setCookie(event, cookieName, token, {
     httpOnly: true,
     secure,
@@ -84,7 +87,7 @@ export function setSessionCookie(event: H3Event, token: string): void {
 }
 
 export function clearSessionCookie(event: H3Event): void {
-  const { cookieName, secure } = sessionConfig()
+  const { cookieName, secure } = sessionConfig(event)
   deleteCookie(event, cookieName, { httpOnly: true, secure, sameSite: 'lax', path: '/' })
 }
 

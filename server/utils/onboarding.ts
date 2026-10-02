@@ -4,7 +4,7 @@ import type { H3Event } from 'h3'
 import { DEFAULT_LEVELS } from '#shared/constants'
 
 import { usePrisma } from './db'
-import { errors } from './http'
+import { errors, requestWantsSecureCookies } from './http'
 
 /**
  * Self-service registration bridge.
@@ -28,11 +28,12 @@ import { errors } from './http'
 
 const COOKIE_NAME = 'workquest_onboarding'
 
-function onboardingConfig() {
+function onboardingConfig(event?: H3Event) {
   const config = useRuntimeConfig()
+  const forcedOff = String(config.secureCookies ?? 'true') === 'false'
   return {
     ttlSeconds: Number(config.onboardingTicketTtlSeconds ?? 60 * 15),
-    secure: String(config.secureCookies ?? 'true') !== 'false',
+    secure: forcedOff ? false : event ? requestWantsSecureCookies(event) : false,
   }
 }
 
@@ -48,7 +49,7 @@ export async function issueOnboardingTicket(
   phone: string,
 ): Promise<OnboardingTicket> {
   const db = usePrisma()
-  const { ttlSeconds, secure } = onboardingConfig()
+  const { ttlSeconds, secure } = onboardingConfig(event)
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
 
   // Supersede any earlier ticket for this phone so only the newest one works.
@@ -83,7 +84,7 @@ export function readOnboardingCookie(event: H3Event): string | undefined {
 }
 
 export function clearOnboardingCookie(event: H3Event): void {
-  const { secure } = onboardingConfig()
+  const { secure } = onboardingConfig(event)
   deleteCookie(event, COOKIE_NAME, { httpOnly: true, secure, sameSite: 'lax', path: '/' })
 }
 

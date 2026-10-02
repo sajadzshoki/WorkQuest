@@ -3,6 +3,20 @@ import type { H3Event } from 'h3'
 import type { ApiErrorBody } from '#shared/types/api'
 
 /**
+ * Session/auth cookies must only carry the Secure flag on real HTTPS.
+ * Plain `http://IP:port` access drops Secure cookies in the browser.
+ * Honour X-Forwarded-Proto when Nginx Proxy Manager terminates TLS.
+ */
+export function requestWantsSecureCookies(event: H3Event): boolean {
+  const forwarded = getHeader(event, 'x-forwarded-proto')
+  if (forwarded) {
+    const first = forwarded.split(',')[0]?.trim().toLowerCase()
+    return first === 'https'
+  }
+  return getRequestURL(event).protocol === 'https:'
+}
+
+/**
  * Small helpers so every endpoint returns the same error envelope.
  * `code` is what the UI switches on; `message` is what the user reads.
  */

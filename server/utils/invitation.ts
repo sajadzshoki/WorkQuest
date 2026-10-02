@@ -3,7 +3,7 @@ import type { AuthContext, InvitationDetail } from '#shared/types/api'
 import type { H3Event } from 'h3'
 
 import { usePrisma } from './db'
-import { errors } from './http'
+import { errors, requestWantsSecureCookies } from './http'
 import { createTenantClient } from './tenant'
 
 /**
@@ -26,12 +26,13 @@ import { createTenantClient } from './tenant'
 
 const COOKIE_NAME = 'workquest_invitation'
 
-function invitationConfig() {
+function invitationConfig(event?: H3Event) {
   const config = useRuntimeConfig()
+  const forcedOff = String(config.secureCookies ?? 'true') === 'false'
   return {
     // Reuses the onboarding TTL: both are "finish this join now" windows.
     ttlSeconds: Number(config.onboardingTicketTtlSeconds ?? 60 * 15),
-    secure: String(config.secureCookies ?? 'true') !== 'false',
+    secure: forcedOff ? false : event ? requestWantsSecureCookies(event) : false,
   }
 }
 
@@ -47,7 +48,7 @@ export async function issueInvitationTicket(
   phone: string,
 ): Promise<InvitationTicket> {
   const db = usePrisma()
-  const { ttlSeconds, secure } = invitationConfig()
+  const { ttlSeconds, secure } = invitationConfig(event)
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
 
   // Supersede earlier tickets so only the newest one works.
@@ -82,7 +83,7 @@ export function readInvitationCookie(event: H3Event): string | undefined {
 }
 
 export function clearInvitationCookie(event: H3Event): void {
-  const { secure } = invitationConfig()
+  const { secure } = invitationConfig(event)
   deleteCookie(event, COOKIE_NAME, { httpOnly: true, secure, sameSite: 'lax', path: '/' })
 }
 
