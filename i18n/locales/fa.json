@@ -21,6 +21,7 @@
     "confirm": "تأیید",
     "close": "بستن",
     "retry": "تلاش دوباره",
+    "refresh": "به‌روزرسانی",
     "optional": "اختیاری",
     "required": "الزامی",
     "all": "همه",
@@ -64,7 +65,8 @@
     "members": "کارکنان",
     "invitations": "دعوت‌نامه‌ها",
     "challenges": "چالش‌ها",
-    "analytics": "تحلیل سازمان"
+    "analytics": "تحلیل سازمان",
+    "more": "بیشتر"
   },
   "analytics": {
     "title": "تحلیل سازمان",

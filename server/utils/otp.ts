@@ -4,13 +4,10 @@
  * Nothing in the app talks to an SMS gateway directly: handlers call
  * `resolveOtpProvider().send(...)`. Drivers:
  *
- *  - `console` — logs the code. Dev-only; refuses outside `import.meta.dev`.
- *  - `http`    — POSTs a JSON payload to any gateway when `NUXT_OTP_HTTP_URL`
- *    is set. If that URL is empty, resolution falls back to `mock`.
- *  - `mock`    — fixed code (`111111`) for deploys without an SMS gateway.
- *
- * An unconfigured `http` driver never silently no-ops: either the real
- * gateway is used, or mock takes over so login still works.
+ *  - `console` — logs the code. Development only.
+ *  - `http`    — POSTs a JSON payload to a gateway. Refuses to send when
+ *    `NUXT_OTP_HTTP_URL` is empty.
+ *  - `mock`    — fixed code (`111111`) for automated tests. Never implied.
  */
 export interface OtpSendInput {
   /** Destination phone number in E.164 form. */
@@ -114,38 +111,40 @@ export const httpOtpProvider: OtpProvider = {
   },
 }
 
-const providers: Record<string, OtpProvider> = {
-  console: consoleOtpProvider,
-  http: httpOtpProvider,
-  mock: mockOtpProvider,
-}
-
-/** True when SMS gateway URL is unset — login uses the fixed mock code. */
+/** True only when the operator explicitly selected the test provider. */
 export function isMockOtpMode(): boolean {
-  const { provider, httpUrl } = otpConfig()
-  if (provider === 'mock') return true
-  if (provider === 'http' && !httpUrl) return true
-  // Production default: empty http URL with leftover "console" → mock.
-  if (provider === 'console' && !import.meta.dev) return true
-  return false
+  return otpConfig().provider === 'mock'
 }
 
 export function resolveOtpProvider(): OtpProvider {
   const { provider, httpUrl } = otpConfig()
 
-  if (provider === 'http' && httpUrl) return httpOtpProvider
-  if (provider === 'http' && !httpUrl) return mockOtpProvider
   if (provider === 'mock') return mockOtpProvider
-  if (provider === 'console' && !import.meta.dev) return mockOtpProvider
 
-  const resolved = providers[provider]
-  if (!resolved) {
-    throw new OtpDeliveryError(
-      `Unknown OTP provider "${provider}". Available: ${Object.keys(providers).join(', ')}.`,
-      'OTP_PROVIDER_UNKNOWN',
-    )
+  if (provider === 'http') {
+    if (!httpUrl) {
+      throw new OtpDeliveryError(
+        'NUXT_OTP_HTTP_URL is not configured; the http OTP provider cannot deliver codes.',
+        'OTP_PROVIDER_UNCONFIGURED',
+      )
+    }
+    return httpOtpProvider
   }
-  return resolved
+
+  if (provider === 'console') {
+    if (!import.meta.dev) {
+      throw new OtpDeliveryError(
+        'The console OTP provider cannot be used in production. Set NUXT_OTP_PROVIDER=http and NUXT_OTP_HTTP_URL.',
+        'OTP_PROVIDER_UNSAFE',
+      )
+    }
+    return consoleOtpProvider
+  }
+
+  throw new OtpDeliveryError(
+    `Unknown OTP provider "${provider}". Available: console, http, mock.`,
+    'OTP_PROVIDER_UNKNOWN',
+  )
 }
 
 export function otpSettings() {

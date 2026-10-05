@@ -13,7 +13,7 @@ const { can } = useCan()
 
 const memberId = computed(() => String(route.params.id ?? ''))
 
-const { data, error, refresh } = await useFetch<MemberDetailResponse>(
+const { data, error, status, refresh } = await useFetch<MemberDetailResponse>(
   () => `/api/members/${memberId.value}`,
 )
 
@@ -183,8 +183,19 @@ const scoreTrendSeries = computed(() => [
       {{ t('members.backToList') }}
     </NuxtLink>
 
+    <div
+      v-if="status === 'pending' && !data"
+      class="wq-skeleton h-48 rounded-xl"
+    />
+
+    <CommonErrorState
+      v-else-if="error && error.statusCode !== 404"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
+
     <CommonEmptyState
-      v-if="error || !member"
+      v-else-if="error || !member"
       class="wq-panel"
       icon="i-heroicons-user-circle"
       :title="t('members.notFound')"

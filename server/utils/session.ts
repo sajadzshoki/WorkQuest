@@ -86,6 +86,12 @@ export function setSessionCookie(event: H3Event, token: string): void {
   })
 }
 
+/** Absolute expiry written onto the session row and the cookie. */
+export function nextSessionExpiry(): Date {
+  const { maxAgeSeconds } = sessionConfig()
+  return new Date(Date.now() + maxAgeSeconds * 1000)
+}
+
 export function clearSessionCookie(event: H3Event): void {
   const { cookieName, secure } = sessionConfig(event)
   deleteCookie(event, cookieName, { httpOnly: true, secure, sameSite: 'lax', path: '/' })

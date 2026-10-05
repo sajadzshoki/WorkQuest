@@ -3,7 +3,7 @@ import { isRole } from '#shared/utils/permissions'
 
 import { usePrisma } from '../utils/db'
 import { errors } from '../utils/http'
-import { readSessionToken, setSessionCookie, tokenNeedsRenewal, signSessionToken, verifySessionToken } from '../utils/session'
+import { clearSessionCookie, nextSessionExpiry, readSessionToken, setSessionCookie, tokenNeedsRenewal, signSessionToken, verifySessionToken } from '../utils/session'
 
 /**
  * Routes reachable without a session.
@@ -65,7 +65,8 @@ export default defineEventHandler(async (event) => {
     db.session.findFirst({ where: { id: claims.sid, revokedAt: null } }),
   ])
 
-  if (!user || !user.company.isActive || !session) {
+  if (!user || !user.company.isActive || !session || session.expiresAt.getTime() <= Date.now()) {
+    clearSessionCookie(event)
     throw errors.unauthorized('نشست شما معتبر نیست')
   }
 
@@ -104,5 +105,9 @@ export default defineEventHandler(async (event) => {
       role: auth.role,
     })
     setSessionCookie(event, renewed)
+    await db.session.update({
+      where: { id: session.id },
+      data: { expiresAt: nextSessionExpiry() },
+    })
   }
 })

@@ -40,7 +40,7 @@ defineExpose({
       class="text-center text-xs"
       :class="complete ? 'text-success' : 'text-muted'"
     >
-      {{ complete ? t('common.confirm') : t('gamification.progress', { current: value.length, total: props.length }) }}
+      {{ complete ? t('auth.verifyCode') : t('gamification.progress', { current: value.length, total: props.length }) }}
     </p>
   </div>
 </template>

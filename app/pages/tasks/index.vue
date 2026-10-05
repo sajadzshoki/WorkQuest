@@ -76,7 +76,7 @@ const query = computed(() => ({
   ...(debouncedSearch.value.trim() ? { search: debouncedSearch.value.trim() } : {}),
 }))
 
-const { data, status, refresh } = await useFetch<TaskListResponse>('/api/tasks', {
+const { data, status, error, refresh } = await useFetch<TaskListResponse>('/api/tasks', {
   query,
   watch: [query],
 })
@@ -196,6 +196,12 @@ async function onAction(action: TaskAction, task: TaskSummary) {
         class="wq-skeleton h-40 rounded-xl"
       />
     </div>
+
+    <CommonErrorState
+      v-else-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
 
     <CommonEmptyState
       v-else-if="!data?.items.length"

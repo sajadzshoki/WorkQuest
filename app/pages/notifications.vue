@@ -12,7 +12,7 @@ const PAGE_SIZE = 20
 const page = ref(1)
 const busyId = ref<string | null>(null)
 
-const { data, pending, refresh } = await useFetch<NotificationListResponse>('/api/notifications', {
+const { data, pending, error, refresh } = await useFetch<NotificationListResponse>('/api/notifications', {
   query: computed(() => ({ page: page.value, pageSize: PAGE_SIZE })),
   watch: [page],
 })
@@ -85,8 +85,21 @@ onMounted(() => {
       </template>
     </CommonPageHeader>
 
+    <CommonErrorState
+      v-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
+
+    <div
+      v-else-if="pending && !data"
+      class="wq-panel p-6"
+    >
+      <div class="wq-skeleton h-16 rounded-lg" />
+    </div>
+
     <CommonEmptyState
-      v-if="!pending && !data?.items.length"
+      v-else-if="!data?.items.length"
       class="wq-panel"
       icon="i-heroicons-bell-slash"
       :title="t('notifications.empty')"

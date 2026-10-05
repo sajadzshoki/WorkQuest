@@ -7,7 +7,7 @@ import { can } from '#shared/utils/permissions'
 
 import { errors } from './http'
 import { usePrisma } from './db'
-import { setSessionCookie, signSessionToken } from './session'
+import { nextSessionExpiry, setSessionCookie, signSessionToken } from './session'
 
 /**
  * The auth context is attached by `server/middleware/1.auth-context.ts`.
@@ -120,7 +120,7 @@ export async function issueSession(
   const db = tx ?? usePrisma()
   const ip = getRequestIP(event, { xForwardedFor: true })
   const userAgent = getHeader(event, 'user-agent')
-  const expiresAt = new Date(Date.now() + Number(useRuntimeConfig().sessionMaxAgeSeconds) * 1000)
+  const expiresAt = nextSessionExpiry()
 
   const session = await db.session.create({
     data: { userId: subject.id, expiresAt, ip, userAgent },

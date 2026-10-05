@@ -16,7 +16,7 @@ const { can } = useCan()
  */
 const status = ref<InvitationStatus>('PENDING')
 
-const { data, pending, refresh } = await useFetch<InvitationListResponse>('/api/invitations', {
+const { data, pending, error, refresh } = await useFetch<InvitationListResponse>('/api/invitations', {
   query: computed(() => ({ status: status.value, pageSize: 100 })),
   watch: [status],
 })
@@ -109,8 +109,19 @@ async function revoke(id: string, fullName: string) {
       :description="data ? t('members.total', { count: format.number(data.total) }) : undefined"
       icon="i-heroicons-envelope"
     >
+      <CommonErrorState
+        v-if="error && !data"
+        :status-code="error.statusCode"
+        @retry="refresh()"
+      />
+
+      <div
+        v-else-if="pending && !data"
+        class="wq-skeleton h-24 rounded-lg"
+      />
+
       <CommonEmptyState
-        v-if="!pending && !data?.invitations.length"
+        v-else-if="!data?.invitations.length"
         icon="i-heroicons-envelope-open"
         :title="t('invitations.empty')"
         :description="t('invitations.emptyHint')"

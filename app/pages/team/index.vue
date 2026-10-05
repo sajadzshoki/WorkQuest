@@ -33,7 +33,7 @@ const toast = useToast()
 const { user } = useSession()
 const { can } = useCan()
 
-const { data, refresh } = await useFetch<TeamResponse>(`/api/teams`)
+const { data, status, error, refresh } = await useFetch<TeamResponse>(`/api/teams`)
 
 // Creating a team is `team:manage` — OWNER/ADMIN. A manager leads teams but
 // does not get to found new ones (see `server/api/teams/index.post.ts`).
@@ -87,8 +87,25 @@ async function create() {
       </template>
     </CommonPageHeader>
 
+    <CommonErrorState
+      v-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
+
+    <div
+      v-else-if="status === 'pending' && !data"
+      class="grid gap-4 lg:grid-cols-2"
+    >
+      <div
+        v-for="index in 2"
+        :key="index"
+        class="wq-skeleton h-40 rounded-xl"
+      />
+    </div>
+
     <CommonEmptyState
-      v-if="!data?.teams.length"
+      v-else-if="!data?.teams.length"
       class="wq-panel"
       icon="i-heroicons-user-group"
       :title="t('team.noTeams')"

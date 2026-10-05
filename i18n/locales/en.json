@@ -21,6 +21,7 @@
     "confirm": "Confirm",
     "close": "Close",
     "retry": "Retry",
+    "refresh": "Refresh",
     "optional": "Optional",
     "required": "Required",
     "all": "All",
@@ -64,7 +65,8 @@
     "members": "Employees",
     "invitations": "Invitations",
     "challenges": "Challenges",
-    "analytics": "Analytics"
+    "analytics": "Analytics",
+    "more": "More"
   },
   "analytics": {
     "title": "Organization analytics",

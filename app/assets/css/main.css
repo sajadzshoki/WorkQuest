@@ -17,18 +17,8 @@
     'Segoe UI', sans-serif;
   --font-display: 'Vazirmatn Variable', 'Vazirmatn', ui-sans-serif, system-ui, sans-serif;
 
-  /* Brand: indigo → violet. Professional, slightly energetic. */
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-300: #a5b4fc;
-  --color-brand-400: #818cf8;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
-  --color-brand-950: #1e1b4b;
+  /* Change `--color-brand` to recolor primary actions. The scale below follows it. */
+  --color-brand: #4f46e5;
 
   /* Gamification accents — used for coins, streaks and XP only. */
   --color-coin-50: #fffbeb;
@@ -50,6 +40,35 @@
 
   --shadow-soft: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
   --shadow-lifted: 0 2px 4px 0 rgb(15 23 42 / 0.05), 0 20px 40px -20px rgb(15 23 42 / 0.25);
+}
+
+/* Tailwind drops color-mix() inside @theme, which left `--ui-primary` empty.
+   These variables are what Nuxt UI reads (`--ui-color-primary-*`). */
+:root {
+  /* Caution. Outside @theme so unused utility shades are not stripped. */
+  --color-warn-50: #fefce8;
+  --color-warn-100: #fef9c3;
+  --color-warn-200: #fef08a;
+  --color-warn-300: #fde047;
+  --color-warn-400: #facc15;
+  --color-warn-500: #eab308;
+  --color-warn-600: #ca8a04;
+  --color-warn-700: #a16207;
+  --color-warn-800: #854d0e;
+  --color-warn-900: #713f12;
+  --color-warn-950: #422006;
+
+  --color-brand-50: color-mix(in oklab, var(--color-brand) 12%, white);
+  --color-brand-100: color-mix(in oklab, var(--color-brand) 20%, white);
+  --color-brand-200: color-mix(in oklab, var(--color-brand) 35%, white);
+  --color-brand-300: color-mix(in oklab, var(--color-brand) 52%, white);
+  --color-brand-400: color-mix(in oklab, var(--color-brand) 75%, white);
+  --color-brand-500: var(--color-brand);
+  --color-brand-600: color-mix(in oklab, var(--color-brand) 88%, black);
+  --color-brand-700: color-mix(in oklab, var(--color-brand) 75%, black);
+  --color-brand-800: color-mix(in oklab, var(--color-brand) 60%, black);
+  --color-brand-900: color-mix(in oklab, var(--color-brand) 45%, black);
+  --color-brand-950: color-mix(in oklab, var(--color-brand) 28%, black);
 }
 
 @layer base {
@@ -88,6 +107,18 @@
   :focus-visible {
     outline: 2px solid var(--ui-primary);
     outline-offset: 2px;
+  }
+
+  /* Outline controls were disappearing into the page surface. */
+  :root,
+  .dark {
+    --ui-border-accented: color-mix(in oklab, var(--ui-text) 28%, var(--ui-bg));
+  }
+
+  button:disabled,
+  button[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.45;
   }
 }
 

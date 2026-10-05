@@ -21,7 +21,7 @@ const toast = useToast()
 const { can } = useCan()
 const { statusLabel } = useChallenges()
 
-const { data, status, refresh } = await useFetch<ChallengeListResponse>('/api/challenges')
+const { data, status, error, refresh } = await useFetch<ChallengeListResponse>('/api/challenges')
 
 const items = computed(() => data.value?.items ?? [])
 const counts = computed(() => data.value?.counts ?? {})
@@ -147,8 +147,14 @@ async function confirmCancel() {
       </button>
     </div>
 
+    <CommonErrorState
+      v-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
+
     <div
-      v-if="status === 'pending'"
+      v-else-if="status === 'pending'"
       class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
     >
       <div

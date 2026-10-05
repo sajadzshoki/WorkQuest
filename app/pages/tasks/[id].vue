@@ -14,7 +14,7 @@ const { actionsFor, transition, setProgress } = useTaskActions()
 
 const taskId = computed(() => String(route.params.id))
 
-const { data, refresh, status } = await useFetch<TaskDetailResponse>(
+const { data, error, refresh, status } = await useFetch<TaskDetailResponse>(
   () => `/api/tasks/${taskId.value}`,
 )
 
@@ -136,6 +136,12 @@ const inlineActions = computed(() => actions.value.filter(action => action === '
       <div class="wq-skeleton h-32 rounded-xl" />
       <div class="wq-skeleton h-64 rounded-xl" />
     </div>
+
+    <CommonErrorState
+      v-else-if="error && error.statusCode !== 404"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
 
     <CommonEmptyState
       v-else-if="!task"

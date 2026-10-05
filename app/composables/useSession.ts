@@ -13,6 +13,8 @@ export interface SessionState {
  * SSR to the client. Route middleware calls `ensureLoaded()` before guarding,
  * and auth pages call `refresh()` after a successful sign-in.
  */
+const INFLIGHT = Symbol.for('workquest.session.inflight')
+
 export function useSession() {
   const state = useState<SessionState>('workquest:session', () => ({
     data: null,
@@ -43,24 +45,39 @@ export function useSession() {
   }
 
   async function refresh(): Promise<MeResponse | null> {
-    if (state.value.pending) return state.value.data
+    const nuxtApp = useNuxtApp() as ReturnType<typeof useNuxtApp> & {
+      [INFLIGHT]?: Promise<MeResponse | null>
+    }
+    if (nuxtApp[INFLIGHT]) return nuxtApp[INFLIGHT]
+
     state.value.pending = true
-    try {
-      state.value.data = await apiFetcher()<MeResponse>('/api/me')
-    }
-    catch {
-      state.value.data = null
-    }
-    finally {
-      state.value.pending = false
-      state.value.initialized = true
-    }
-    return state.value.data
+    const current: { promise?: Promise<MeResponse | null> } = {}
+    const request = (async () => {
+      try {
+        state.value.data = await apiFetcher()<MeResponse>('/api/me')
+      }
+      catch {
+        state.value.data = null
+      }
+      finally {
+        state.value.pending = false
+        state.value.initialized = true
+        if (nuxtApp[INFLIGHT] === current.promise) nuxtApp[INFLIGHT] = undefined
+      }
+      return state.value.data
+    })()
+
+    current.promise = request
+    nuxtApp[INFLIGHT] = request
+    return request
   }
 
-  /** Load once; safe to call from middleware on every navigation. */
+  /**
+   * Load once; safe to call from middleware on every navigation.
+   * Concurrent callers share the in-flight request instead of deciding early.
+   */
   async function ensureLoaded(): Promise<void> {
-    if (state.value.initialized || state.value.pending) return
+    if (state.value.initialized) return
     await refresh()
   }
 
@@ -68,10 +85,30 @@ export function useSession() {
     state.value = { data: null, initialized: true, pending: false }
   }
 
-  async function logout(): Promise<void> {
-    await $fetch('/api/auth/session', { method: 'DELETE' }).catch(() => undefined)
+  /** Drop client-only state that must not survive a signed-out session. */
+  function clearPrivateState(): void {
     clear()
+    useNotifications().reset()
+    useCelebration().clear()
+    useOnboarding().reset()
   }
 
-  return { session, user, company, gamification, isAuthenticated, initialized, refresh, ensureLoaded, clear, logout }
+  async function logout(): Promise<void> {
+    await $fetch('/api/auth/session', { method: 'DELETE' }).catch(() => undefined)
+    clearPrivateState()
+  }
+
+  return {
+    session,
+    user,
+    company,
+    gamification,
+    isAuthenticated,
+    initialized,
+    refresh,
+    ensureLoaded,
+    clear,
+    abandon: clearPrivateState,
+    logout,
+  }
 }

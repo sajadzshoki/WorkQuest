@@ -65,6 +65,18 @@ export default defineEventHandler(async (event) => {
     )
   }
 
+  let provider
+  try {
+    provider = resolveOtpProvider()
+  }
+  catch (error) {
+    if (error instanceof OtpDeliveryError) {
+      console.error('[workquest:otp]', error.message)
+      throw errors.serviceUnavailable('ارسال کد در حال حاضر ممکن نیست. کمی بعد دوباره تلاش کنید')
+    }
+    throw error
+  }
+
   const code = isMockOtpMode() ? MOCK_OTP_CODE.slice(0, codeLength).padEnd(codeLength, '1') : generateOtpCode(codeLength)
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
 
@@ -86,7 +98,6 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  const provider = resolveOtpProvider()
   try {
     await provider.send({
       to: normalized,
@@ -98,7 +109,8 @@ export default defineEventHandler(async (event) => {
   }
   catch (error) {
     if (error instanceof OtpDeliveryError) {
-      throw errors.serviceUnavailable(error.message)
+      console.error('[workquest:otp]', error.message)
+      throw errors.serviceUnavailable('ارسال کد در حال حاضر ممکن نیست. کمی بعد دوباره تلاش کنید')
     }
     throw error
   }

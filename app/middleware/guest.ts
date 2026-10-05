@@ -1,4 +1,4 @@
-/** Sends already-authenticated visitors away from login/landing screens. */
+/** Sends already-authenticated visitors away from the sign-in screens. */
 export default defineNuxtRouteMiddleware(async () => {
   const { isAuthenticated, ensureLoaded } = useSession()
   const localePath = useLocalePath()

@@ -46,7 +46,7 @@ const localePath = useLocalePath()
 const toast = useToast()
 const { can } = useCan()
 
-const { data, refresh } = await useFetch<BoardResponse>('/api/recognition')
+const { data, status, error, refresh } = await useFetch<BoardResponse>('/api/recognition')
 
 const pickerOpen = ref(false)
 const activeCategory = ref<BoardResponse['categories'][number] | null>(null)
@@ -125,138 +125,154 @@ async function select(coworkerId: string) {
       </template>
     </CommonPageHeader>
 
-    <!-- Cycle banner -->
-    <div class="wq-panel mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
-      <div class="flex items-center gap-3">
-        <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
-          <UIcon
-            name="i-heroicons-calendar-days"
-            class="size-5"
-          />
-        </span>
-        <div>
-          <p class="text-sm font-bold text-highlighted">
-            {{ t('recognition.cycle') }} — {{ cycleLabel }}
-          </p>
-          <p class="text-xs text-muted">
-            {{ cycleRange }}
-          </p>
-        </div>
-      </div>
-
-      <UBadge
-        :color="daysLeft !== null && daysLeft > 0 ? 'primary' : 'warning'"
-        variant="subtle"
-        size="md"
-      >
-        <template v-if="daysLeft !== null && daysLeft > 0">
-          {{ t('recognition.endsIn', { days: format.number(daysLeft) }) }}
-        </template>
-        <template v-else>
-          {{ t('recognition.ended') }}
-        </template>
-      </UBadge>
-    </div>
-
-    <!-- Categories -->
-    <CommonEmptyState
-      v-if="!data?.categories.length"
-      class="wq-panel"
-      icon="i-heroicons-sparkles"
-      :title="t('recognition.noResults')"
+    <CommonErrorState
+      v-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
     />
 
     <div
-      v-else
-      class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+      v-else-if="status === 'pending' && !data"
+      class="grid gap-3"
     >
-      <RecognitionCategoryCard
-        v-for="category in data.categories"
-        :key="category.id"
-        :name="category.name"
-        :description="category.description"
-        :icon-key="category.iconKey"
-        :tone="category.tone"
-        :my-vote="category.myVote"
-        @pick="openPicker(category)"
-      >
-        <template #pick-label>
-          {{ t('recognition.vote') }}
-        </template>
-        <template #your-vote-label>
-          {{ t('recognition.yourVote') }}
-        </template>
-      </RecognitionCategoryCard>
+      <div class="wq-skeleton h-24 rounded-xl" />
+      <div class="wq-skeleton h-64 rounded-xl" />
     </div>
 
-    <p class="mt-3 flex items-center gap-1.5 text-xs text-dimmed">
-      <UIcon
-        name="i-heroicons-lock-closed"
-        class="size-3.5"
-      />
-      {{ t('recognition.privacyNote') }}
-    </p>
-
-    <!-- Results -->
-    <h2 class="mt-8 flex items-center gap-2 text-lg font-bold text-highlighted">
-      <UIcon
-        name="i-heroicons-trophy"
-        class="size-5 text-coin-500"
-      />
-      {{ t('recognition.results') }}
-    </h2>
-
-    <template v-if="data?.results.length">
-      <div
-        v-for="cycle in data.results"
-        :key="cycle.id"
-        class="mt-4"
-      >
-        <p class="mb-2 text-xs font-semibold text-muted">
-          {{ cycle.title ?? `${t(`recognition.frequency.${cycle.frequency}`)} · ${format.shortDate(cycle.endsAt)}` }}
-        </p>
-
-        <CommonEmptyState
-          v-if="!cycle.winners.length"
-          class="wq-panel"
-          icon="i-heroicons-user-group"
-          :title="t('recognition.noWinners')"
-        />
-
-        <div
-          v-else
-          class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          <RecognitionWinnerCard
-            v-for="winner in cycle.winners"
-            :key="winner.id"
-            :winner="winner.user"
-            :category-name="winner.category.name"
-            :category-icon="winner.category.iconKey"
-            :tone="winner.category.tone"
-            :title-name="winner.titleName"
-            :vote-count="winner.voteCount"
-            :xp-reward="winner.xpReward"
-            :coin-reward="winner.coinReward"
-          />
+    <template v-else>
+      <!-- Cycle banner -->
+      <div class="wq-panel mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
+        <div class="flex items-center gap-3">
+          <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+            <UIcon
+              name="i-heroicons-calendar-days"
+              class="size-5"
+            />
+          </span>
+          <div>
+            <p class="text-sm font-bold text-highlighted">
+              {{ t('recognition.cycle') }} — {{ cycleLabel }}
+            </p>
+            <p class="text-xs text-muted">
+              {{ cycleRange }}
+            </p>
+          </div>
         </div>
+
+        <UBadge
+          :color="daysLeft !== null && daysLeft > 0 ? 'primary' : 'warning'"
+          variant="subtle"
+          size="md"
+        >
+          <template v-if="daysLeft !== null && daysLeft > 0">
+            {{ t('recognition.endsIn', { days: format.number(daysLeft) }) }}
+          </template>
+          <template v-else>
+            {{ t('recognition.ended') }}
+          </template>
+        </UBadge>
       </div>
+
+      <!-- Categories -->
+      <CommonEmptyState
+        v-if="!data?.categories.length"
+        class="wq-panel"
+        icon="i-heroicons-sparkles"
+        :title="t('recognition.noResults')"
+      />
+
+      <div
+        v-else
+        class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+      >
+        <RecognitionCategoryCard
+          v-for="category in data.categories"
+          :key="category.id"
+          :name="category.name"
+          :description="category.description"
+          :icon-key="category.iconKey"
+          :tone="category.tone"
+          :my-vote="category.myVote"
+          @pick="openPicker(category)"
+        >
+          <template #pick-label>
+            {{ t('recognition.vote') }}
+          </template>
+          <template #your-vote-label>
+            {{ t('recognition.yourVote') }}
+          </template>
+        </RecognitionCategoryCard>
+      </div>
+
+      <p class="mt-3 flex items-center gap-1.5 text-xs text-dimmed">
+        <UIcon
+          name="i-heroicons-lock-closed"
+          class="size-3.5"
+        />
+        {{ t('recognition.privacyNote') }}
+      </p>
+
+      <!-- Results -->
+      <h2 class="mt-8 flex items-center gap-2 text-lg font-bold text-highlighted">
+        <UIcon
+          name="i-heroicons-trophy"
+          class="size-5 text-coin-500"
+        />
+        {{ t('recognition.results') }}
+      </h2>
+
+      <template v-if="data?.results.length">
+        <div
+          v-for="cycle in data.results"
+          :key="cycle.id"
+          class="mt-4"
+        >
+          <p class="mb-2 text-xs font-semibold text-muted">
+            {{ cycle.title ?? `${t(`recognition.frequency.${cycle.frequency}`)} · ${format.shortDate(cycle.endsAt)}` }}
+          </p>
+
+          <CommonEmptyState
+            v-if="!cycle.winners.length"
+            class="wq-panel"
+            icon="i-heroicons-user-group"
+            :title="t('recognition.noWinners')"
+          />
+
+          <div
+            v-else
+            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            <RecognitionWinnerCard
+              v-for="winner in cycle.winners"
+              :key="winner.id"
+              :winner="winner.user"
+              :category-name="winner.category.name"
+              :category-icon="winner.category.iconKey"
+              :tone="winner.category.tone"
+              :title-name="winner.titleName"
+              :vote-count="winner.voteCount"
+              :xp-reward="winner.xpReward"
+              :coin-reward="winner.coinReward"
+            />
+          </div>
+        </div>
+      </template>
+
+      <CommonEmptyState
+        v-else
+        class="wq-panel mt-4"
+        icon="i-heroicons-trophy"
+        :title="t('recognition.noResults')"
+      />
+
+      <RecognitionCoworkerPicker
+        :open="pickerOpen"
+        :category-name="activeCategory?.name ?? ''"
+        :coworkers="data?.coworkers ?? []"
+        :pending="voting"
+        @update:open="pickerOpen = $event"
+        @select="select"
+      />
     </template>
-
-    <CommonEmptyState
-      v-else
-      class="wq-panel mt-4"
-      icon="i-heroicons-trophy"
-      :title="t('recognition.noResults')"
-    />
-
-    <RecognitionCoworkerPicker
-      :open="pickerOpen"
-      :category-name="activeCategory?.name ?? ''"
-      :coworkers="data?.coworkers ?? []"
-      :pending="voting"
-      @update:open="pickerOpen = $event"
-      @select="select"
-    />
   </div>
 </template>

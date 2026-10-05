@@ -39,5 +39,9 @@ export function useCelebration() {
     celebrations.value = celebrations.value.filter(item => item.id !== id)
   }
 
-  return { celebrations, celebrate, dismiss }
+  function clear(): void {
+    celebrations.value = []
+  }
+
+  return { celebrations, celebrate, dismiss, clear }
 }

@@ -18,6 +18,7 @@ const purpose = computed<'LOGIN' | 'REGISTER'>(() =>
 
 const code = ref('')
 const pending = ref(false)
+const resending = ref(false)
 const errorMessage = ref<string | null>(null)
 const errorIcon = ref('i-heroicons-exclamation-triangle')
 const resendAfter = ref(Number(route.query.resend ?? 90))
@@ -99,8 +100,9 @@ async function submit() {
 }
 
 async function resend() {
-  if (resendAfter.value > 0) return
+  if (resendAfter.value > 0 || resending.value || pending.value) return
   errorMessage.value = null
+  resending.value = true
 
   try {
     const result = await $fetch<RequestOtpResponse>('/api/auth/otp/request', {
@@ -114,6 +116,9 @@ async function resend() {
   catch (error) {
     const data = (error as { data?: ApiErrorBody }).data
     errorMessage.value = data?.message ?? t('auth.errors.generic')
+  }
+  finally {
+    resending.value = false
   }
 }
 </script>
@@ -154,7 +159,7 @@ async function resend() {
         size="xl"
         block
         :loading="pending"
-        :disabled="code.length < 6"
+        :disabled="code.length < 6 || pending"
       >
         {{ pending ? t('auth.verifying') : t('auth.verifyCode') }}
       </UButton>
@@ -171,11 +176,17 @@ async function resend() {
       <button
         type="button"
         class="text-xs font-semibold"
-        :class="resendAfter > 0 ? 'cursor-not-allowed text-dimmed' : 'text-primary hover:underline'"
-        :disabled="resendAfter > 0"
+        :class="resendAfter > 0 || resending ? 'cursor-not-allowed text-dimmed' : 'text-primary hover:underline'"
+        :disabled="resendAfter > 0 || resending || pending"
         @click="resend"
       >
-        {{ resendAfter > 0 ? t('auth.resendIn', { seconds: format.number(resendAfter) }) : t('auth.resendCode') }}
+        {{
+          resending
+            ? t('auth.sending')
+            : resendAfter > 0
+              ? t('auth.resendIn', { seconds: format.number(resendAfter) })
+              : t('auth.resendCode')
+        }}
       </button>
     </div>
 

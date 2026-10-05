@@ -35,9 +35,9 @@ const page = ref(1)
 const pageSize = 20
 const type = ref<TransactionType | undefined>(undefined)
 
-const { data: wallet } = await useFetch('/api/wallet')
+const { data: wallet, error: walletError, refresh: refreshWallet } = await useFetch('/api/wallet')
 
-const { data: statement, pending } = await useFetch<{
+const { data: statement, pending, error: statementError, refresh: refreshStatement } = await useFetch<{
   items: WalletTransaction[]
   total: number
 }>('/api/wallet/transactions', {
@@ -46,8 +46,14 @@ const { data: statement, pending } = await useFetch<{
     pageSize,
     ...(type.value ? { type: type.value } : {}),
   })),
-  default: () => ({ items: [], total: 0 }),
 })
+
+const loadError = computed(() => (walletError.value && !wallet.value ? walletError.value : null)
+  ?? (statementError.value && !statement.value ? statementError.value : null))
+
+async function reloadWallet(): Promise<void> {
+  await Promise.all([refreshWallet(), refreshStatement()])
+}
 
 const typeOptions = computed(() => [
   { label: t('common.all'), value: undefined },
@@ -68,7 +74,24 @@ useHead({ title: t('wallet.title') })
       {{ t('wallet.title') }}
     </h1>
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]">
+    <CommonErrorState
+      v-if="loadError"
+      :status-code="loadError.statusCode"
+      @retry="reloadWallet()"
+    />
+
+    <div
+      v-else-if="!wallet || !statement"
+      class="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]"
+    >
+      <div class="wq-skeleton h-48 rounded-xl" />
+      <div class="wq-skeleton h-64 rounded-xl" />
+    </div>
+
+    <div
+      v-else
+      class="grid gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]"
+    >
       <GamificationProgressCard :wallet="wallet" />
 
       <section class="wq-panel p-5">

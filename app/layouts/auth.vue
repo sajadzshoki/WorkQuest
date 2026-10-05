@@ -1,16 +1,18 @@
 <script setup lang="ts">
-const localePath = useLocalePath()
+const runtime = useRuntimeConfig()
+const showDevHint = import.meta.dev
 </script>
 
 <template>
   <div class="wq-hero-gradient flex min-h-dvh flex-col">
     <header class="flex items-center justify-between px-5 py-5 sm:px-8">
-      <NuxtLink
-        :to="localePath('/')"
+      <div
         class="rounded-lg"
+        role="img"
+        :aria-label="runtime.public.appName"
       >
-        <LayoutAppLogo compact />
-      </NuxtLink>
+        <LayoutAppLogo />
+      </div>
 
       <div class="flex items-center gap-1">
         <LayoutThemeToggle />
@@ -24,7 +26,10 @@ const localePath = useLocalePath()
       </div>
     </main>
 
-    <footer class="px-6 pb-6 text-center text-xs text-dimmed">
+    <footer
+      v-if="showDevHint"
+      class="px-6 pb-6 text-center text-xs text-dimmed"
+    >
       {{ $t('auth.devHint') }}
     </footer>
   </div>

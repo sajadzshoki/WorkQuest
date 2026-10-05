@@ -27,7 +27,7 @@ const { t } = useI18n()
 const format = useLocaleFormat()
 const toast = useToast()
 
-const { data, refresh } = await useFetch<AdminResponse>('/api/recognition/admin')
+const { data, status, error, refresh } = await useFetch<AdminResponse>('/api/recognition/admin')
 
 const cycleRange = computed(() => {
   const cycle = data.value?.cycle
@@ -226,340 +226,362 @@ async function saveTitle() {
       :subtitle="t('recognition.admin.subtitle')"
     />
 
-    <div class="grid gap-4 lg:grid-cols-3">
-      <!-- Cycle configuration -->
-      <CommonSectionCard
-        :title="t('recognition.admin.cycle')"
-        icon="i-heroicons-calendar-days"
-      >
-        <div class="space-y-3">
-          <div>
-            <p class="mb-1 text-xs text-muted">
-              {{ t('recognition.admin.frequencyLabel') }}
-            </p>
-            <USelect
-              v-model="frequency"
-              :items="[
-                { label: t('recognition.frequency.WEEKLY'), value: 'WEEKLY' },
-                { label: t('recognition.frequency.MONTHLY'), value: 'MONTHLY' },
-              ]"
-              value-key="value"
-            />
-          </div>
+    <CommonErrorState
+      v-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
 
-          <p class="text-xs text-dimmed">
-            {{ cycleRange }}
-          </p>
-
-          <UButton
-            color="primary"
-            :loading="savingCycle"
-            block
-            @click="saveCycle"
-          >
-            {{ t('recognition.admin.saveCycle') }}
-          </UButton>
-
-          <UButton
-            color="neutral"
-            variant="soft"
-            :loading="finalizing"
-            block
-            @click="finalizeNow"
-          >
-            {{ t('recognition.admin.finalizeNow') }}
-          </UButton>
-        </div>
-      </CommonSectionCard>
-
-      <!-- Titles -->
-      <CommonSectionCard
-        :title="t('recognition.titles')"
-        icon="i-heroicons-tag"
-      >
-        <template #header-actions>
-          <UButton
-            size="xs"
-            color="primary"
-            variant="soft"
-            icon="i-heroicons-plus"
-            @click="openNewTitle"
-          >
-            {{ t('recognition.admin.newTitle') }}
-          </UButton>
-        </template>
-
-        <ul class="divide-y divide-default">
-          <li
-            v-for="title in data?.titles ?? []"
-            :key="title.id"
-            class="flex items-center gap-2 py-2.5 first:pt-0 last:pb-0"
-          >
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-highlighted">
-                {{ title.name }}
-              </p>
-              <p class="truncate text-[11px] text-muted">
-                {{ title.description }}
-              </p>
-            </div>
-            <UBadge
-              :color="title.isSystem ? 'neutral' : 'primary'"
-              variant="subtle"
-              size="xs"
-            >
-              {{ title.isSystem ? t('recognition.admin.system') : t('recognition.admin.custom') }}
-            </UBadge>
-          </li>
-        </ul>
-      </CommonSectionCard>
-
-      <!-- Categories -->
-      <CommonSectionCard
-        :title="t('recognition.categories')"
-        icon="i-heroicons-squares-plus"
-      >
-        <template #header-actions>
-          <UButton
-            size="xs"
-            color="primary"
-            variant="soft"
-            icon="i-heroicons-plus"
-            @click="openCreateCategory"
-          >
-            {{ t('recognition.admin.newCategory') }}
-          </UButton>
-        </template>
-
-        <ul class="divide-y divide-default">
-          <li
-            v-for="category in data?.categories ?? []"
-            :key="category.id"
-            class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
-          >
-            <span
-              class="grid size-8 shrink-0 place-items-center rounded-lg bg-elevated text-muted"
-            >
-              <UIcon
-                :name="category.iconKey ?? 'i-heroicons-sparkles'"
-                class="size-4"
-              />
-            </span>
-
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-semibold text-highlighted">
-                {{ category.name }}
-              </p>
-              <p class="truncate text-[11px] text-muted">
-                {{ t('recognition.admin.votesCount', { count: format.number(category.voteCount) }) }}
-                <template v-if="category.title">
-                  · {{ category.title.name }}
-                </template>
-              </p>
-            </div>
-
-            <UBadge
-              v-if="!category.isActive"
-              color="warning"
-              variant="subtle"
-              size="xs"
-            >
-              {{ t('recognition.admin.disabled') }}
-            </UBadge>
-
-            <UToggle
-              :model-value="category.isActive"
-              color="success"
-              @update:model-value="toggleCategory(category)"
-            />
-
-            <UButton
-              color="neutral"
-              variant="ghost"
-              size="xs"
-              icon="i-heroicons-pencil-square"
-              aria-label="edit"
-              @click="openEditCategory(category)"
-            />
-          </li>
-        </ul>
-      </CommonSectionCard>
+    <div
+      v-else-if="status === 'pending' && !data"
+      class="grid gap-4 lg:grid-cols-3"
+    >
+      <div
+        v-for="index in 3"
+        :key="index"
+        class="wq-skeleton h-48 rounded-xl"
+      />
     </div>
 
-    <!-- Category editor -->
-    <UModal
-      :model-value="categoryModalOpen"
-      @update:model-value="categoryModalOpen = $event"
+    <div
+      v-else
+      class="contents"
     >
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between gap-3">
-            <p class="text-sm font-bold text-highlighted">
-              {{ categoryForm.id ? t('recognition.admin.editCategory') : t('recognition.admin.newCategory') }}
+      <div class="grid gap-4 lg:grid-cols-3">
+        <!-- Cycle configuration -->
+        <CommonSectionCard
+          :title="t('recognition.admin.cycle')"
+          icon="i-heroicons-calendar-days"
+        >
+          <div class="space-y-3">
+            <div>
+              <p class="mb-1 text-xs text-muted">
+                {{ t('recognition.admin.frequencyLabel') }}
+              </p>
+              <USelect
+                v-model="frequency"
+                :items="[
+                  { label: t('recognition.frequency.WEEKLY'), value: 'WEEKLY' },
+                  { label: t('recognition.frequency.MONTHLY'), value: 'MONTHLY' },
+                ]"
+                value-key="value"
+              />
+            </div>
+
+            <p class="text-xs text-dimmed">
+              {{ cycleRange }}
             </p>
-            <UButton
-              color="neutral"
-              variant="ghost"
-              icon="i-heroicons-x-mark"
-              aria-label="close"
-              @click="categoryModalOpen = false"
-            />
-          </div>
-        </template>
 
-        <div class="grid gap-3 sm:grid-cols-2">
-          <UFormGroup
-            class="sm:col-span-2"
-            :label="t('recognition.admin.name')"
-            required
-          >
-            <UInput
-              v-model="categoryForm.name"
-              :placeholder="t('recognition.admin.namePlaceholder')"
-            />
-          </UFormGroup>
-
-          <UFormGroup
-            class="sm:col-span-2"
-            :label="t('recognition.admin.description')"
-          >
-            <UTextarea
-              v-model="categoryForm.description"
-              :placeholder="t('recognition.admin.descriptionPlaceholder')"
-              :rows="2"
-            />
-          </UFormGroup>
-
-          <UFormGroup :label="t('recognition.admin.icon')">
-            <UInput
-              v-model="categoryForm.iconKey"
-              :placeholder="t('recognition.admin.iconPlaceholder')"
-            />
-          </UFormGroup>
-
-          <UFormGroup :label="t('recognition.admin.tone')">
-            <USelect
-              v-model="categoryForm.tone"
-              :items="toneOptions"
-              value-key="value"
-            />
-          </UFormGroup>
-
-          <UFormGroup :label="t('recognition.admin.xpReward')">
-            <UInput
-              v-model.number="categoryForm.xpReward"
-              type="number"
-              min="0"
-            />
-          </UFormGroup>
-
-          <UFormGroup :label="t('recognition.admin.coinReward')">
-            <UInput
-              v-model.number="categoryForm.coinReward"
-              type="number"
-              min="0"
-            />
-          </UFormGroup>
-
-          <UFormGroup :label="t('recognition.admin.title')">
-            <USelect
-              v-model="categoryForm.titleId"
-              :items="titleOptions"
-              value-key="value"
-              :placeholder="t('recognition.admin.titlePlaceholder')"
-            />
-          </UFormGroup>
-
-          <UFormGroup :label="t('recognition.admin.badge')">
-            <USelect
-              v-model="categoryForm.badgeId"
-              :items="badgeOptions"
-              value-key="value"
-            />
-          </UFormGroup>
-        </div>
-
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton
-              color="neutral"
-              variant="ghost"
-              @click="categoryModalOpen = false"
-            >
-              {{ t('recognition.admin.cancel') }}
-            </UButton>
             <UButton
               color="primary"
-              :loading="categoryPending"
-              :disabled="!categoryForm.name.trim()"
-              @click="saveCategory"
+              :loading="savingCycle"
+              block
+              @click="saveCycle"
             >
-              {{ t('recognition.admin.save') }}
+              {{ t('recognition.admin.saveCycle') }}
+            </UButton>
+
+            <UButton
+              color="neutral"
+              variant="soft"
+              :loading="finalizing"
+              block
+              @click="finalizeNow"
+            >
+              {{ t('recognition.admin.finalizeNow') }}
             </UButton>
           </div>
-        </template>
-      </UCard>
-    </UModal>
+        </CommonSectionCard>
 
-    <!-- Title editor -->
-    <UModal
-      :model-value="titleModalOpen"
-      @update:model-value="titleModalOpen = $event"
-    >
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between gap-3">
-            <p class="text-sm font-bold text-highlighted">
+        <!-- Titles -->
+        <CommonSectionCard
+          :title="t('recognition.titles')"
+          icon="i-heroicons-tag"
+        >
+          <template #header-actions>
+            <UButton
+              size="xs"
+              color="primary"
+              variant="soft"
+              icon="i-heroicons-plus"
+              @click="openNewTitle"
+            >
               {{ t('recognition.admin.newTitle') }}
-            </p>
-            <UButton
-              color="neutral"
-              variant="ghost"
-              icon="i-heroicons-x-mark"
-              aria-label="close"
-              @click="titleModalOpen = false"
-            />
-          </div>
-        </template>
-
-        <div class="space-y-3">
-          <UFormGroup
-            :label="t('recognition.admin.titleName')"
-            required
-          >
-            <UInput
-              v-model="titleForm.name"
-              :placeholder="t('recognition.admin.titleNamePlaceholder')"
-            />
-          </UFormGroup>
-          <UFormGroup :label="t('recognition.admin.titleDescription')">
-            <UTextarea
-              v-model="titleForm.description"
-              :rows="2"
-            />
-          </UFormGroup>
-        </div>
-
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton
-              color="neutral"
-              variant="ghost"
-              @click="titleModalOpen = false"
-            >
-              {{ t('recognition.admin.cancel') }}
             </UButton>
+          </template>
+
+          <ul class="divide-y divide-default">
+            <li
+              v-for="title in data?.titles ?? []"
+              :key="title.id"
+              class="flex items-center gap-2 py-2.5 first:pt-0 last:pb-0"
+            >
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold text-highlighted">
+                  {{ title.name }}
+                </p>
+                <p class="truncate text-[11px] text-muted">
+                  {{ title.description }}
+                </p>
+              </div>
+              <UBadge
+                :color="title.isSystem ? 'neutral' : 'primary'"
+                variant="subtle"
+                size="xs"
+              >
+                {{ title.isSystem ? t('recognition.admin.system') : t('recognition.admin.custom') }}
+              </UBadge>
+            </li>
+          </ul>
+        </CommonSectionCard>
+
+        <!-- Categories -->
+        <CommonSectionCard
+          :title="t('recognition.categories')"
+          icon="i-heroicons-squares-plus"
+        >
+          <template #header-actions>
             <UButton
+              size="xs"
               color="primary"
-              :loading="titlePending"
-              :disabled="!titleForm.name.trim()"
-              @click="saveTitle"
+              variant="soft"
+              icon="i-heroicons-plus"
+              @click="openCreateCategory"
             >
-              {{ t('recognition.admin.create') }}
+              {{ t('recognition.admin.newCategory') }}
             </UButton>
+          </template>
+
+          <ul class="divide-y divide-default">
+            <li
+              v-for="category in data?.categories ?? []"
+              :key="category.id"
+              class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+            >
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-lg bg-elevated text-muted"
+              >
+                <UIcon
+                  :name="category.iconKey ?? 'i-heroicons-sparkles'"
+                  class="size-4"
+                />
+              </span>
+
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold text-highlighted">
+                  {{ category.name }}
+                </p>
+                <p class="truncate text-[11px] text-muted">
+                  {{ t('recognition.admin.votesCount', { count: format.number(category.voteCount) }) }}
+                  <template v-if="category.title">
+                    · {{ category.title.name }}
+                  </template>
+                </p>
+              </div>
+
+              <UBadge
+                v-if="!category.isActive"
+                color="warning"
+                variant="subtle"
+                size="xs"
+              >
+                {{ t('recognition.admin.disabled') }}
+              </UBadge>
+
+              <UToggle
+                :model-value="category.isActive"
+                color="success"
+                @update:model-value="toggleCategory(category)"
+              />
+
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-heroicons-pencil-square"
+                aria-label="edit"
+                @click="openEditCategory(category)"
+              />
+            </li>
+          </ul>
+        </CommonSectionCard>
+      </div>
+
+      <!-- Category editor -->
+      <UModal
+        :model-value="categoryModalOpen"
+        @update:model-value="categoryModalOpen = $event"
+      >
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-bold text-highlighted">
+                {{ categoryForm.id ? t('recognition.admin.editCategory') : t('recognition.admin.newCategory') }}
+              </p>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                icon="i-heroicons-x-mark"
+                aria-label="close"
+                @click="categoryModalOpen = false"
+              />
+            </div>
+          </template>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <UFormGroup
+              class="sm:col-span-2"
+              :label="t('recognition.admin.name')"
+              required
+            >
+              <UInput
+                v-model="categoryForm.name"
+                :placeholder="t('recognition.admin.namePlaceholder')"
+              />
+            </UFormGroup>
+
+            <UFormGroup
+              class="sm:col-span-2"
+              :label="t('recognition.admin.description')"
+            >
+              <UTextarea
+                v-model="categoryForm.description"
+                :placeholder="t('recognition.admin.descriptionPlaceholder')"
+                :rows="2"
+              />
+            </UFormGroup>
+
+            <UFormGroup :label="t('recognition.admin.icon')">
+              <UInput
+                v-model="categoryForm.iconKey"
+                :placeholder="t('recognition.admin.iconPlaceholder')"
+              />
+            </UFormGroup>
+
+            <UFormGroup :label="t('recognition.admin.tone')">
+              <USelect
+                v-model="categoryForm.tone"
+                :items="toneOptions"
+                value-key="value"
+              />
+            </UFormGroup>
+
+            <UFormGroup :label="t('recognition.admin.xpReward')">
+              <UInput
+                v-model.number="categoryForm.xpReward"
+                type="number"
+                min="0"
+              />
+            </UFormGroup>
+
+            <UFormGroup :label="t('recognition.admin.coinReward')">
+              <UInput
+                v-model.number="categoryForm.coinReward"
+                type="number"
+                min="0"
+              />
+            </UFormGroup>
+
+            <UFormGroup :label="t('recognition.admin.title')">
+              <USelect
+                v-model="categoryForm.titleId"
+                :items="titleOptions"
+                value-key="value"
+                :placeholder="t('recognition.admin.titlePlaceholder')"
+              />
+            </UFormGroup>
+
+            <UFormGroup :label="t('recognition.admin.badge')">
+              <USelect
+                v-model="categoryForm.badgeId"
+                :items="badgeOptions"
+                value-key="value"
+              />
+            </UFormGroup>
           </div>
-        </template>
-      </UCard>
-    </UModal>
+
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                @click="categoryModalOpen = false"
+              >
+                {{ t('recognition.admin.cancel') }}
+              </UButton>
+              <UButton
+                color="primary"
+                :loading="categoryPending"
+                :disabled="!categoryForm.name.trim()"
+                @click="saveCategory"
+              >
+                {{ t('recognition.admin.save') }}
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </UModal>
+
+      <!-- Title editor -->
+      <UModal
+        :model-value="titleModalOpen"
+        @update:model-value="titleModalOpen = $event"
+      >
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-bold text-highlighted">
+                {{ t('recognition.admin.newTitle') }}
+              </p>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                icon="i-heroicons-x-mark"
+                aria-label="close"
+                @click="titleModalOpen = false"
+              />
+            </div>
+          </template>
+
+          <div class="space-y-3">
+            <UFormGroup
+              :label="t('recognition.admin.titleName')"
+              required
+            >
+              <UInput
+                v-model="titleForm.name"
+                :placeholder="t('recognition.admin.titleNamePlaceholder')"
+              />
+            </UFormGroup>
+            <UFormGroup :label="t('recognition.admin.titleDescription')">
+              <UTextarea
+                v-model="titleForm.description"
+                :rows="2"
+              />
+            </UFormGroup>
+          </div>
+
+          <template #footer>
+            <div class="flex justify-end gap-2">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                @click="titleModalOpen = false"
+              >
+                {{ t('recognition.admin.cancel') }}
+              </UButton>
+              <UButton
+                color="primary"
+                :loading="titlePending"
+                :disabled="!titleForm.name.trim()"
+                @click="saveTitle"
+              >
+                {{ t('recognition.admin.create') }}
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </UModal>
+    </div>
   </div>
 </template>

@@ -47,11 +47,19 @@ export function useNavItems() {
   return computed<NavItem[]>(() => items.filter(item => !item.permission || can(item.permission)))
 }
 
+const MOBILE_PRIMARY = ['dashboard', 'tasks', 'leaderboard', 'rewards', 'settings']
+
 /** The five most important destinations for the mobile tab bar. */
 export function useMobileNavItems() {
   const items = useNavItems()
-  const picked = ['dashboard', 'tasks', 'leaderboard', 'rewards', 'settings']
-  return computed(() => picked
+  return computed(() => MOBILE_PRIMARY
     .map(key => items.value.find(item => item.key === key))
     .filter((item): item is NavItem => Boolean(item)))
+}
+
+/** Routes that do not fit the tab bar, still filtered by permission. */
+export function useMobileMoreItems() {
+  const items = useNavItems()
+  const primary = new Set(MOBILE_PRIMARY)
+  return computed(() => items.value.filter(item => !primary.has(item.key)))
 }

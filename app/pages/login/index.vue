@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { requestOtpSchema } from '#shared/schemas'
 import type { ApiErrorBody, RequestOtpResponse } from '#shared/types/api'
 
 definePageMeta({ layout: 'auth', middleware: ['guest'] })
@@ -9,12 +10,20 @@ const toast = useToast()
 const router = useRouter()
 
 const phone = ref('')
+const phoneError = ref<string | null>(null)
 const pending = ref<'LOGIN' | 'REGISTER' | null>(null)
 const errorMessage = ref<string | null>(null)
+
+function validatePhone(): boolean {
+  const parsed = requestOtpSchema.safeParse({ phone: phone.value, purpose: 'LOGIN' })
+  phoneError.value = parsed.success ? null : t('auth.errors.invalidPhone')
+  return parsed.success
+}
 
 /** Both buttons share one flow; only the purpose sent to the server differs. */
 async function request(purpose: 'LOGIN' | 'REGISTER') {
   errorMessage.value = null
+  if (!validatePhone()) return
   pending.value = purpose
 
   try {
@@ -67,6 +76,7 @@ async function request(purpose: 'LOGIN' | 'REGISTER') {
       <UFormField
         :label="t('auth.phoneLabel')"
         required
+        :error="phoneError ?? undefined"
       >
         <UInput
           v-model="phone"
@@ -79,6 +89,9 @@ async function request(purpose: 'LOGIN' | 'REGISTER') {
           icon="i-heroicons-device-phone-mobile"
           class="w-full text-start"
           :disabled="pending !== null"
+          :aria-invalid="phoneError ? true : undefined"
+          @blur="phone.trim() ? validatePhone() : undefined"
+          @update:model-value="phoneError = null"
         />
       </UFormField>
 
@@ -95,7 +108,7 @@ async function request(purpose: 'LOGIN' | 'REGISTER') {
         size="xl"
         block
         :loading="pending === 'LOGIN'"
-        :disabled="phone.length < 10 || pending !== null"
+        :disabled="pending !== null"
       >
         {{ pending === 'LOGIN' ? t('auth.sending') : t('auth.sendCode') }}
       </UButton>
@@ -123,7 +136,7 @@ async function request(purpose: 'LOGIN' | 'REGISTER') {
         class="mt-3"
         icon="i-heroicons-building-office"
         :loading="pending === 'REGISTER'"
-        :disabled="phone.length < 10 || pending !== null"
+        :disabled="pending !== null"
         @click="request('REGISTER')"
       >
         {{ pending === 'REGISTER' ? t('auth.sending') : t('auth.registerCompany') }}

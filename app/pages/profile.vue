@@ -62,7 +62,7 @@ interface ProfileResponse {
 const { t, te } = useI18n()
 const format = useLocaleFormat()
 
-const { data } = await useFetch<ProfileResponse>('/api/profile')
+const { data, status, error, refresh } = await useFetch<ProfileResponse>('/api/profile')
 
 useHead({ title: t('profile.title') })
 
@@ -89,211 +89,227 @@ function activityLabel(kind: string): string {
 
 <template>
   <div>
-    <!-- Identity -->
-    <CommonSectionCard
-      class="mb-4"
-      icon="i-heroicons-identification"
+    <CommonErrorState
+      v-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
+
+    <div
+      v-else-if="status === 'pending' && !data"
+      class="grid gap-4"
     >
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <UAvatar
-          :src="data?.user.avatarUrl ?? undefined"
-          :text="(data?.user.fullName ?? '').charAt(0)"
-          size="2xl"
-        />
-        <div class="min-w-0 flex-1">
-          <h1 class="text-xl font-black text-highlighted">
-            {{ data?.user.fullName }}
-          </h1>
-          <p class="mt-0.5 text-sm text-muted">
-            {{ data?.user.jobTitle ?? t(`roles.${data?.user.role}`) }}
-          </p>
-        </div>
+      <div class="wq-skeleton h-32 rounded-xl" />
+      <div class="wq-skeleton h-48 rounded-xl" />
+    </div>
 
-        <dl class="grid grid-cols-3 gap-4 sm:gap-6">
-          <div>
-            <dt class="text-xs text-muted">
-              {{ t('gamification.level') }}
-            </dt>
-            <dd class="mt-0.5 text-lg font-black tabular-nums text-primary">
-              {{ format.number(data?.level.current ?? 1) }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-xs text-muted">
-              {{ t('gamification.coins') }}
-            </dt>
-            <dd class="mt-0.5 text-lg font-black tabular-nums text-coin-600 dark:text-coin-300">
-              {{ format.number(data?.coins.balance ?? 0) }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-xs text-muted">
-              {{ t('gamification.streak') }}
-            </dt>
-            <dd class="mt-0.5 text-lg font-black tabular-nums text-streak-600 dark:text-streak-400">
-              {{ format.number(data?.streak.current ?? 0) }}
-            </dd>
-          </div>
-        </dl>
-      </div>
-    </CommonSectionCard>
-
-    <div class="grid gap-4 lg:grid-cols-3">
-      <!-- Level & XP progress -->
+    <template v-else>
+      <!-- Identity -->
       <CommonSectionCard
-        class="lg:col-span-2"
-        :title="t('profile.levelProgress')"
-        icon="i-heroicons-arrow-trending-up"
+        class="mb-4"
+        icon="i-heroicons-identification"
       >
-        <GamificationXpProgress
-          :level="data?.level.current ?? 1"
-          :title="data?.level.title"
-          :percent="data?.level.percent ?? 0"
-          :current-xp="data?.level.currentXp ?? 0"
-          :needed-xp="data?.level.neededXp ?? 0"
-        />
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <UAvatar
+            :src="data?.user.avatarUrl ?? undefined"
+            :text="(data?.user.fullName ?? '').charAt(0)"
+            size="2xl"
+          />
+          <div class="min-w-0 flex-1">
+            <h1 class="text-xl font-black text-highlighted">
+              {{ data?.user.fullName }}
+            </h1>
+            <p class="mt-0.5 text-sm text-muted">
+              {{ data?.user.jobTitle ?? t(`roles.${data?.user.role}`) }}
+            </p>
+          </div>
 
-        <div class="mt-5 grid grid-cols-3 gap-3 border-t border-default pt-4 text-center">
-          <div>
-            <p class="text-xs text-muted">
-              {{ t('gamification.xp') }}
-            </p>
-            <p class="text-lg font-black tabular-nums">
-              {{ format.number(data?.xp.total ?? 0) }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-muted">
-              {{ t('profile.lifetimeXp') }}
-            </p>
-            <p class="text-lg font-black tabular-nums">
-              {{ format.number(data?.xp.lifetimeXp ?? 0) }}
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-muted">
-              {{ t('profile.nextLevel') }}
-            </p>
-            <p class="text-lg font-black tabular-nums text-muted">
-              {{ data?.level.next ? format.number(data.level.next.level) : '—' }}
-            </p>
-          </div>
+          <dl class="grid grid-cols-3 gap-4 sm:gap-6">
+            <div>
+              <dt class="text-xs text-muted">
+                {{ t('gamification.level') }}
+              </dt>
+              <dd class="mt-0.5 text-lg font-black tabular-nums text-primary">
+                {{ format.number(data?.level.current ?? 1) }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted">
+                {{ t('gamification.coins') }}
+              </dt>
+              <dd class="mt-0.5 text-lg font-black tabular-nums text-coin-600 dark:text-coin-300">
+                {{ format.number(data?.coins.balance ?? 0) }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted">
+                {{ t('gamification.streak') }}
+              </dt>
+              <dd class="mt-0.5 text-lg font-black tabular-nums text-streak-600 dark:text-streak-400">
+                {{ format.number(data?.streak.current ?? 0) }}
+              </dd>
+            </div>
+          </dl>
         </div>
       </CommonSectionCard>
 
-      <!-- Streak -->
-      <GamificationStreakCard
-        :current="data?.streak.current ?? 0"
-        :longest="data?.streak.longest ?? 0"
-        :milestones="data?.streak.milestones ?? []"
-        :next="data?.streak.next ?? null"
-      />
-    </div>
-
-    <!-- Badges -->
-    <CommonSectionCard
-      class="mt-4"
-      :title="t('gamification.badge')"
-      icon="i-heroicons-shield-check"
-    >
-      <CommonEmptyState
-        v-if="!unlockedBadges.length"
-        icon="i-heroicons-shield-check"
-        :title="t('profile.noBadges')"
-      />
-
-      <div
-        v-else
-        class="flex flex-wrap gap-x-6 gap-y-4"
-      >
-        <GamificationBadge
-          v-for="badge in unlockedBadges"
-          :key="badge.id"
-          :name="badge.name"
-          :icon-key="badge.iconKey"
-          :tone="badge.tone"
-          :description="badge.description"
-          :awarded-at="badge.awardedAt"
-          size="lg"
-        />
-      </div>
-    </CommonSectionCard>
-
-    <!-- Achievements -->
-    <CommonSectionCard
-      class="mt-4"
-      :title="t('profile.achievements')"
-      icon="i-heroicons-star"
-    >
-      <CommonEmptyState
-        v-if="!unlockedAchievements.length"
-        icon="i-heroicons-star"
-        :title="t('profile.noAchievements')"
-      />
-
-      <div
-        v-else
-        class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
-      >
-        <GamificationAchievementCard
-          v-for="achievement in unlockedAchievements"
-          :key="achievement.id"
-          :title="achievement.title"
-          :description="achievement.description"
-          :icon-key="achievement.iconKey"
-          :xp-reward="achievement.xpReward"
-          :coin-reward="achievement.coinReward"
-          :unlocked="true"
-          :unlocked-at="achievement.unlockedAt"
-        />
-      </div>
-    </CommonSectionCard>
-
-    <!-- Recent activity -->
-    <CommonSectionCard
-      class="mt-4"
-      :title="t('profile.recentActivity')"
-      icon="i-heroicons-clock"
-    >
-      <CommonEmptyState
-        v-if="!data?.recentActivity.length"
-        icon="i-heroicons-clock"
-        :title="t('profile.noActivity')"
-      />
-
-      <ul
-        v-else
-        class="divide-y divide-default"
-      >
-        <li
-          v-for="item in data?.recentActivity ?? []"
-          :key="item.id"
-          class="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+      <div class="grid gap-4 lg:grid-cols-3">
+        <!-- Level & XP progress -->
+        <CommonSectionCard
+          class="lg:col-span-2"
+          :title="t('profile.levelProgress')"
+          icon="i-heroicons-arrow-trending-up"
         >
-          <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-elevated text-muted">
-            <UIcon
-              :name="activityIcon(item.kind)"
-              class="size-4.5"
-            />
-          </span>
+          <GamificationXpProgress
+            :level="data?.level.current ?? 1"
+            :title="data?.level.title"
+            :percent="data?.level.percent ?? 0"
+            :current-xp="data?.level.currentXp ?? 0"
+            :needed-xp="data?.level.neededXp ?? 0"
+          />
 
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-highlighted">
-              {{ item.title ?? activityLabel(item.kind) }}
-            </p>
-            <p class="text-xs text-muted">
-              {{ activityLabel(item.kind) }} · {{ format.relative(item.at) }}
-            </p>
+          <div class="mt-5 grid grid-cols-3 gap-3 border-t border-default pt-4 text-center">
+            <div>
+              <p class="text-xs text-muted">
+                {{ t('gamification.xp') }}
+              </p>
+              <p class="text-lg font-black tabular-nums">
+                {{ format.number(data?.xp.total ?? 0) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-muted">
+                {{ t('profile.lifetimeXp') }}
+              </p>
+              <p class="text-lg font-black tabular-nums">
+                {{ format.number(data?.xp.lifetimeXp ?? 0) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-muted">
+                {{ t('profile.nextLevel') }}
+              </p>
+              <p class="text-lg font-black tabular-nums text-muted">
+                {{ data?.level.next ? format.number(data.level.next.level) : '—' }}
+              </p>
+            </div>
           </div>
+        </CommonSectionCard>
 
-          <span
-            v-if="item.xp > 0"
-            class="shrink-0 text-sm font-black tabular-nums text-primary"
+        <!-- Streak -->
+        <GamificationStreakCard
+          :current="data?.streak.current ?? 0"
+          :longest="data?.streak.longest ?? 0"
+          :milestones="data?.streak.milestones ?? []"
+          :next="data?.streak.next ?? null"
+        />
+      </div>
+
+      <!-- Badges -->
+      <CommonSectionCard
+        class="mt-4"
+        :title="t('gamification.badge')"
+        icon="i-heroicons-shield-check"
+      >
+        <CommonEmptyState
+          v-if="!unlockedBadges.length"
+          icon="i-heroicons-shield-check"
+          :title="t('profile.noBadges')"
+        />
+
+        <div
+          v-else
+          class="flex flex-wrap gap-x-6 gap-y-4"
+        >
+          <GamificationBadge
+            v-for="badge in unlockedBadges"
+            :key="badge.id"
+            :name="badge.name"
+            :icon-key="badge.iconKey"
+            :tone="badge.tone"
+            :description="badge.description"
+            :awarded-at="badge.awardedAt"
+            size="lg"
+          />
+        </div>
+      </CommonSectionCard>
+
+      <!-- Achievements -->
+      <CommonSectionCard
+        class="mt-4"
+        :title="t('profile.achievements')"
+        icon="i-heroicons-star"
+      >
+        <CommonEmptyState
+          v-if="!unlockedAchievements.length"
+          icon="i-heroicons-star"
+          :title="t('profile.noAchievements')"
+        />
+
+        <div
+          v-else
+          class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+        >
+          <GamificationAchievementCard
+            v-for="achievement in unlockedAchievements"
+            :key="achievement.id"
+            :title="achievement.title"
+            :description="achievement.description"
+            :icon-key="achievement.iconKey"
+            :xp-reward="achievement.xpReward"
+            :coin-reward="achievement.coinReward"
+            :unlocked="true"
+            :unlocked-at="achievement.unlockedAt"
+          />
+        </div>
+      </CommonSectionCard>
+
+      <!-- Recent activity -->
+      <CommonSectionCard
+        class="mt-4"
+        :title="t('profile.recentActivity')"
+        icon="i-heroicons-clock"
+      >
+        <CommonEmptyState
+          v-if="!data?.recentActivity.length"
+          icon="i-heroicons-clock"
+          :title="t('profile.noActivity')"
+        />
+
+        <ul
+          v-else
+          class="divide-y divide-default"
+        >
+          <li
+            v-for="item in data?.recentActivity ?? []"
+            :key="item.id"
+            class="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
           >
-            +{{ format.number(item.xp) }}
-          </span>
-        </li>
-      </ul>
-    </CommonSectionCard>
+            <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-elevated text-muted">
+              <UIcon
+                :name="activityIcon(item.kind)"
+                class="size-4.5"
+              />
+            </span>
+
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-highlighted">
+                {{ item.title ?? activityLabel(item.kind) }}
+              </p>
+              <p class="text-xs text-muted">
+                {{ activityLabel(item.kind) }} · {{ format.relative(item.at) }}
+              </p>
+            </div>
+
+            <span
+              v-if="item.xp > 0"
+              class="shrink-0 text-sm font-black tabular-nums text-primary"
+            >
+              +{{ format.number(item.xp) }}
+            </span>
+          </li>
+        </ul>
+      </CommonSectionCard>
+    </template>
   </div>
 </template>

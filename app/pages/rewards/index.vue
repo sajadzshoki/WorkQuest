@@ -25,7 +25,7 @@ const activeType = ref<string | null>(null)
 
 const query = computed(() => ({ type: activeType.value ?? undefined }))
 
-const { data, status, refresh } = await useFetch<RewardCatalogueResponse>('/api/rewards', { query })
+const { data, status, error, refresh } = await useFetch<RewardCatalogueResponse>('/api/rewards', { query })
 
 /** Only the types actually on the shelf get a filter chip. */
 const typeFilters = computed(() => {
@@ -58,7 +58,7 @@ function onRedeemed() {
 const showAllHistory = ref(false)
 const historyPage = ref(1)
 
-const { data: history, refresh: refreshHistory } = await useFetch<RedemptionListResponse>(
+const { data: history, error: historyError, refresh: refreshHistory } = await useFetch<RedemptionListResponse>(
   '/api/rewards/redemptions',
   { query: computed(() => ({ page: String(historyPage.value), pageSize: showAllHistory.value ? '20' : '5' })) },
 )
@@ -169,8 +169,14 @@ const liveCount = computed(() => (counts.value.PENDING ?? 0) + (counts.value.APP
     </div>
 
     <!-- The shelf -->
+    <CommonErrorState
+      v-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
+
     <div
-      v-if="status === 'pending'"
+      v-else-if="status === 'pending'"
       class="wq-panel grid place-items-center p-12 text-sm text-muted"
     >
       {{ t('common.loading') }}
@@ -203,7 +209,13 @@ const liveCount = computed(() => (counts.value.PENDING ?? 0) + (counts.value.APP
       :title="t('rewards.myRedemptions')"
       icon="i-heroicons-receipt-percent"
     >
+      <CommonErrorState
+        v-if="historyError && !history"
+        :status-code="historyError.statusCode"
+        @retry="refreshHistory()"
+      />
       <RewardsRedemptionList
+        v-else
         :items="historyItems"
         @changed="() => { refresh(); refreshHistory() }"
       />

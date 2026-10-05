@@ -30,7 +30,7 @@ const query = computed(() => ({
   pageSize: 100,
 }))
 
-const { data, pending, refresh } = await useFetch<MemberListResponse>('/api/members', {
+const { data, pending, error, refresh } = await useFetch<MemberListResponse>('/api/members', {
   query,
   // Debounce-ish: only re-run once the user pauses typing.
   watch: [search, teamFilter, roleFilter],
@@ -141,8 +141,25 @@ async function removeMember(id: string, fullName: string) {
       </p>
     </div>
 
+    <CommonErrorState
+      v-if="error && !data"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
+
+    <div
+      v-else-if="pending && !data"
+      class="grid gap-3"
+    >
+      <div
+        v-for="index in 4"
+        :key="index"
+        class="wq-skeleton h-20 rounded-xl"
+      />
+    </div>
+
     <CommonEmptyState
-      v-if="!pending && !data?.members.length"
+      v-else-if="!data?.members.length"
       class="wq-panel"
       icon="i-heroicons-user-group"
       :title="t('members.empty.title')"

@@ -14,7 +14,7 @@ const { user } = useSession()
 
 const teamId = computed(() => String(route.params.id ?? ''))
 
-const { data, error, refresh } = await useFetch<TeamDetailResponse>(() => `/api/teams/${teamId.value}`)
+const { data, error, status, refresh } = await useFetch<TeamDetailResponse>(() => `/api/teams/${teamId.value}`)
 
 const team = computed(() => data.value?.team ?? null)
 const canEdit = computed(() => data.value?.canEdit ?? false)
@@ -164,8 +164,19 @@ function fail(err: unknown): string {
       {{ t('team.title') }}
     </NuxtLink>
 
+    <div
+      v-if="status === 'pending' && !data"
+      class="wq-skeleton h-48 rounded-xl"
+    />
+
+    <CommonErrorState
+      v-else-if="error && error.statusCode !== 404"
+      :status-code="error.statusCode"
+      @retry="refresh()"
+    />
+
     <CommonEmptyState
-      v-if="error || !team"
+      v-else-if="error || !team"
       class="wq-panel"
       icon="i-heroicons-user-group"
       :title="t('team.notFound')"

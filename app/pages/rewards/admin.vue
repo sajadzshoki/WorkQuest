@@ -51,7 +51,7 @@ const shelfQuery = computed(() => ({
   type: shelfType.value || undefined,
 }))
 
-const { data: admin, refresh: refreshAdmin } = await useFetch<RewardAdminResponse>('/api/rewards/admin', {
+const { data: admin, status: adminStatus, error: adminError, refresh: refreshAdmin } = await useFetch<RewardAdminResponse>('/api/rewards/admin', {
   query: shelfQuery,
 })
 
@@ -243,366 +243,388 @@ async function saveRules() {
       </template>
     </CommonPageHeader>
 
-    <!-- Stats -->
-    <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      <div
-        v-for="stat in stats"
-        :key="stat.key"
-        class="wq-panel p-4"
-      >
-        <div class="flex items-center gap-2">
-          <UIcon
-            :name="stat.icon"
-            class="size-4 shrink-0"
-            :class="stat.tone"
-          />
-          <p class="truncate text-[11px] text-muted">
-            {{ t(`rewards.admin.stats.${stat.key}`) }}
-          </p>
-        </div>
-        <p class="mt-1 text-xl font-black tabular-nums text-highlighted">
-          {{ format.compact(stat.value) }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Gamification rules: the economy behind the payouts -->
-    <CommonSectionCard
-      class="mb-6"
-      :title="t('rewards.admin.rules.title')"
-      icon="i-heroicons-adjustments-horizontal"
-      :description="activeRules
-        ? t('rewards.admin.rules.description', { version: format.number(activeRules.version) })
-        : undefined"
-    >
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="min-w-0">
-          <p
-            v-if="activeRules"
-            class="text-sm text-highlighted"
-          >
-            {{ t('rewards.admin.rules.activeSummary', { xp: format.number(activeRules.baseXp), coins: format.number(activeRules.baseCoins) }) }}
-          </p>
-          <p class="mt-1 text-xs text-muted">
-            {{ t('rewards.admin.rules.versioningHint') }}
-          </p>
-        </div>
-        <UButton
-          color="primary"
-          variant="soft"
-          icon="i-heroicons-pencil-square"
-          @click="openRules"
-        >
-          {{ t('rewards.admin.rules.edit') }}
-        </UButton>
-      </div>
-    </CommonSectionCard>
-
-    <!-- Queue -->
-    <CommonSectionCard
-      class="mb-6"
-      :title="t('rewards.admin.queue')"
-      icon="i-heroicons-queue-list"
-      :description="t('rewards.admin.demand', { count: format.number(queueTotal) })"
-    >
-      <template #header-actions>
-        <USelect
-          v-model="queueStatus"
-          :items="queueStatusItems"
-          size="sm"
-          :aria-label="t('rewards.admin.queueActions.filterStatus')"
-          class="w-40"
-        />
-      </template>
-
-      <RewardsRedemptionQueue
-        :items="queueItems"
-        :pending-action="pendingAction"
-        @decide="openDecision"
-        @close-decision="pendingAction = null"
-        @changed="refreshAll"
-      />
-
-      <div
-        v-if="queuePages > 1"
-        class="mt-4 flex items-center justify-between border-t border-default pt-3"
-      >
-        <UButton
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          icon="i-heroicons-arrow-right"
-          :disabled="queuePage <= 1"
-          :label="t('common.previous')"
-          @click="queuePage -= 1"
-        />
-        <span class="text-[11px] tabular-nums text-muted">
-          {{ format.number(queuePage) }} / {{ format.number(queuePages) }}
-        </span>
-        <UButton
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          trailing-icon="i-heroicons-arrow-left"
-          :disabled="queuePage >= queuePages"
-          :label="t('common.next')"
-          @click="queuePage += 1"
-        />
-      </div>
-    </CommonSectionCard>
-
-    <!-- Shelf -->
-    <CommonSectionCard
-      :title="t('rewards.admin.shelf')"
-      icon="i-heroicons-building-storefront"
-    >
-      <template #header-actions>
-        <div class="flex flex-wrap items-center gap-2">
-          <USelect
-            v-model="shelfStatus"
-            :items="shelfStatusItems"
-            size="sm"
-            :aria-label="t('common.status')"
-            class="w-32"
-          />
-          <USelect
-            v-model="shelfType"
-            :items="shelfTypeItems"
-            size="sm"
-            :aria-label="t('rewards.admin.form.type')"
-            class="w-36"
-          />
-        </div>
-      </template>
-
-      <CommonEmptyState
-        v-if="!shelf.length"
-        icon="i-heroicons-building-storefront"
-        :title="t('rewards.admin.emptyShelf')"
-        :description="t('rewards.admin.emptyShelfHint')"
-      >
-        <UButton
-          class="mt-2"
-          color="primary"
-          icon="i-heroicons-plus"
-          :label="t('rewards.admin.newReward')"
-          @click="openCreate"
-        />
-      </CommonEmptyState>
-
-      <ul
-        v-else
-        class="divide-y divide-default"
-      >
-        <li
-          v-for="reward in shelf"
-          :key="reward.id"
-          class="flex flex-wrap items-start gap-3 py-3.5 first:pt-0 last:pb-0"
-        >
-          <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-elevated text-primary">
-            <img
-              v-if="reward.imageUrl"
-              :src="reward.imageUrl"
-              :alt="reward.title"
-              class="size-full object-cover"
-              loading="lazy"
-              decoding="async"
-            >
-            <UIcon
-              v-else
-              :name="typeIcon(reward.type)"
-              class="size-5"
-            />
-          </span>
-
-          <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-2">
-              <p class="truncate text-sm font-bold text-highlighted">
-                {{ reward.title }}
-              </p>
-              <UBadge
-                :color="catalogTone(reward.status)"
-                variant="subtle"
-                size="sm"
-              >
-                {{ catalogStatusLabel(reward.status) }}
-              </UBadge>
-              <UBadge
-                v-if="reward.rules.autoApprove"
-                color="success"
-                variant="subtle"
-                size="sm"
-                icon="i-heroicons-bolt"
-              >
-                {{ t('rewards.autoApprove') }}
-              </UBadge>
-              <UBadge
-                v-if="!reward.availability.available"
-                color="warning"
-                variant="subtle"
-                size="sm"
-              >
-                {{ t(`rewards.block.${reward.availability.code}`) }}
-              </UBadge>
-            </div>
-
-            <p
-              v-if="reward.description"
-              class="mt-0.5 line-clamp-1 text-[11px] text-muted"
-            >
-              {{ reward.description }}
-            </p>
-
-            <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-dimmed">
-              <span class="font-semibold tabular-nums text-coin-600 dark:text-coin-300">
-                {{ t('rewards.cost', { value: format.number(reward.coinCost) }) }}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>{{ typeLabel(reward.type) }}</span>
-              <span aria-hidden="true">·</span>
-              <span>
-                {{ reward.stock === null
-                  ? t('rewards.unlimitedStock')
-                  : t('rewards.stock', { count: format.number(reward.stock) }) }}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span class="tabular-nums">{{ t('rewards.admin.demand', { count: format.number(reward.redemptions.total) }) }}</span>
-            </p>
-
-            <!-- The rules, so an admin can see the policy without opening the form -->
-            <p
-              v-if="reward.rules.maxPerUser !== null || reward.rules.minLevel !== null || reward.rules.requiresNote"
-              class="mt-1 flex flex-wrap gap-1.5 text-[10px] text-muted"
-            >
-              <span
-                v-if="reward.rules.maxPerUser !== null"
-                class="rounded-full bg-elevated/70 px-2 py-0.5"
-              >
-                {{ t('rewards.maxPerUser', { count: format.number(reward.rules.maxPerUser) }) }}
-              </span>
-              <span
-                v-if="reward.rules.minLevel !== null"
-                class="rounded-full bg-elevated/70 px-2 py-0.5"
-              >
-                {{ t('rewards.levelRequired', { level: format.number(reward.rules.minLevel) }) }}
-              </span>
-              <span
-                v-if="reward.rules.requiresNote"
-                class="rounded-full bg-elevated/70 px-2 py-0.5"
-              >
-                {{ t('rewards.requiresNote') }}
-              </span>
-            </p>
-          </div>
-
-          <div class="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-            <UButton
-              size="xs"
-              color="neutral"
-              variant="soft"
-              icon="i-heroicons-pencil"
-              :label="t('rewards.admin.actions.edit')"
-              @click="openEdit(reward)"
-            />
-            <UButton
-              v-if="reward.status !== 'ACTIVE'"
-              size="xs"
-              color="success"
-              variant="soft"
-              icon="i-heroicons-check"
-              :label="t('rewards.admin.actions.activate')"
-              @click="setStatus(reward, 'ACTIVE')"
-            />
-            <UButton
-              v-else
-              size="xs"
-              color="warning"
-              variant="soft"
-              icon="i-heroicons-pause"
-              :label="t('rewards.admin.actions.pause')"
-              @click="setStatus(reward, 'PAUSED')"
-            />
-            <UButton
-              v-if="reward.status !== 'ARCHIVED'"
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              icon="i-heroicons-archive-box"
-              :aria-label="t('rewards.admin.actions.archive')"
-              @click="setStatus(reward, 'ARCHIVED')"
-            />
-          </div>
-        </li>
-      </ul>
-    </CommonSectionCard>
-
-    <RewardsRewardFormModal
-      v-model:open="formOpen"
-      :reward="editing"
-      @saved="refreshAll"
+    <CommonErrorState
+      v-if="adminError && !admin"
+      :status-code="adminError.statusCode"
+      @retry="refreshAdmin()"
     />
 
-    <!-- The economy editor. Fields are grouped the way the payout formula
-         reads: what a task is worth, how priority and quality scale it, which
-         behaviours earn a bonus, which lose one, and the guard rails. -->
-    <UModal
-      v-model:open="rulesOpen"
-      :title="t('rewards.admin.rules.title')"
-      :description="t('rewards.admin.rules.versioningHint')"
+    <div
+      v-else-if="adminStatus === 'pending' && !admin"
+      class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
     >
-      <template #body>
-        <div class="space-y-5">
-          <p
-            v-if="rulesError"
-            class="rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error"
-          >
-            {{ rulesError }}
+      <div
+        v-for="index in 5"
+        :key="index"
+        class="wq-skeleton h-24 rounded-xl"
+      />
+    </div>
+
+    <div
+      v-else
+      class="contents"
+    >
+      <!-- Stats -->
+      <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div
+          v-for="stat in stats"
+          :key="stat.key"
+          class="wq-panel p-4"
+        >
+          <div class="flex items-center gap-2">
+            <UIcon
+              :name="stat.icon"
+              class="size-4 shrink-0"
+              :class="stat.tone"
+            />
+            <p class="truncate text-[11px] text-muted">
+              {{ t(`rewards.admin.stats.${stat.key}`) }}
+            </p>
+          </div>
+          <p class="mt-1 text-xl font-black tabular-nums text-highlighted">
+            {{ format.compact(stat.value) }}
           </p>
-
-          <fieldset
-            v-for="group in RULE_FIELD_GROUPS"
-            :key="group.key"
-          >
-            <legend class="mb-2 text-xs font-bold text-muted">
-              {{ t(`rewards.admin.rules.groups.${group.key}`) }}
-            </legend>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <UFormField
-                v-for="field in group.fields"
-                :key="field"
-                :label="t(`rewards.admin.rules.fields.${field}`)"
-              >
-                <UInput
-                  v-model="rulesForm[field]"
-                  type="number"
-                  class="w-full"
-                  :disabled="rulesSaving"
-                />
-              </UFormField>
-            </div>
-          </fieldset>
         </div>
-      </template>
+      </div>
 
-      <template #footer>
-        <div class="flex w-full items-center justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            @click="rulesOpen = false"
-          >
-            {{ t('common.cancel') }}
-          </UButton>
+      <!-- Gamification rules: the economy behind the payouts -->
+      <CommonSectionCard
+        class="mb-6"
+        :title="t('rewards.admin.rules.title')"
+        icon="i-heroicons-adjustments-horizontal"
+        :description="activeRules
+          ? t('rewards.admin.rules.description', { version: format.number(activeRules.version) })
+          : undefined"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p
+              v-if="activeRules"
+              class="text-sm text-highlighted"
+            >
+              {{ t('rewards.admin.rules.activeSummary', { xp: format.number(activeRules.baseXp), coins: format.number(activeRules.baseCoins) }) }}
+            </p>
+            <p class="mt-1 text-xs text-muted">
+              {{ t('rewards.admin.rules.versioningHint') }}
+            </p>
+          </div>
           <UButton
             color="primary"
-            icon="i-heroicons-paper-airplane"
-            :loading="rulesSaving"
-            @click="saveRules"
+            variant="soft"
+            icon="i-heroicons-pencil-square"
+            @click="openRules"
           >
-            {{ t('common.save') }}
+            {{ t('rewards.admin.rules.edit') }}
           </UButton>
         </div>
-      </template>
-    </UModal>
+      </CommonSectionCard>
+
+      <!-- Queue -->
+      <CommonSectionCard
+        class="mb-6"
+        :title="t('rewards.admin.queue')"
+        icon="i-heroicons-queue-list"
+        :description="t('rewards.admin.demand', { count: format.number(queueTotal) })"
+      >
+        <template #header-actions>
+          <USelect
+            v-model="queueStatus"
+            :items="queueStatusItems"
+            size="sm"
+            :aria-label="t('rewards.admin.queueActions.filterStatus')"
+            class="w-40"
+          />
+        </template>
+
+        <RewardsRedemptionQueue
+          :items="queueItems"
+          :pending-action="pendingAction"
+          @decide="openDecision"
+          @close-decision="pendingAction = null"
+          @changed="refreshAll"
+        />
+
+        <div
+          v-if="queuePages > 1"
+          class="mt-4 flex items-center justify-between border-t border-default pt-3"
+        >
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            icon="i-heroicons-arrow-right"
+            :disabled="queuePage <= 1"
+            :label="t('common.previous')"
+            @click="queuePage -= 1"
+          />
+          <span class="text-[11px] tabular-nums text-muted">
+            {{ format.number(queuePage) }} / {{ format.number(queuePages) }}
+          </span>
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            trailing-icon="i-heroicons-arrow-left"
+            :disabled="queuePage >= queuePages"
+            :label="t('common.next')"
+            @click="queuePage += 1"
+          />
+        </div>
+      </CommonSectionCard>
+
+      <!-- Shelf -->
+      <CommonSectionCard
+        :title="t('rewards.admin.shelf')"
+        icon="i-heroicons-building-storefront"
+      >
+        <template #header-actions>
+          <div class="flex flex-wrap items-center gap-2">
+            <USelect
+              v-model="shelfStatus"
+              :items="shelfStatusItems"
+              size="sm"
+              :aria-label="t('common.status')"
+              class="w-32"
+            />
+            <USelect
+              v-model="shelfType"
+              :items="shelfTypeItems"
+              size="sm"
+              :aria-label="t('rewards.admin.form.type')"
+              class="w-36"
+            />
+          </div>
+        </template>
+
+        <CommonEmptyState
+          v-if="!shelf.length"
+          icon="i-heroicons-building-storefront"
+          :title="t('rewards.admin.emptyShelf')"
+          :description="t('rewards.admin.emptyShelfHint')"
+        >
+          <UButton
+            class="mt-2"
+            color="primary"
+            icon="i-heroicons-plus"
+            :label="t('rewards.admin.newReward')"
+            @click="openCreate"
+          />
+        </CommonEmptyState>
+
+        <ul
+          v-else
+          class="divide-y divide-default"
+        >
+          <li
+            v-for="reward in shelf"
+            :key="reward.id"
+            class="flex flex-wrap items-start gap-3 py-3.5 first:pt-0 last:pb-0"
+          >
+            <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-elevated text-primary">
+              <img
+                v-if="reward.imageUrl"
+                :src="reward.imageUrl"
+                :alt="reward.title"
+                class="size-full object-cover"
+                loading="lazy"
+                decoding="async"
+              >
+              <UIcon
+                v-else
+                :name="typeIcon(reward.type)"
+                class="size-5"
+              />
+            </span>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="truncate text-sm font-bold text-highlighted">
+                  {{ reward.title }}
+                </p>
+                <UBadge
+                  :color="catalogTone(reward.status)"
+                  variant="subtle"
+                  size="sm"
+                >
+                  {{ catalogStatusLabel(reward.status) }}
+                </UBadge>
+                <UBadge
+                  v-if="reward.rules.autoApprove"
+                  color="success"
+                  variant="subtle"
+                  size="sm"
+                  icon="i-heroicons-bolt"
+                >
+                  {{ t('rewards.autoApprove') }}
+                </UBadge>
+                <UBadge
+                  v-if="!reward.availability.available"
+                  color="warning"
+                  variant="subtle"
+                  size="sm"
+                >
+                  {{ t(`rewards.block.${reward.availability.code}`) }}
+                </UBadge>
+              </div>
+
+              <p
+                v-if="reward.description"
+                class="mt-0.5 line-clamp-1 text-[11px] text-muted"
+              >
+                {{ reward.description }}
+              </p>
+
+              <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-dimmed">
+                <span class="font-semibold tabular-nums text-coin-600 dark:text-coin-300">
+                  {{ t('rewards.cost', { value: format.number(reward.coinCost) }) }}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{{ typeLabel(reward.type) }}</span>
+                <span aria-hidden="true">·</span>
+                <span>
+                  {{ reward.stock === null
+                    ? t('rewards.unlimitedStock')
+                    : t('rewards.stock', { count: format.number(reward.stock) }) }}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span class="tabular-nums">{{ t('rewards.admin.demand', { count: format.number(reward.redemptions.total) }) }}</span>
+              </p>
+
+              <!-- The rules, so an admin can see the policy without opening the form -->
+              <p
+                v-if="reward.rules.maxPerUser !== null || reward.rules.minLevel !== null || reward.rules.requiresNote"
+                class="mt-1 flex flex-wrap gap-1.5 text-[10px] text-muted"
+              >
+                <span
+                  v-if="reward.rules.maxPerUser !== null"
+                  class="rounded-full bg-elevated/70 px-2 py-0.5"
+                >
+                  {{ t('rewards.maxPerUser', { count: format.number(reward.rules.maxPerUser) }) }}
+                </span>
+                <span
+                  v-if="reward.rules.minLevel !== null"
+                  class="rounded-full bg-elevated/70 px-2 py-0.5"
+                >
+                  {{ t('rewards.levelRequired', { level: format.number(reward.rules.minLevel) }) }}
+                </span>
+                <span
+                  v-if="reward.rules.requiresNote"
+                  class="rounded-full bg-elevated/70 px-2 py-0.5"
+                >
+                  {{ t('rewards.requiresNote') }}
+                </span>
+              </p>
+            </div>
+
+            <div class="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="soft"
+                icon="i-heroicons-pencil"
+                :label="t('rewards.admin.actions.edit')"
+                @click="openEdit(reward)"
+              />
+              <UButton
+                v-if="reward.status !== 'ACTIVE'"
+                size="xs"
+                color="success"
+                variant="soft"
+                icon="i-heroicons-check"
+                :label="t('rewards.admin.actions.activate')"
+                @click="setStatus(reward, 'ACTIVE')"
+              />
+              <UButton
+                v-else
+                size="xs"
+                color="warning"
+                variant="soft"
+                icon="i-heroicons-pause"
+                :label="t('rewards.admin.actions.pause')"
+                @click="setStatus(reward, 'PAUSED')"
+              />
+              <UButton
+                v-if="reward.status !== 'ARCHIVED'"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-heroicons-archive-box"
+                :aria-label="t('rewards.admin.actions.archive')"
+                @click="setStatus(reward, 'ARCHIVED')"
+              />
+            </div>
+          </li>
+        </ul>
+      </CommonSectionCard>
+
+      <RewardsRewardFormModal
+        v-model:open="formOpen"
+        :reward="editing"
+        @saved="refreshAll"
+      />
+
+      <!-- The economy editor. Fields are grouped the way the payout formula
+         reads: what a task is worth, how priority and quality scale it, which
+         behaviours earn a bonus, which lose one, and the guard rails. -->
+      <UModal
+        v-model:open="rulesOpen"
+        :title="t('rewards.admin.rules.title')"
+        :description="t('rewards.admin.rules.versioningHint')"
+      >
+        <template #body>
+          <div class="space-y-5">
+            <p
+              v-if="rulesError"
+              class="rounded-lg bg-error/10 px-3 py-2 text-xs font-semibold text-error"
+            >
+              {{ rulesError }}
+            </p>
+
+            <fieldset
+              v-for="group in RULE_FIELD_GROUPS"
+              :key="group.key"
+            >
+              <legend class="mb-2 text-xs font-bold text-muted">
+                {{ t(`rewards.admin.rules.groups.${group.key}`) }}
+              </legend>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <UFormField
+                  v-for="field in group.fields"
+                  :key="field"
+                  :label="t(`rewards.admin.rules.fields.${field}`)"
+                >
+                  <UInput
+                    v-model="rulesForm[field]"
+                    type="number"
+                    class="w-full"
+                    :disabled="rulesSaving"
+                  />
+                </UFormField>
+              </div>
+            </fieldset>
+          </div>
+        </template>
+
+        <template #footer>
+          <div class="flex w-full items-center justify-end gap-2">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              @click="rulesOpen = false"
+            >
+              {{ t('common.cancel') }}
+            </UButton>
+            <UButton
+              color="primary"
+              icon="i-heroicons-paper-airplane"
+              :loading="rulesSaving"
+              @click="saveRules"
+            >
+              {{ t('common.save') }}
+            </UButton>
+          </div>
+        </template>
+      </UModal>
+    </div>
   </div>
 </template>

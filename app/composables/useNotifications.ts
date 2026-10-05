@@ -48,6 +48,14 @@ export function useNotifications() {
     }, 45_000)
   }
 
+  function reset(): void {
+    unread.value = 0
+    if (pollTimer) {
+      clearInterval(pollTimer)
+      pollTimer = undefined
+    }
+  }
+
   /** Mark one notification read; the server is authoritative for the count. */
   async function markRead(id: string): Promise<void> {
     await $fetch(`/api/notifications/${id}/read`, { method: 'POST' })
@@ -97,6 +105,7 @@ export function useNotifications() {
     unread,
     refreshUnread,
     startPolling,
+    reset,
     markRead,
     markAllRead,
     fetchPage,
